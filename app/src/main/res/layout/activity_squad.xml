@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bg_screen">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        app:title="Elenco"
+        app:titleTextColor="@color/color_on_surface"
+        android:background="@color/color_surface"/>
+
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tabs"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/color_surface"
+        app:tabIndicatorColor="@color/color_primary"
+        app:tabIndicatorHeight="3dp"
+        app:tabSelectedTextColor="@color/color_primary"
+        app:tabTextColor="@color/color_on_surface_variant"
+        app:tabTextAppearance="@style/TextAppearance.MaterialComponents.Button"/>
+
+    <View android:layout_width="match_parent" android:layout_height="1dp"
+        android:background="@color/color_outline_gold"/>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recycler"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingVertical="8dp"/>
+
+        <TextView
+            android:id="@+id/tv_empty"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:textSize="14sp"
+            android:textColor="@color/color_on_surface_variant"
+            android:visibility="gone"/>
+    </FrameLayout>
+</LinearLayout>

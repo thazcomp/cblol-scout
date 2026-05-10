@@ -259,6 +259,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showPlayerDetail(player: Player) {
+        // Delega para o helper compartilhado; recarrega a lista quando algo muda.
+        PlayerDetailDialog.show(this, player) { reloadFromGameState() }
+        return
+    }
+
+    @Suppress("unused")
+    private fun showPlayerDetailLegacy(player: Player) {
         val dialog = BottomSheetDialog(this, R.style.ThemeOverlay_CBLOLScout_BottomSheet)
         val view = layoutInflater.inflate(R.layout.bottom_sheet_player, null)
         dialog.setContentView(view)

@@ -28,6 +28,10 @@
             android:windowSoftInputMode="adjustResize"
             android:parentActivityName=".ui.ManagerHubActivity"/>
 
+        <activity android:name=".ui.SquadActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.ManagerHubActivity"/>
+
         <activity android:name=".ui.ScheduleActivity"
             android:exported="false"
             android:parentActivityName=".ui.ManagerHubActivity"/>

@@ -55,8 +55,7 @@ class ManagerHubActivity : AppCompatActivity() {
         binding.btnAdvanceWeek.setOnClickListener { advanceDays(7) }
         binding.btnAdvanceMatch.setOnClickListener { advanceUntilNextMatch() }
         binding.cardSquad.setOnClickListener {
-            startActivity(Intent(this, MainActivity::class.java)
-                .putExtra(TeamSelectActivity.EXTRA_TEAM_ID, GameRepository.current().managerTeamId))
+            startActivity(Intent(this, SquadActivity::class.java))
         }
         binding.cardMarket.setOnClickListener {
             startActivity(Intent(this, TransferMarketActivity::class.java))
