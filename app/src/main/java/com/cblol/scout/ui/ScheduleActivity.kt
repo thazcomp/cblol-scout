@@ -90,21 +90,21 @@ class ScheduleActivity : AppCompatActivity() {
             h.viewAwayBar.setBackgroundColor(TeamColors.forTeam(m.awayTeamId))
 
             val isMine = m.homeTeamId == myTeamId || m.awayTeamId == myTeamId
-            val accent = if (isMine) Color.parseColor("#0066CC") else Color.parseColor("#9CA3AF")
+            val accent = if (isMine) Color.parseColor("#C89B3C") else Color.parseColor("#3C3C41")
             h.viewBar.setBackgroundColor(accent)
 
             if (m.played) {
                 h.tvScore.text = "${m.homeScore}-${m.awayScore}"
-                h.tvScore.setTextColor(Color.parseColor("#1A1A1A"))
+                h.tvScore.setTextColor(Color.parseColor("#F0E6D2"))
             } else if (m.date == currentDate) {
                 h.tvScore.text = "HOJE"
-                h.tvScore.setTextColor(Color.parseColor("#FB8C00"))
+                h.tvScore.setTextColor(Color.parseColor("#FFB800"))
             } else if (m.date < currentDate) {
                 h.tvScore.text = "—"
-                h.tvScore.setTextColor(Color.parseColor("#9CA3AF"))
+                h.tvScore.setTextColor(Color.parseColor("#A09B8C"))
             } else {
                 h.tvScore.text = "vs"
-                h.tvScore.setTextColor(Color.parseColor("#9CA3AF"))
+                h.tvScore.setTextColor(Color.parseColor("#A09B8C"))
             }
         }
     }

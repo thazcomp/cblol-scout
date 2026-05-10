@@ -89,7 +89,7 @@ class ManagerHubActivity : AppCompatActivity() {
         binding.tvDate.text = LocalDate.parse(gs.currentDate).format(dateFormatter)
         binding.tvBudget.text = "R$ ${"%,d".format(gs.budget)}"
         binding.tvBudget.setTextColor(
-            if (gs.budget < 0) Color.parseColor("#E53935") else Color.parseColor("#43A047")
+            if (gs.budget < 0) Color.parseColor("#E84057") else Color.parseColor("#C89B3C")
         )
 
         val payroll = GameEngine.totalMonthlyPayroll(applicationContext)

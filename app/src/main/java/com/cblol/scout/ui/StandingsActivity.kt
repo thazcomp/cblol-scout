@@ -67,20 +67,22 @@ class StandingsActivity : AppCompatActivity() {
             h.tvDiff.text = (if (s.mapDiff >= 0) "+" else "") + s.mapDiff.toString()
             h.viewBar.setBackgroundColor(TeamColors.forTeam(s.teamId))
 
-            // Destaque pro meu time
+            // Destaque pro meu time (highlight dourado discreto)
             if (s.teamId == myTeamId) {
-                h.itemView.setBackgroundColor(Color.parseColor("#E8F2FF"))
+                h.itemView.setBackgroundColor(Color.parseColor("#1E2D40"))
                 h.tvName.setTypeface(null, android.graphics.Typeface.BOLD)
+                h.tvName.setTextColor(Color.parseColor("#C89B3C"))
             } else {
                 h.itemView.setBackgroundColor(Color.TRANSPARENT)
                 h.tvName.setTypeface(null, android.graphics.Typeface.NORMAL)
+                h.tvName.setTextColor(Color.parseColor("#F0E6D2"))
             }
 
-            // Top 6 = playoffs
+            // Top 6 = playoffs (dourado), demais (creme apagado)
             h.tvPos.setTextColor(
                 when {
-                    i < 6 -> Color.parseColor("#43A047")
-                    else -> Color.parseColor("#9CA3AF")
+                    i < 6 -> Color.parseColor("#C89B3C")
+                    else -> Color.parseColor("#A09B8C")
                 }
             )
         }

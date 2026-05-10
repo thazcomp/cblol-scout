@@ -73,13 +73,13 @@ class PlayerAdapter(
         holder.tvFlag.text = TeamColors.flagEmoji(player.nacionalidade)
         holder.tvTeam.text = player.time_nome
 
-        // Overall rating circle color
+        // Overall rating circle color (raridades estilo LoL)
         val overall = player.overallRating()
         val ratingColor = when {
-            overall >= 80 -> Color.parseColor("#43A047")
-            overall >= 70 -> Color.parseColor("#1E88E5")
-            overall >= 60 -> Color.parseColor("#FB8C00")
-            else          -> Color.parseColor("#E53935")
+            overall >= 85 -> Color.parseColor("#C89B3C") // Mythic gold
+            overall >= 75 -> Color.parseColor("#0AC8B9") // Legendary cyan
+            overall >= 65 -> Color.parseColor("#B19CD9") // Epic purple
+            else          -> Color.parseColor("#788CA0") // Rare silver
         }
         val ratingBg = GradientDrawable().apply {
             shape = GradientDrawable.OVAL
@@ -110,7 +110,7 @@ class PlayerAdapter(
             holder.tvSalarySource.text = if (player.contrato.fonte_salario == "reportado") "reportado" else "estimado"
             holder.tvSalarySource.setTextColor(
                 if (player.contrato.fonte_salario == "reportado")
-                    Color.parseColor("#43A047") else Color.parseColor("#FB8C00")
+                    Color.parseColor("#00B894") else Color.parseColor("#C89B3C")
             )
         }
 

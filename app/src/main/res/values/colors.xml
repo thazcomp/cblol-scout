@@ -1,23 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Material Design 3 tokens (dark-friendly) -->
-    <color name="color_primary">#0066CC</color>
-    <color name="color_on_primary">#FFFFFF</color>
-    <color name="color_primary_container">#D8E6FF</color>
-    <color name="color_on_primary_container">#001D40</color>
-    <color name="color_secondary_container">#F0F4FA</color>
-    <color name="color_on_secondary_container">#3A4A5C</color>
-    <color name="color_surface">#FFFFFF</color>
-    <color name="color_on_surface">#1A1A1A</color>
-    <color name="color_on_surface_variant">#6B7280</color>
-    <color name="color_outline_variant">#E5E7EB</color>
-    <color name="bg_screen">#F1F3F7</color>
+    <!-- ─── Paleta inspirada no client do League of Legends ───
+         Fundo: navy escuro com tom azulado
+         Acento principal: dourado LoL (#C89B3C)
+         Texto: creme (#F0E6D2)                                     -->
 
-    <!-- Attribute bar colors -->
-    <color name="attr_lane">#1E88E5</color>
-    <color name="attr_tf">#E53935</color>
-    <color name="attr_cria">#8E24AA</color>
-    <color name="attr_cons">#43A047</color>
-    <color name="attr_clutch">#FB8C00</color>
-    <color name="attr_track">#E0E0E0</color>
+    <!-- Backgrounds -->
+    <color name="bg_screen">#010A13</color>
+    <color name="color_surface">#0A1428</color>
+    <color name="color_surface_elevated">#0F1F35</color>
+
+    <!-- Texto -->
+    <color name="color_on_surface">#F0E6D2</color>
+    <color name="color_on_surface_variant">#A09B8C</color>
+
+    <!-- Dourado LoL (primary) -->
+    <color name="color_primary">#C89B3C</color>
+    <color name="color_primary_light">#C8AA6E</color>
+    <color name="color_primary_dark">#785A28</color>
+    <color name="color_on_primary">#010A13</color>
+
+    <!-- Containers -->
+    <color name="color_primary_container">#1E2D40</color>
+    <color name="color_on_primary_container">#C8AA6E</color>
+    <color name="color_secondary_container">#0F1F35</color>
+    <color name="color_on_secondary_container">#C8AA6E</color>
+
+    <!-- Bordas -->
+    <color name="color_outline">#3C3C41</color>
+    <color name="color_outline_variant">#1E2D40</color>
+    <color name="color_outline_gold">#785A28</color>
+
+    <!-- Acentos por raridade (overall do jogador) -->
+    <color name="rarity_mythic">#C89B3C</color>     <!-- 85+ -->
+    <color name="rarity_legendary">#0AC8B9</color>  <!-- 75-84 -->
+    <color name="rarity_epic">#B19CD9</color>       <!-- 65-74 -->
+    <color name="rarity_rare">#788CA0</color>       <!-- < 65 -->
+
+    <!-- Estados -->
+    <color name="state_success">#00B894</color>     <!-- vitória / dentro do top 6 -->
+    <color name="state_warning">#FFB800</color>     <!-- alerta / hoje -->
+    <color name="state_danger">#E84057</color>      <!-- derrota / vender -->
+
+    <!-- Atributos derivados (barras) -->
+    <color name="attr_lane">#0AC8B9</color>
+    <color name="attr_tf">#E84057</color>
+    <color name="attr_cria">#B19CD9</color>
+    <color name="attr_cons">#00B894</color>
+    <color name="attr_clutch">#FFB800</color>
+    <color name="attr_track">#1E2D40</color>
 </resources>

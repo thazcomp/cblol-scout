@@ -377,7 +377,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Vender jogador"
-                android:backgroundTint="#E53935"
+                android:backgroundTint="@color/state_danger"
                 android:textColor="#FFFFFF"/>
         </LinearLayout>
 

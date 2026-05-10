@@ -1,19 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Hexágono dourado externo -->
     <item>
-        <shape android:shape="oval">
-            <solid android:color="@color/color_primary"/>
+        <shape android:shape="rectangle">
+            <solid android:color="#00000000"/>
         </shape>
     </item>
     <item android:gravity="center">
         <vector
-            android:width="56dp"
-            android:height="56dp"
-            android:viewportWidth="24"
-            android:viewportHeight="24">
-            <path
-                android:fillColor="#FFFFFF"
-                android:pathData="M12,2L4,6v6c0,5.5 3.8,10.7 8,12 4.2,-1.3 8,-6.5 8,-12V6L12,2zM10,17l-5,-5 1.4,-1.4L10,14.2l7.6,-7.6L19,8L10,17z"/>
+            android:width="100dp"
+            android:height="100dp"
+            android:viewportWidth="100"
+            android:viewportHeight="100">
+
+            <!-- Borda hexagonal dourada -->
+            <path android:fillColor="#C8AA6E"
+                android:pathData="M50,4 L88,26 L88,74 L50,96 L12,74 L12,26 Z"/>
+            <!-- Hexágono interno dourado escuro -->
+            <path android:fillColor="#C89B3C"
+                android:pathData="M50,8 L84,28 L84,72 L50,92 L16,72 L16,28 Z"/>
+            <!-- Centro escuro -->
+            <path android:fillColor="#010A13"
+                android:pathData="M50,18 L74,32 L74,68 L50,82 L26,68 L26,32 Z"/>
+            <!-- Espada estilizada (vertical) -->
+            <path android:fillColor="#C89B3C"
+                android:pathData="M48,28 L52,28 L52,58 L56,62 L52,66 L52,72 L48,72 L48,66 L44,62 L48,58 Z"/>
         </vector>
     </item>
 </layer-list>

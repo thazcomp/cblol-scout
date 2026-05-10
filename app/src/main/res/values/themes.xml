@@ -1,14 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.CBLOLScout" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+    <style name="Theme.CBLOLScout" parent="Theme.MaterialComponents.NoActionBar">
         <item name="colorPrimary">@color/color_primary</item>
-        <item name="colorPrimaryVariant">@color/color_primary</item>
+        <item name="colorPrimaryVariant">@color/color_primary_dark</item>
         <item name="colorOnPrimary">@color/color_on_primary</item>
+        <item name="colorSecondary">@color/color_primary_light</item>
+        <item name="colorOnSecondary">@color/color_on_primary</item>
         <item name="colorSurface">@color/color_surface</item>
         <item name="colorOnSurface">@color/color_on_surface</item>
+        <item name="colorError">@color/state_danger</item>
         <item name="android:windowBackground">@color/bg_screen</item>
-        <item name="windowActionBar">false</item>
-        <item name="windowNoTitle">true</item>
+        <item name="android:statusBarColor">@color/bg_screen</item>
+        <item name="android:navigationBarColor">@color/bg_screen</item>
+        <item name="android:textColorPrimary">@color/color_on_surface</item>
+        <item name="android:textColorSecondary">@color/color_on_surface_variant</item>
+        <item name="android:textColorHint">@color/color_on_surface_variant</item>
+        <item name="materialButtonStyle">@style/Widget.CBLOLScout.Button</item>
+    </style>
+
+    <!-- Botão "ouro" no estilo do client -->
+    <style name="Widget.CBLOLScout.Button" parent="Widget.MaterialComponents.Button">
+        <item name="backgroundTint">@color/color_primary</item>
+        <item name="android:textColor">@color/color_on_primary</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.08</item>
+        <item name="cornerRadius">2dp</item>
+        <item name="rippleColor">@color/color_primary_light</item>
     </style>
 
     <style name="ThemeOverlay.CBLOLScout.BottomSheet" parent="ThemeOverlay.MaterialComponents.BottomSheetDialog">
@@ -19,12 +36,13 @@
 
     <style name="BottomSheet.CBLOLScout" parent="Widget.MaterialComponents.BottomSheet.Modal">
         <item name="shapeAppearanceOverlay">@style/ShapeAppearance.CBLOLScout.BottomSheet</item>
+        <item name="backgroundTint">@color/color_surface</item>
     </style>
 
     <style name="ShapeAppearance.CBLOLScout.BottomSheet" parent="">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSizeTopLeft">20dp</item>
-        <item name="cornerSizeTopRight">20dp</item>
+        <item name="cornerFamily">cut</item>
+        <item name="cornerSizeTopLeft">12dp</item>
+        <item name="cornerSizeTopRight">12dp</item>
         <item name="cornerSizeBottomLeft">0dp</item>
         <item name="cornerSizeBottomRight">0dp</item>
     </style>
