@@ -38,10 +38,11 @@ object GameRepository {
             .getOrNull()
     }
 
-    fun save(context: Context, gs: GameState = state ?: return) {
-        state = gs
+    fun save(context: Context, gs: GameState? = null) {
+        val target = gs ?: state ?: return
+        state = target
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        prefs.edit().putString(KEY_STATE, gson.toJson(gs)).apply()
+        prefs.edit().putString(KEY_STATE, gson.toJson(target)).apply()
     }
 
     fun clear(context: Context) {
