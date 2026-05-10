@@ -1,11 +1,13 @@
 package com.cblol.scout.ui
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -38,7 +40,8 @@ class ScheduleActivity : AppCompatActivity() {
             matches = gs.matches.sortedWith(compareBy({ it.round }, { it.date })),
             currentDate = gs.currentDate,
             myTeamId = gs.managerTeamId,
-            teamNames = snap.times.associate { it.id to it.nome }
+            teamNames = snap.times.associate { it.id to it.nome },
+            onMatchClick = { m -> handleMatchClick(m) }
         )
 
         // Scroll inicial pra próxima partida do meu time
@@ -51,11 +54,35 @@ class ScheduleActivity : AppCompatActivity() {
 
     override fun onSupportNavigateUp(): Boolean { finish(); return true }
 
+    private fun handleMatchClick(m: Match) {
+        if (m.played) {
+            // já jogada: mostra resumo
+            val homeName = GameRepository.snapshot(applicationContext).times.find { it.id == m.homeTeamId }!!.nome
+            val awayName = GameRepository.snapshot(applicationContext).times.find { it.id == m.awayTeamId }!!.nome
+            AlertDialog.Builder(this)
+                .setTitle("Rodada ${m.round}")
+                .setMessage("$homeName ${m.homeScore} — ${m.awayScore} $awayName")
+                .setPositiveButton("OK", null)
+                .show()
+            return
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Simular ao vivo?")
+            .setMessage("Acompanhe pick & ban + eventos do mapa em tempo acelerado.")
+            .setPositiveButton("Assistir") { _, _ ->
+                startActivity(Intent(this, MatchSimulationActivity::class.java)
+                    .putExtra(MatchSimulationActivity.EXTRA_MATCH_ID, m.id))
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
     private class MatchAdapter(
         private val matches: List<Match>,
         private val currentDate: String,
         private val myTeamId: String,
-        private val teamNames: Map<String, String>
+        private val teamNames: Map<String, String>,
+        private val onMatchClick: (Match) -> Unit
     ) : RecyclerView.Adapter<MatchAdapter.VH>() {
 
         private val dateFmt = DateTimeFormatter.ofPattern("dd/MM")
@@ -106,6 +133,8 @@ class ScheduleActivity : AppCompatActivity() {
                 h.tvScore.text = "vs"
                 h.tvScore.setTextColor(Color.parseColor("#A09B8C"))
             }
+
+            h.itemView.setOnClickListener { onMatchClick(m) }
         }
     }
 }

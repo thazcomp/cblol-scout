@@ -32,6 +32,10 @@
             android:exported="false"
             android:parentActivityName=".ui.ManagerHubActivity"/>
 
+        <activity android:name=".ui.MatchSimulationActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.ManagerHubActivity"/>
+
         <activity android:name=".ui.ScheduleActivity"
             android:exported="false"
             android:parentActivityName=".ui.ManagerHubActivity"/>

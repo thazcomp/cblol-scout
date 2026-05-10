@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bg_screen">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        app:title="Partida ao vivo"
+        app:titleTextColor="@color/color_on_surface"
+        android:background="@color/color_surface"/>
+
+    <!-- Header: scoreboard -->
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="10dp"
+        app:cardCornerRadius="2dp"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/color_outline_gold"
+        app:strokeWidth="1dp"
+        app:cardBackgroundColor="@color/color_surface">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="14dp">
+
+            <!-- Series score row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <View android:id="@+id/view_home_bar"
+                    android:layout_width="3dp" android:layout_height="32dp"/>
+
+                <TextView android:id="@+id/tv_home_name"
+                    android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:textSize="16sp" android:fontFamily="sans-serif-bold"
+                    android:textColor="@color/color_on_surface"/>
+
+                <TextView android:id="@+id/tv_series_score"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="0 - 0"
+                    android:textSize="22sp" android:fontFamily="sans-serif-bold"
+                    android:textColor="@color/color_primary"
+                    android:paddingHorizontal="14dp"/>
+
+                <TextView android:id="@+id/tv_away_name"
+                    android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:gravity="end"
+                    android:layout_marginEnd="6dp"
+                    android:textSize="16sp" android:fontFamily="sans-serif-bold"
+                    android:textColor="@color/color_on_surface"/>
+
+                <View android:id="@+id/view_away_bar"
+                    android:layout_width="3dp" android:layout_height="32dp"/>
+            </LinearLayout>
+
+            <View android:layout_width="match_parent" android:layout_height="1dp"
+                android:background="@color/color_outline_variant"
+                android:layout_marginVertical="10dp"/>
+
+            <!-- Game info -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView android:id="@+id/tv_game_number"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="Mapa 1"
+                    android:textSize="13sp" android:fontFamily="sans-serif-medium"
+                    android:textColor="@color/color_primary"
+                    android:letterSpacing="0.05"/>
+
+                <TextView android:id="@+id/tv_phase"
+                    android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:textSize="12sp"
+                    android:textColor="@color/color_on_surface_variant"/>
+
+                <TextView android:id="@+id/btn_speed"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="1x"
+                    android:textSize="13sp" android:fontFamily="sans-serif-bold"
+                    android:textColor="@color/color_on_primary"
+                    android:background="@color/color_primary"
+                    android:paddingHorizontal="14dp"
+                    android:paddingVertical="6dp"
+                    android:gravity="center"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground"/>
+            </LinearLayout>
+
+            <!-- Pick & Ban panel (visible during draft) -->
+            <LinearLayout
+                android:id="@+id/layout_pick_ban"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="14dp"
+                android:visibility="gone">
+
+                <LinearLayout android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content" android:orientation="vertical">
+
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="BANS" android:textSize="10sp"
+                        android:textColor="@color/color_on_surface_variant"
+                        android:letterSpacing="0.1"/>
+                    <com.google.android.flexbox.FlexboxLayout
+                        android:id="@+id/container_home_bans"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:flexWrap="wrap"/>
+
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="PICKS" android:textSize="10sp"
+                        android:layout_marginTop="6dp"
+                        android:textColor="@color/color_on_surface_variant"
+                        android:letterSpacing="0.1"/>
+                    <com.google.android.flexbox.FlexboxLayout
+                        android:id="@+id/container_home_picks"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:flexWrap="wrap"/>
+                </LinearLayout>
+
+                <View android:layout_width="1dp" android:layout_height="match_parent"
+                    android:background="@color/color_outline_variant"
+                    android:layout_marginHorizontal="8dp"/>
+
+                <LinearLayout android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content" android:orientation="vertical">
+
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="BANS" android:textSize="10sp"
+                        android:textColor="@color/color_on_surface_variant"
+                        android:letterSpacing="0.1"
+                        android:layout_gravity="end"/>
+                    <com.google.android.flexbox.FlexboxLayout
+                        android:id="@+id/container_away_bans"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:flexWrap="wrap"
+                        app:justifyContent="flex_end"/>
+
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="PICKS" android:textSize="10sp"
+                        android:layout_marginTop="6dp"
+                        android:textColor="@color/color_on_surface_variant"
+                        android:letterSpacing="0.1"
+                        android:layout_gravity="end"/>
+                    <com.google.android.flexbox.FlexboxLayout
+                        android:id="@+id/container_away_picks"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:flexWrap="wrap"
+                        app:justifyContent="flex_end"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Game stats panel (visible during game) -->
+            <LinearLayout
+                android:id="@+id/layout_game_stats"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="14dp"
+                android:visibility="gone">
+
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:gravity="center_vertical">
+
+                    <TextView android:id="@+id/tv_home_kills"
+                        android:layout_width="0dp" android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:gravity="end"
+                        android:textSize="36sp" android:fontFamily="sans-serif-bold"
+                        android:textColor="@color/color_on_surface"/>
+
+                    <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:orientation="vertical" android:gravity="center"
+                        android:paddingHorizontal="20dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="⚔️" android:textSize="22sp"
+                            android:gravity="center"/>
+                        <TextView android:id="@+id/tv_game_timer"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="00:00"
+                            android:textSize="14sp" android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/color_primary"/>
+                    </LinearLayout>
+
+                    <TextView android:id="@+id/tv_away_kills"
+                        android:layout_width="0dp" android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:textSize="36sp" android:fontFamily="sans-serif-bold"
+                        android:textColor="@color/color_on_surface"/>
+                </LinearLayout>
+
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="6dp">
+
+                    <TextView android:id="@+id/tv_obj_towers"
+                        android:layout_width="0dp" android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:textSize="11sp" android:fontFamily="sans-serif-medium"
+                        android:textColor="@color/color_on_surface_variant"/>
+
+                    <TextView android:id="@+id/tv_obj_dragons"
+                        android:layout_width="0dp" android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:textSize="11sp" android:fontFamily="sans-serif-medium"
+                        android:textColor="@color/color_on_surface_variant"/>
+
+                    <TextView android:id="@+id/tv_obj_barons"
+                        android:layout_width="0dp" android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:textSize="11sp" android:fontFamily="sans-serif-medium"
+                        android:textColor="@color/color_on_surface_variant"/>
+
+                    <TextView android:id="@+id/tv_obj_heralds"
+                        android:layout_width="0dp" android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:textSize="11sp" android:fontFamily="sans-serif-medium"
+                        android:textColor="@color/color_on_surface_variant"/>
+                </LinearLayout>
+            </LinearLayout>
+
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+    <!-- Event feed header -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="EVENTOS AO VIVO"
+        android:textSize="11sp"
+        android:fontFamily="sans-serif-medium"
+        android:textColor="@color/color_primary"
+        android:letterSpacing="0.1"
+        android:layout_marginStart="14dp"
+        android:layout_marginBottom="6dp"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recycler_feed"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:paddingHorizontal="6dp"
+        android:paddingBottom="14dp"/>
+</LinearLayout>

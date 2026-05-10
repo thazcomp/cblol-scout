@@ -54,6 +54,8 @@ class ManagerHubActivity : AppCompatActivity() {
         binding.btnAdvanceDay.setOnClickListener { advanceDays(1) }
         binding.btnAdvanceWeek.setOnClickListener { advanceDays(7) }
         binding.btnAdvanceMatch.setOnClickListener { advanceUntilNextMatch() }
+        binding.tvNextMatch.setOnClickListener { openLiveSimForNextMatch() }
+        binding.tvNextMatchDate.setOnClickListener { openLiveSimForNextMatch() }
         binding.cardSquad.setOnClickListener {
             startActivity(Intent(this, SquadActivity::class.java))
         }
@@ -140,6 +142,13 @@ class ManagerHubActivity : AppCompatActivity() {
         val days = LocalDate.parse(GameRepository.current().currentDate)
             .until(LocalDate.parse(next.date)).days + 1
         if (days > 0) advanceDays(days)
+    }
+
+    /** Abre o simulador ao vivo da próxima partida do meu time. */
+    private fun openLiveSimForNextMatch() {
+        val next = GameEngine.nextMatchForManager() ?: return
+        startActivity(android.content.Intent(this, MatchSimulationActivity::class.java)
+            .putExtra(MatchSimulationActivity.EXTRA_MATCH_ID, next.id))
     }
 
     private fun showAdvanceReport(r: AdvanceReport) {
