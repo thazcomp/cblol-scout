@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & publish release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Build release APK (unsigned)
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Rename APK
+        run: |
+          mkdir -p artifacts
+          cp app/build/outputs/apk/release/app-release-unsigned.apk artifacts/cblol-scout-${{ github.ref_name }}.apk
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: CBLOL Scout ${{ github.ref_name }}
+          body: |
+            ## CBLOL Scout ${{ github.ref_name }}
+
+            App Android com os 40 jogadores titulares do CBLOL 2026 Split 1.
+
+            ### Fluxo
+            - **Login** (qualquer usuário + senha ≥ 4 caracteres, ou modo Convidado)
+            - **Seleção de time** (8 organizações em grid)
+            - **Lista de jogadores** do time escolhido com filtros, busca e detalhe
+
+            ### Como instalar
+            1. Baixe o APK abaixo
+            2. No Android, ative *Instalar fontes desconhecidas* e abra o arquivo
+            3. Requisitos: Android 8.1+ (API 27)
+
+            > APK não-assinado, gerado automaticamente pelo workflow.
+          files: artifacts/cblol-scout-${{ github.ref_name }}.apk
+          draft: false
+          prerelease: false
