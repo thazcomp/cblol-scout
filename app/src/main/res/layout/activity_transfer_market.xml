@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bg_screen">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        app:title="Mercado de Transferências"
+        app:titleTextColor="@color/color_on_surface"
+        android:background="@color/color_surface"/>
+
+    <TextView android:id="@+id/tv_budget"
+        android:layout_width="match_parent" android:layout_height="32dp"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="16dp"
+        android:textSize="13sp"
+        android:fontFamily="sans-serif-medium"
+        android:textColor="@color/color_on_primary_container"
+        android:background="@color/color_primary_container"/>
+
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:scrollbars="none"
+        android:background="@color/color_surface"
+        android:paddingVertical="6dp">
+
+        <com.google.android.material.chip.ChipGroup
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="12dp">
+
+            <com.google.android.material.chip.Chip android:id="@+id/chip_all"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="Todos" android:checkable="true"/>
+
+            <com.google.android.material.chip.Chip android:id="@+id/chip_top"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="TOP" android:checkable="true"/>
+
+            <com.google.android.material.chip.Chip android:id="@+id/chip_jng"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="JNG" android:checkable="true"/>
+
+            <com.google.android.material.chip.Chip android:id="@+id/chip_mid"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="MID" android:checkable="true"/>
+
+            <com.google.android.material.chip.Chip android:id="@+id/chip_adc"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="ADC" android:checkable="true"/>
+
+            <com.google.android.material.chip.Chip android:id="@+id/chip_sup"
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="SUP" android:checkable="true"/>
+        </com.google.android.material.chip.ChipGroup>
+    </HorizontalScrollView>
+
+    <View android:layout_width="match_parent" android:layout_height="1dp"
+        android:background="@color/color_outline_variant"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recycler"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:paddingVertical="6dp"/>
+</LinearLayout>

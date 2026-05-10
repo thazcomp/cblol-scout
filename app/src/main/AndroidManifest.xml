@@ -9,7 +9,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.CBLOLScout">
 
-        <!-- Login = launcher -->
         <activity
             android:name=".ui.LoginActivity"
             android:exported="true"
@@ -20,17 +19,26 @@
             </intent-filter>
         </activity>
 
-        <!-- Seleção de time -->
-        <activity
-            android:name=".ui.TeamSelectActivity"
-            android:exported="false"/>
+        <activity android:name=".ui.TeamSelectActivity" android:exported="false"/>
 
-        <!-- Lista de jogadores do time -->
-        <activity
-            android:name=".ui.MainActivity"
+        <activity android:name=".ui.ManagerHubActivity" android:exported="false"/>
+
+        <activity android:name=".ui.MainActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize"
-            android:parentActivityName=".ui.TeamSelectActivity"/>
+            android:parentActivityName=".ui.ManagerHubActivity"/>
+
+        <activity android:name=".ui.ScheduleActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.ManagerHubActivity"/>
+
+        <activity android:name=".ui.StandingsActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.ManagerHubActivity"/>
+
+        <activity android:name=".ui.TransferMarketActivity"
+            android:exported="false"
+            android:parentActivityName=".ui.ManagerHubActivity"/>
 
     </application>
 

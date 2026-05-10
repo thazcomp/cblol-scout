@@ -1,6 +1,47 @@
-# CBLOL Scout
+# CBLOL Scout · Manager Edition
 
-Aplicativo Android nativo para visualizar os atributos de todos os jogadores do **CBLOL 2026 Split 1**, estilo FIFA/Football Manager.
+Aplicativo Android nativo — agora um **jogo de gestão estilo Football Manager** para o **CBLOL 2026 Split 1**.
+
+Você assume o papel de técnico de um dos 8 times, recebe um orçamento, gerencia seu elenco, contrata e vende jogadores, renegocia contratos, e o calendário do split avança em tempo simulado com partidas BO3 sendo decididas pelo motor do jogo.
+
+## Modos do app
+
+### 1. Modo Scout (legado)
+Originalmente o app era apenas um catálogo dos 40 jogadores titulares do CBLOL 2026 Split 1.
+Esses dados continuam acessíveis dentro do modo carreira (tela de Elenco e Mercado).
+
+### 2. Modo Carreira (v2.0+)
+Você controla um time. Funcionalidades:
+
+- **Calendário automático** — round-robin duplo (14 rodadas × 4 jogos = 56 partidas) começando em 28/03/2026
+- **Simulador de partidas BO3** — vencedor decidido por força do elenco (média do overall dos titulares) + bônus de mando + ruído
+- **Gestão de elenco** — promova/rebaixe titular ↔ reserva, venda jogadores, renegocie contratos
+- **Mercado de transferências** — compre jogadores de outros times pagando o preço calculado a partir do overall + salário
+- **Economia** — orçamento inicial por tier, patrocínio semanal automático, folha mensal de salários debitada, premiação por vitória/mapas vencidos
+- **Avançar dia** — pule 1 dia, 1 semana ou direto até a próxima partida; eventos econômicos e jogos são processados em sequência
+- **Classificação** — tabela atualizada após cada rodada (top 6 = playoffs)
+- **Save persistente** — toda a carreira salva automaticamente no SharedPreferences
+
+#### Fluxo
+```
+LoginActivity → TeamSelectActivity → ManagerHubActivity (centro)
+                                          ├─ MainActivity (Elenco)
+                                          ├─ TransferMarketActivity (Mercado)
+                                          ├─ ScheduleActivity (Calendário)
+                                          └─ StandingsActivity (Classificação)
+```
+
+#### Orçamentos por tier
+| Tier | Times | Orçamento inicial | Patrocínio/sem |
+|------|-------|-------------------|---------------|
+| S | FURIA, LOUD, paiN | R$ 5.000.000 | R$ 600.000 |
+| A | Fluxo W7M, RED Canids | R$ 3.000.000 | R$ 350.000 |
+| B | Keyd Stars, Leviatán, LOS | R$ 1.500.000 | R$ 200.000 |
+
+#### Receitas e despesas
+- Patrocínio semanal: pago todo domingo
+- Salários: debitados no dia 1 de cada mês (somatório do elenco titular + reserva)
+- Vitória em série BO3: R$ 100.000 + R$ 50.000 por mapa vencido
 
 ## Screenshots
 

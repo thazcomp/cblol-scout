@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Salário mensal (R$)"
+        android:textSize="12sp"
+        android:textColor="@color/color_on_surface_variant"/>
+
+    <EditText
+        android:id="@+id/et_new_salary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="number"
+        android:textSize="16sp"
+        android:layout_marginBottom="12dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Nova data de término (yyyy-mm-dd)"
+        android:textSize="12sp"
+        android:textColor="@color/color_on_surface_variant"/>
+
+    <EditText
+        android:id="@+id/et_new_date"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="text"
+        android:textSize="16sp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="O jogador pode recusar se a oferta for menor que 90% do salário atual."
+        android:textSize="11sp"
+        android:textColor="@color/color_on_surface_variant"
+        android:layout_marginTop="12dp"/>
+</LinearLayout>

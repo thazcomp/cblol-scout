@@ -325,9 +325,61 @@
             android:layout_height="wrap_content"
             android:paddingHorizontal="20dp"
             android:paddingTop="14dp"
-            android:paddingBottom="24dp"
+            android:paddingBottom="14dp"
             android:textSize="14sp"
             android:textColor="@color/color_on_surface_variant"/>
+
+        <!-- Manager actions (visible only when this player belongs to my team) -->
+        <LinearLayout
+            android:id="@+id/layout_bs_actions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="20dp"
+            android:paddingBottom="20dp"
+            android:visibility="gone">
+
+            <View android:layout_width="match_parent" android:layout_height="1dp"
+                android:background="@color/color_outline_variant"
+                android:layout_marginBottom="14dp"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="GERENCIAR"
+                android:textSize="11sp"
+                android:fontFamily="sans-serif-medium"
+                android:textColor="@color/color_primary"
+                android:letterSpacing="0.1"
+                android:layout_marginBottom="8dp"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_bs_toggle_starter"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="6dp"
+                android:textColor="@color/color_primary"
+                app:strokeColor="@color/color_primary"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_bs_renegotiate"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="6dp"
+                android:text="Renegociar contrato"
+                android:textColor="@color/color_primary"
+                app:strokeColor="@color/color_primary"/>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_bs_sell"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Vender jogador"
+                android:backgroundTint="#E53935"
+                android:textColor="#FFFFFF"/>
+        </LinearLayout>
 
     </LinearLayout>
 </ScrollView>

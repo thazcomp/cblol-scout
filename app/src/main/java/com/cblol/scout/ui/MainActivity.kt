@@ -8,8 +8,12 @@ import android.text.TextWatcher
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.widget.Button
+import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -17,6 +21,9 @@ import com.cblol.scout.R
 import com.cblol.scout.data.Player
 import com.cblol.scout.data.SnapshotData
 import com.cblol.scout.databinding.ActivityMainBinding
+import com.cblol.scout.game.GameRepository
+import com.cblol.scout.game.SellResult
+import com.cblol.scout.game.TransferMarket
 import com.cblol.scout.util.JsonLoader
 import com.cblol.scout.util.TeamColors
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -82,15 +89,16 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadData() {
         lifecycleScope.launch {
+            // Carrega game state pra refletir transferências/overrides
+            GameRepository.load(applicationContext)
             val data = withContext(Dispatchers.IO) { JsonLoader.loadSnapshot(applicationContext) }
             snapshot = data
 
-            // Ajusta o título da toolbar quando há time travado
             lockedTeamId?.let { id ->
                 val team = data.times.find { it.id == id }
                 if (team != null) {
                     binding.toolbar.title = team.nome
-                    binding.toolbar.subtitle = "Tier ${team.tier_orcamento} · CBLOL ${data.meta.split.removePrefix("2026 ")}"
+                    binding.toolbar.subtitle = "Tier ${team.tier_orcamento} · Elenco"
                     binding.toolbar.setBackgroundColor(TeamColors.forTeam(team.id))
                     binding.toolbar.setTitleTextColor(Color.WHITE)
                     binding.toolbar.setSubtitleTextColor(Color.WHITE)
@@ -101,6 +109,28 @@ class MainActivity : AppCompatActivity() {
             if (lockedTeamId == null) buildTeamChips(data)
             applyFilters()
         }
+    }
+
+    /** Recarrega aplicando overrides do GameRepository (após uma compra/venda/renegociação). */
+    private fun reloadFromGameState() {
+        val gs = GameRepository.load(applicationContext) ?: return
+        val snap = GameRepository.snapshot(applicationContext)
+        // Copia o snapshot mas usando overrides
+        val overridden = snap.jogadores.map { p ->
+            val ov = gs.playerOverrides[p.id] ?: return@map p
+            p.copy(
+                time_id = ov.newTeamId ?: p.time_id,
+                time_nome = ov.newTeamId?.let { id -> snap.times.find { it.id == id }?.nome } ?: p.time_nome,
+                titular = ov.titular ?: p.titular,
+                contrato = p.contrato.copy(
+                    salario_mensal_estimado_brl = ov.newSalary ?: p.contrato.salario_mensal_estimado_brl,
+                    termino = ov.newContractEnd ?: p.contrato.termino,
+                    fonte_salario = if (ov.newSalary != null) "renegociado" else p.contrato.fonte_salario
+                )
+            )
+        }
+        snapshot = snap.copy(jogadores = overridden)
+        applyFilters()
     }
 
     private fun buildRoleChips(data: SnapshotData) {
@@ -168,7 +198,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun applyFilters() {
         val data = snapshot ?: return
-        var list = data.jogadores.filter { it.titular }
+        // Quando há um time travado (modo gerência), mostra titulares E reservas dele.
+        // Quando navegação livre (sem lock), mostra só titulares.
+        var list = if (lockedTeamId != null) data.jogadores else data.jogadores.filter { it.titular }
 
         if (selectedRole != "ALL") list = list.filter { it.role == selectedRole }
         if (selectedTeam != "ALL") list = list.filter { it.time_id == selectedTeam }
@@ -269,6 +301,76 @@ class MainActivity : AppCompatActivity() {
             if (salary != null) "R$ ${"%,d".format(salary)}/mês (${player.contrato.fonte_salario})"
             else "Salário não disponível"
 
+        // Ações de gerência (só aparecem se houver carreira ativa e for jogador do meu time)
+        val gs = GameRepository.load(applicationContext)
+        val actions = view.findViewById<LinearLayout>(R.id.layout_bs_actions)
+        if (gs != null && player.time_id == gs.managerTeamId) {
+            actions.visibility = View.VISIBLE
+            view.findViewById<Button>(R.id.btn_bs_toggle_starter).apply {
+                text = if (player.titular) "Mover para reserva" else "Promover a titular"
+                setOnClickListener {
+                    TransferMarket.toggleStarter(applicationContext, player.id)
+                    Toast.makeText(this@MainActivity, "Status atualizado", Toast.LENGTH_SHORT).show()
+                    dialog.dismiss()
+                    reloadFromGameState()
+                }
+            }
+            view.findViewById<Button>(R.id.btn_bs_renegotiate).setOnClickListener {
+                showRenegotiateDialog(player); dialog.dismiss()
+            }
+            view.findViewById<Button>(R.id.btn_bs_sell).setOnClickListener {
+                confirmSell(player); dialog.dismiss()
+            }
+        } else {
+            actions.visibility = View.GONE
+        }
+
         dialog.show()
+    }
+
+    private fun confirmSell(player: Player) {
+        val price = TransferMarket.marketPriceOf(player)
+        AlertDialog.Builder(this)
+            .setTitle("Vender ${player.nome_jogo}?")
+            .setMessage("Você receberá R$ ${"%,d".format(price)}.\nO jogador será transferido para outra organização do CBLOL.")
+            .setPositiveButton("Vender") { _, _ ->
+                when (val r = TransferMarket.sellPlayer(applicationContext, player.id)) {
+                    is SellResult.Ok -> {
+                        Toast.makeText(this,
+                            "${player.nome_jogo} → ${r.toTeam} (R$ ${"%,d".format(r.price)})",
+                            Toast.LENGTH_LONG).show()
+                        reloadFromGameState()
+                    }
+                    is SellResult.Error -> Toast.makeText(this, r.msg, Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+    private fun showRenegotiateDialog(player: Player) {
+        val current = player.contrato.salario_mensal_estimado_brl ?: 0L
+        val view = layoutInflater.inflate(R.layout.dialog_renegotiate, null)
+        val etSalary = view.findViewById<android.widget.EditText>(R.id.et_new_salary)
+        val etDate   = view.findViewById<android.widget.EditText>(R.id.et_new_date)
+        etSalary.setText(current.toString())
+        etDate.setText("2027-11-30")
+
+        AlertDialog.Builder(this)
+            .setTitle("Renegociar ${player.nome_jogo}")
+            .setView(view)
+            .setPositiveButton("Propor") { _, _ ->
+                val newSal = etSalary.text.toString().toLongOrNull() ?: current
+                val newEnd = etDate.text.toString().ifBlank { "2027-11-30" }
+                val ok = TransferMarket.renegotiateContract(
+                    applicationContext, player.id, newSal, newEnd
+                )
+                Toast.makeText(this,
+                    if (ok) "Contrato renovado!" else "${player.nome_jogo} recusou a oferta.",
+                    Toast.LENGTH_LONG).show()
+                reloadFromGameState()
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
     }
 }

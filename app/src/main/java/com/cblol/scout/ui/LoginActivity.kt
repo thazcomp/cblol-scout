@@ -23,9 +23,20 @@ class LoginActivity : AppCompatActivity() {
 
         binding.btnLogin.setOnClickListener { tryLogin() }
         binding.btnGuest.setOnClickListener {
-            // Guest: bypass auth e vai direto pra seleção de time
-            goToTeamSelect("Convidado")
+            goToNext("Convidado")
         }
+    }
+
+    /** Se já existe save vai direto pro Hub; caso contrário, abre seleção de time. */
+    private fun goToNext(username: String) {
+        val intent = if (com.cblol.scout.game.GameRepository.hasSave(applicationContext)) {
+            Intent(this, ManagerHubActivity::class.java)
+        } else {
+            Intent(this, TeamSelectActivity::class.java)
+                .putExtra(TeamSelectActivity.EXTRA_USERNAME, username)
+        }
+        startActivity(intent)
+        finish()
     }
 
     private fun tryLogin() {
@@ -51,17 +62,10 @@ class LoginActivity : AppCompatActivity() {
                 // Simula um delay de auth
                 binding.root.postDelayed({
                     Toast.makeText(this, "Bem-vindo, $user!", Toast.LENGTH_SHORT).show()
-                    goToTeamSelect(user)
+                    goToNext(user)
                 }, 600)
             }
         }
     }
 
-    private fun goToTeamSelect(username: String) {
-        startActivity(
-            Intent(this, TeamSelectActivity::class.java)
-                .putExtra(TeamSelectActivity.EXTRA_USERNAME, username)
-        )
-        finish()
-    }
 }
