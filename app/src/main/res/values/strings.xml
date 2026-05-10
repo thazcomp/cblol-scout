@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CBLOL Scout</string>
+    <string name="sort_by">Ordenar por</string>
+    <string name="sort_overall">Overall</string>
+    <string name="sort_name">Nome</string>
+    <string name="sort_kda">KDA</string>
+    <string name="sort_cs">CS/min</string>
+    <string name="sort_salary">Salário</string>
+    <string name="change_team">Trocar de time</string>
+    <string name="logout">Sair</string>
+</resources>

@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_screen"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingHorizontal="32dp"
+        android:paddingVertical="40dp">
+
+        <!-- Logo -->
+        <View
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:background="@drawable/bg_login_logo"
+            android:layout_marginBottom="20dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="CBLOL Scout"
+            android:textSize="32sp"
+            android:fontFamily="sans-serif-bold"
+            android:textColor="@color/color_on_surface"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Gerencie seu time dos sonhos"
+            android:textSize="14sp"
+            android:textColor="@color/color_on_surface_variant"
+            android:layout_marginBottom="36dp"/>
+
+        <!-- Username -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/til_user"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Usuário"
+            app:startIconDrawable="@android:drawable/ic_menu_myplaces">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_user"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="text"
+                android:imeOptions="actionNext"
+                android:singleLine="true"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Password -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/til_pass"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="Senha"
+            app:passwordToggleEnabled="true"
+            app:startIconDrawable="@android:drawable/ic_lock_lock">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/et_pass"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="textPassword"
+                android:imeOptions="actionDone"
+                android:singleLine="true"/>
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Login button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_login"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="24dp"
+            android:text="Entrar"
+            android:textSize="15sp"
+            app:cornerRadius="14dp"
+            android:backgroundTint="@color/color_primary"/>
+
+        <!-- Progress -->
+        <ProgressBar
+            android:id="@+id/progress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:visibility="gone"/>
+
+        <!-- Divider -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginVertical="20dp">
+            <View android:layout_width="0dp" android:layout_height="1dp"
+                android:layout_weight="1" android:background="@color/color_outline_variant"/>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="ou" android:paddingHorizontal="12dp"
+                android:textSize="12sp" android:textColor="@color/color_on_surface_variant"/>
+            <View android:layout_width="0dp" android:layout_height="1dp"
+                android:layout_weight="1" android:background="@color/color_outline_variant"/>
+        </LinearLayout>
+
+        <!-- Guest button -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_guest"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:text="Entrar como convidado"
+            android:textSize="15sp"
+            app:cornerRadius="14dp"
+            android:textColor="@color/color_primary"
+            app:strokeColor="@color/color_primary"/>
+
+    </LinearLayout>
+</ScrollView>

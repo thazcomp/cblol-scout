@@ -1,0 +1,333 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/color_surface">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Team bar -->
+        <View
+            android:id="@+id/view_bs_team_bar"
+            android:layout_width="match_parent"
+            android:layout_height="6dp"/>
+
+        <!-- Drag handle -->
+        <View
+            android:layout_width="40dp"
+            android:layout_height="4dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="8dp"
+            android:background="@color/color_outline_variant"
+            android:layout_marginBottom="8dp"/>
+
+        <!-- Player header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingHorizontal="20dp"
+            android:paddingBottom="12dp"
+            android:gravity="center_vertical">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tv_bs_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="24sp"
+                    android:fontFamily="sans-serif-bold"
+                    android:textColor="@color/color_on_surface"/>
+
+                <TextView
+                    android:id="@+id/tv_bs_realname"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="13sp"
+                    android:textColor="@color/color_on_surface_variant"
+                    android:layout_marginBottom="2dp"/>
+
+                <TextView
+                    android:id="@+id/tv_bs_team"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="14sp"
+                    android:fontFamily="sans-serif-medium"
+                    android:textColor="@color/color_primary"/>
+
+                <TextView
+                    android:id="@+id/tv_bs_role"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="13sp"
+                    android:textColor="@color/color_on_surface_variant"
+                    android:layout_marginTop="2dp"/>
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tv_bs_overall"
+                android:layout_width="60dp"
+                android:layout_height="60dp"
+                android:gravity="center"
+                android:textColor="#FFFFFF"
+                android:textSize="22sp"
+                android:fontFamily="sans-serif-bold"
+                android:background="@drawable/bg_rating_circle"/>
+        </LinearLayout>
+
+        <!-- Divider -->
+        <View android:layout_width="match_parent" android:layout_height="1dp"
+            android:background="@color/color_outline_variant"/>
+
+        <!-- Stats grid -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="ESTATÍSTICAS"
+            android:textSize="11sp"
+            android:fontFamily="sans-serif-medium"
+            android:textColor="@color/color_primary"
+            android:letterSpacing="0.1"
+            android:paddingHorizontal="20dp"
+            android:paddingTop="14dp"
+            android:paddingBottom="8dp"/>
+
+        <GridLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="4"
+            android:paddingHorizontal="16dp"
+            android:paddingBottom="12dp">
+
+            <!-- Row 1 -->
+            <LinearLayout android:layout_width="0dp" android:layout_columnWeight="1"
+                android:layout_height="wrap_content" android:orientation="vertical"
+                android:gravity="center" android:padding="6dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="Jogos" android:textSize="10sp" android:textColor="@color/color_on_surface_variant"/>
+                <TextView android:id="@+id/tv_bs_jogos" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:textSize="18sp"
+                    android:fontFamily="sans-serif-bold" android:textColor="@color/color_on_surface"/>
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="0dp" android:layout_columnWeight="1"
+                android:layout_height="wrap_content" android:orientation="vertical"
+                android:gravity="center" android:padding="6dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="KDA" android:textSize="10sp" android:textColor="@color/color_on_surface_variant"/>
+                <TextView android:id="@+id/tv_bs_kda" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:textSize="18sp"
+                    android:fontFamily="sans-serif-bold" android:textColor="@color/color_on_surface"/>
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="0dp" android:layout_columnWeight="1"
+                android:layout_height="wrap_content" android:orientation="vertical"
+                android:gravity="center" android:padding="6dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="KP%" android:textSize="10sp" android:textColor="@color/color_on_surface_variant"/>
+                <TextView android:id="@+id/tv_bs_kp" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:textSize="18sp"
+                    android:fontFamily="sans-serif-bold" android:textColor="@color/color_on_surface"/>
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="0dp" android:layout_columnWeight="1"
+                android:layout_height="wrap_content" android:orientation="vertical"
+                android:gravity="center" android:padding="6dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="CS/min" android:textSize="10sp" android:textColor="@color/color_on_surface_variant"/>
+                <TextView android:id="@+id/tv_bs_cs" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:textSize="18sp"
+                    android:fontFamily="sans-serif-bold" android:textColor="@color/color_on_surface"/>
+            </LinearLayout>
+
+            <!-- Row 2 -->
+            <LinearLayout android:layout_width="0dp" android:layout_columnWeight="1"
+                android:layout_height="wrap_content" android:orientation="vertical"
+                android:gravity="center" android:padding="6dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="DMG%" android:textSize="10sp" android:textColor="@color/color_on_surface_variant"/>
+                <TextView android:id="@+id/tv_bs_dmg" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:textSize="18sp"
+                    android:fontFamily="sans-serif-bold" android:textColor="@color/color_on_surface"/>
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="0dp" android:layout_columnWeight="1"
+                android:layout_height="wrap_content" android:orientation="vertical"
+                android:gravity="center" android:padding="6dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="GD@15" android:textSize="10sp" android:textColor="@color/color_on_surface_variant"/>
+                <TextView android:id="@+id/tv_bs_gd15" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:textSize="18sp"
+                    android:fontFamily="sans-serif-bold" android:textColor="@color/color_on_surface"/>
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="0dp" android:layout_columnWeight="1"
+                android:layout_height="wrap_content" android:orientation="vertical"
+                android:gravity="center" android:padding="6dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="XPD@15" android:textSize="10sp" android:textColor="@color/color_on_surface_variant"/>
+                <TextView android:id="@+id/tv_bs_xpd15" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:textSize="18sp"
+                    android:fontFamily="sans-serif-bold" android:textColor="@color/color_on_surface"/>
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="0dp" android:layout_columnWeight="1"
+                android:layout_height="wrap_content" android:orientation="vertical"
+                android:gravity="center" android:padding="6dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="Vision/min" android:textSize="10sp" android:textColor="@color/color_on_surface_variant"/>
+                <TextView android:id="@+id/tv_bs_vis" android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" android:textSize="18sp"
+                    android:fontFamily="sans-serif-bold" android:textColor="@color/color_on_surface"/>
+            </LinearLayout>
+
+        </GridLayout>
+
+        <!-- Divider -->
+        <View android:layout_width="match_parent" android:layout_height="1dp"
+            android:background="@color/color_outline_variant"/>
+
+        <!-- Atributos derivados -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="ATRIBUTOS"
+            android:textSize="11sp"
+            android:fontFamily="sans-serif-medium"
+            android:textColor="@color/color_primary"
+            android:letterSpacing="0.1"
+            android:paddingHorizontal="20dp"
+            android:paddingTop="14dp"
+            android:paddingBottom="8dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="20dp"
+            android:paddingBottom="8dp">
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="24dp"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:layout_marginBottom="6dp">
+                <TextView android:layout_width="90dp" android:layout_height="wrap_content"
+                    android:text="Lane Phase" android:textSize="13sp"
+                    android:textColor="@color/color_on_surface"/>
+                <ProgressBar android:id="@+id/pb_bs_lane"
+                    style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+                    android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="10dp" android:max="100"
+                    android:progressTint="@color/attr_lane"
+                    android:progressBackgroundTint="@color/attr_track"/>
+                <TextView android:id="@+id/tv_bs_lane_val"
+                    android:layout_width="32dp" android:layout_height="wrap_content"
+                    android:gravity="end" android:textSize="13sp"
+                    android:fontFamily="sans-serif-bold"
+                    android:textColor="@color/color_on_surface"/>
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="24dp"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:layout_marginBottom="6dp">
+                <TextView android:layout_width="90dp" android:layout_height="wrap_content"
+                    android:text="Team Fight" android:textSize="13sp"
+                    android:textColor="@color/color_on_surface"/>
+                <ProgressBar android:id="@+id/pb_bs_tf"
+                    style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+                    android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="10dp" android:max="100"
+                    android:progressTint="@color/attr_tf"
+                    android:progressBackgroundTint="@color/attr_track"/>
+                <TextView android:id="@+id/tv_bs_tf_val"
+                    android:layout_width="32dp" android:layout_height="wrap_content"
+                    android:gravity="end" android:textSize="13sp"
+                    android:fontFamily="sans-serif-bold"
+                    android:textColor="@color/color_on_surface"/>
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="24dp"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:layout_marginBottom="6dp">
+                <TextView android:layout_width="90dp" android:layout_height="wrap_content"
+                    android:text="Criatividade" android:textSize="13sp"
+                    android:textColor="@color/color_on_surface"/>
+                <ProgressBar android:id="@+id/pb_bs_cria"
+                    style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+                    android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="10dp" android:max="100"
+                    android:progressTint="@color/attr_cria"
+                    android:progressBackgroundTint="@color/attr_track"/>
+                <TextView android:id="@+id/tv_bs_cria_val"
+                    android:layout_width="32dp" android:layout_height="wrap_content"
+                    android:gravity="end" android:textSize="13sp"
+                    android:fontFamily="sans-serif-bold"
+                    android:textColor="@color/color_on_surface"/>
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="24dp"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:layout_marginBottom="6dp">
+                <TextView android:layout_width="90dp" android:layout_height="wrap_content"
+                    android:text="Consistência" android:textSize="13sp"
+                    android:textColor="@color/color_on_surface"/>
+                <ProgressBar android:id="@+id/pb_bs_cons"
+                    style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+                    android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="10dp" android:max="100"
+                    android:progressTint="@color/attr_cons"
+                    android:progressBackgroundTint="@color/attr_track"/>
+                <TextView android:id="@+id/tv_bs_cons_val"
+                    android:layout_width="32dp" android:layout_height="wrap_content"
+                    android:gravity="end" android:textSize="13sp"
+                    android:fontFamily="sans-serif-bold"
+                    android:textColor="@color/color_on_surface"/>
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="match_parent" android:layout_height="24dp"
+                android:orientation="horizontal" android:gravity="center_vertical"
+                android:layout_marginBottom="6dp">
+                <TextView android:layout_width="90dp" android:layout_height="wrap_content"
+                    android:text="Clutch" android:textSize="13sp"
+                    android:textColor="@color/color_on_surface"/>
+                <ProgressBar android:id="@+id/pb_bs_clutch"
+                    style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+                    android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="10dp" android:max="100"
+                    android:progressTint="@color/attr_clutch"
+                    android:progressBackgroundTint="@color/attr_track"/>
+                <TextView android:id="@+id/tv_bs_clutch_val"
+                    android:layout_width="32dp" android:layout_height="wrap_content"
+                    android:gravity="end" android:textSize="13sp"
+                    android:fontFamily="sans-serif-bold"
+                    android:textColor="@color/color_on_surface"/>
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Divider -->
+        <View android:layout_width="match_parent" android:layout_height="1dp"
+            android:background="@color/color_outline_variant"/>
+
+        <!-- Salary -->
+        <TextView
+            android:id="@+id/tv_bs_salary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="20dp"
+            android:paddingTop="14dp"
+            android:paddingBottom="24dp"
+            android:textSize="14sp"
+            android:textColor="@color/color_on_surface_variant"/>
+
+    </LinearLayout>
+</ScrollView>
