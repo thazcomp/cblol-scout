@@ -25,13 +25,13 @@ Você controla um time. Funcionalidades:
 
 #### Fluxo
 ```
-LoginActivity → TeamSelectActivity → ManagerHubActivity (centro)
-                                          ├─ MainActivity (Elenco)
-                                          ├─ TransferMarketActivity (Mercado)
-                                          ├─ ScheduleActivity (Calendário)
-                                          │   └─ FullPickBanActivity (fullscreen grid de pick)
-                                          │       └─ MatchSimulationActivity (simulação com timeline)
-                                          └─ StandingsActivity (Classificação)
+LoginActivity  →  TeamSelectActivity  →  ManagerHubActivity (centro)
+   (auth)            (escolhe time)        ├─ MainActivity (Elenco)
+                                           ├─ TransferMarketActivity (Mercado)
+                                           ├─ ScheduleActivity (Calendário)
+                                           │   └─ FullPickBanActivity (4 fases: A→B→C→D)
+                                           │       └─ MatchSimulationActivity (timeline BO3)
+                                           └─ StandingsActivity (Classificação)
 ```
 
 #### Orçamentos por tier
@@ -127,14 +127,18 @@ CBLOLScout/
 │   │   │   ├── game/
 │   │   │   │   ├── GameEngine.kt          ← motor principal de carreira
 │   │   │   │   ├── LiveMatchEngine.kt     ← BO3 com timeline eventos
-│   │   │   │   └── Champions.kt           ← lista de campeões por role
+│   │   │   │   ├── Champions.kt           ← lista de campeões por role
+│   │   │   │   └── PickBanSequenceManager.kt ← orquestrador 4 fases (A, B, C, D)
 │   │   │   ├── ui/
 │   │   │   │   ├── LoginActivity.kt       ← tela de login (launcher)
 │   │   │   │   ├── TeamSelectActivity.kt  ← grid de seleção de time
+│   │   │   │   ├── ManagerHubActivity.kt  ← hub central da carreira
 │   │   │   │   ├── MainActivity.kt        ← jogadores do time + filtros + ordenação
+│   │   │   │   ├── TransferMarketActivity.kt  ← mercado de transferências
 │   │   │   │   ├── ScheduleActivity.kt    ← calendário e matchmaking
-│   │   │   │   ├── FullPickBanActivity.kt ← fullscreen grid de pick & ban (5 colunas)
+│   │   │   │   ├── FullPickBanActivity.kt ← fullscreen grid de pick & ban (5 colunas, 4 fases)
 │   │   │   │   ├── MatchSimulationActivity.kt ← timeline BO3 com eventos
+│   │   │   │   ├── StandingsActivity.kt   ← tabela de classificação
 │   │   │   │   ├── PlayerAdapter.kt       ← RecyclerView adapter jogadores
 │   │   │   │   └── util/
 │   │   │   │       ├── JsonLoader.kt      ← lê assets/cblol_jogadores.json
@@ -158,8 +162,9 @@ CBLOLScout/
 │   │       └── values/ (colors, strings, themes)
 │   ├── src/test/
 │   │   └── java/com/cblol/scout/
-│   │       ├── PickBanSerializationTest.kt            ← teste serialização Gson
-│   │       └── LiveMatchEngineTest.kt                 ← teste engine com overrides
+│   │       ├── PickBanSequenceManagerTest.kt     ← teste fluxo 4 fases (A→B→C→D)
+│   │       ├── PickBanSerializationTest.kt       ← teste serialização Gson
+│   │       └── LiveMatchEngineTest.kt            ← teste engine com overrides
 │   └── build.gradle
 ├── build.gradle
 ├── settings.gradle
@@ -168,22 +173,127 @@ CBLOLScout/
 
 ## Features de Pick & Ban (v3.0+)
 
+### Fluxo de Pick & Ban em 4 Fases
+O técnico controla **todas as escolhas** em sequência obrigatória:
+
+- **Fase A** — Bans do seu time (3 campeões)
+- **Fase B** — Bans do time adversário (3 campeões)  
+- **Fase C** — Picks do seu time (5 campeões)
+- **Fase D** — Picks do time adversário (5 campeões)
+
+Cada fase deve ser **100% completada** antes de avançar para a próxima.
+
+#### PickBanSequenceManager
+Classe orquestradora central que gerencia o fluxo em 4 fases:
+
+```kotlin
+class PickBanSequenceManager(
+    val userTeamId: String,        // ID do seu time
+    val userTeamName: String,      // Nome do seu time
+    val opponentTeamId: String,    // ID do time adversário
+    val opponentTeamName: String   // Nome do time adversário
+)
+```
+
+**Métodos principais:**
+- `getCurrentPhaseInfo(): Pair<String, String>` — retorna título e descrição da fase atual
+- `selectChampion(champion: String): Boolean` — seleciona um campeão (valida duplicatas e bans)
+- `deselectChampion(champion: String): Boolean` — remove seleção anterior
+- `isPhaseComplete(): Boolean` — verifica se fase atual atingiu o limite
+- `nextPhase(): Boolean` — avança para a próxima fase (retorna false se todas concluídas)
+- `getSelectedChampions(): PickBanPlan` — retorna plano completo serializado
+
+**Estados internos:**
+```
+BAN_TEAM_A (3/3) → BAN_TEAM_B (3/3) → PICK_TEAM_A (5/5) → PICK_TEAM_B (5/5) → COMPLETE
+```
+
+**Validações aplicadas:**
+- ✓ Sem repetições dentro de uma seleção
+- ✓ Bans não podem ser pickados
+- ✓ Só avança fase se atingir 100% das seleções
+- ✓ Campeon uma vez banido fica indisponível para toda a BO3
+
+**Exemplo de uso:**
+```kotlin
+val manager = PickBanSequenceManager(
+    userTeamId = "furia",
+    userTeamName = "FURIA",
+    opponentTeamId = "loud",
+    opponentTeamName = "LOUD"
+)
+
+// Fase A: Ban FURIA (3 campeões)
+manager.selectChampion("Yasuo")     // ✓
+manager.selectChampion("LeBlanc")   // ✓
+manager.selectChampion("Ahri")      // ✓ (fase completa)
+
+// Avança para Fase B
+if (manager.isPhaseComplete()) {
+    manager.nextPhase()  // Agora em BAN_TEAM_B
+}
+
+// Fase B: Ban LOUD (3 campeões)
+manager.selectChampion("Orianna")
+manager.selectChampion("Zed")
+manager.selectChampion("Akali")
+
+manager.nextPhase()  // Agora em PICK_TEAM_A
+
+// Fase C: Picks FURIA (5 campeões)
+manager.selectChampion("Gnar")
+manager.selectChampion("Lee Sin")
+manager.selectChampion("Anivia")
+manager.selectChampion("Jinx")
+manager.selectChampion("Thresh")
+
+manager.nextPhase()  // Agora em PICK_TEAM_B
+
+// Fase D: Picks LOUD (automático ou via input)
+// ... (5 picks)
+
+manager.nextPhase()  // COMPLETE
+
+// Obter resultado final
+val pickBanPlan = manager.getSelectedChampions()
+// PickBanPlan(
+//   matchId = "match_123",
+//   maps = [
+//     PickBanMap(
+//       gameNumber = 1,
+//       homeBans = ["Yasuo", "LeBlanc", "Ahri"],
+//       awayBans = ["Orianna", "Zed", "Akali"],
+//       homePicks = [PickRecord(..., "Gnar"), ..., PickRecord(..., "Thresh")],
+//       awayPicks = [PickRecord(..., ...), ...]
+//     )
+//   ]
+// )
+```
+
 ### FullPickBanActivity
-- **Grid fullscreen 5×N** com todos os campeões do jogo
-- **Seleção visual**: clique em um campeão para selecionar
+- **Grid fullscreen 5×N** com todos os campeões do jogo, organizados por role
+- **Seleção visual com feedback**:
   - Selecionado: **contorno ouro em stroke 5dp** (#FFD54F)
-  - Não-selecionado: sem contorno (fundo translúcido)
-- **Botões de navegação**: Voltar (descarta) e Confirmar (persiste)
-- **ActivityResult**: retorna campeões selecionados como comma-separated string
+  - Não-selecionado: sem contorno (fundo translúcido #102233)
+  - Banido: escurecido/desabilitado (indisponível para picks)
+- **Toolbar dinâmica** mostra fase atual (A/B/C/D) e contador `X/Y` de seleções
+- **Botões de navegação**:
+  - ◀ Voltar (descarta seleções da fase)
+  - ✓ Confirmar (persiste seleções e avança)
+- **Validação em tempo real**: desabilita botão Confirmar até atingir 100% das seleções
+- **IntentResult**: retorna PickBanPlan completo serializado em JSON
 
 ### Integração com Simulação
-- Ao iniciar uma partida do seu time (via ScheduleActivity), FullPickBanActivity é aberta
-- Após confirmar, os picks são salvos em um **PickBanPlan** persistido no Match
-- O motor de simulação (**LiveMatchEngine**) recebe o plano e:
-  - Aplica overrides (bans e picks definidos) onde disponíveis
-  - Completa automaticamente picks faltantes com campeões aleatórios
-  - Calcula bônus de composição baseado nos picks
-  - Gera timeline BO3 com eventos de Ban, Pick, matança, objetivo, etc.
+1. Ao iniciar uma partida do seu time (via ScheduleActivity), **FullPickBanActivity é aberta**
+2. Você passa pelas 4 fases (A→B→C→D) selecionando campeões
+3. Após confirmar a Fase D, os picks são salvos em um **PickBanPlan** persistido no Match
+4. Retorna para **MatchSimulationActivity** com o plano carregado
+5. O motor de simulação (**LiveMatchEngine**) recebe o plano e:
+   - Aplica **overrides** (bans e picks definidos) onde disponíveis
+   - Completa automaticamente picks faltantes com campeões aleatórios
+   - Calcula **bônus de composição** baseado nos picks (sinergia de comp)
+   - Gera **timeline BO3** com eventos de Ban, Pick, matança, objetivo, etc.
+   - Aplicar multiplicadores: se compo forte → +2.5% winrate; se compo fraca → -2.5%
 
 ### Estrutura de Dados
 ```kotlin
