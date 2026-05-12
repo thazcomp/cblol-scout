@@ -14,7 +14,8 @@ Esses dados continuam acessíveis dentro do modo carreira (tela de Elenco e Merc
 Você controla um time. Funcionalidades:
 
 - **Calendário automático** — round-robin duplo (14 rodadas × 4 jogos = 56 partidas) começando em 28/03/2026
-- **Simulador de partidas BO3** — vencedor decidido por força do elenco (média do overall dos titulares) + bônus de mando + ruído
+- **Pick & Ban fullscreen** — ao iniciar uma partida do seu time, abre uma tela fullscreen com grid 5×N de campeões. Clique para selecionar (destaque com **contorno ouro de 5dp**). Os picks são persistidos e usados pelo motor de simulação para calcular bônus de composição
+- **Simulador de partidas BO3** — vencedor decidido por força do elenco (média do overall dos titulares) + bônus de mando + bônus de composição (picks) + ruído
 - **Gestão de elenco** — promova/rebaixe titular ↔ reserva, venda jogadores, renegocie contratos
 - **Mercado de transferências** — compre jogadores de outros times pagando o preço calculado a partir do overall + salário
 - **Economia** — orçamento inicial por tier, patrocínio semanal automático, folha mensal de salários debitada, premiação por vitória/mapas vencidos
@@ -28,6 +29,8 @@ LoginActivity → TeamSelectActivity → ManagerHubActivity (centro)
                                           ├─ MainActivity (Elenco)
                                           ├─ TransferMarketActivity (Mercado)
                                           ├─ ScheduleActivity (Calendário)
+                                          │   └─ FullPickBanActivity (fullscreen grid de pick)
+                                          │       └─ MatchSimulationActivity (simulação com timeline)
                                           └─ StandingsActivity (Classificação)
 ```
 
@@ -119,29 +122,89 @@ CBLOLScout/
 │   │   │   └── cblol_jogadores.json       ← dataset completo dos 40 jogadores
 │   │   ├── java/com/cblol/scout/
 │   │   │   ├── data/
-│   │   │   │   └── Models.kt              ← Player, Team, SnapshotData, etc.
+│   │   │   │   ├── Models.kt              ← Player, Team, SnapshotData, etc.
+│   │   │   │   └── PickBan.kt             ← PickRecord, PickBanMap, PickBanPlan
+│   │   │   ├── game/
+│   │   │   │   ├── GameEngine.kt          ← motor principal de carreira
+│   │   │   │   ├── LiveMatchEngine.kt     ← BO3 com timeline eventos
+│   │   │   │   └── Champions.kt           ← lista de campeões por role
 │   │   │   ├── ui/
 │   │   │   │   ├── LoginActivity.kt       ← tela de login (launcher)
 │   │   │   │   ├── TeamSelectActivity.kt  ← grid de seleção de time
 │   │   │   │   ├── MainActivity.kt        ← jogadores do time + filtros + ordenação
-│   │   │   │   └── PlayerAdapter.kt       ← RecyclerView adapter
-│   │   │   └── util/
-│   │   │       ├── JsonLoader.kt          ← lê assets/cblol_jogadores.json
-│   │   │       └── TeamColors.kt          ← cores de time/role e bandeiras
+│   │   │   │   ├── ScheduleActivity.kt    ← calendário e matchmaking
+│   │   │   │   ├── FullPickBanActivity.kt ← fullscreen grid de pick & ban (5 colunas)
+│   │   │   │   ├── MatchSimulationActivity.kt ← timeline BO3 com eventos
+│   │   │   │   ├── PlayerAdapter.kt       ← RecyclerView adapter jogadores
+│   │   │   │   └── util/
+│   │   │   │       ├── JsonLoader.kt      ← lê assets/cblol_jogadores.json
+│   │   │   │       └── TeamColors.kt      ← cores de time/role e bandeiras
 │   │   └── res/
 │   │       ├── layout/
 │   │       │   ├── activity_login.xml
 │   │       │   ├── activity_team_select.xml
 │   │       │   ├── activity_main.xml
+│   │       │   ├── activity_pickban_fullscreen.xml    ← grid fullscreen com toolbar
+│   │       │   ├── activity_match_simulation.xml      ← timeline BO3
+│   │       │   ├── item_champion_card.xml             ← card 140×160 com contorno
 │   │       │   ├── item_team_card.xml
 │   │       │   ├── item_player.xml
+│   │       │   ├── item_match_feed.xml                ← evento na timeline
 │   │       │   └── bottom_sheet_player.xml
+│   │       ├── drawable/
+│   │       │   ├── champ_chip_bg.xml                  ← background chip (#102233)
+│   │       │   └── champ_selected_border.xml          ← stroke ouro 5dp (#FFD54F)
 │   │       ├── menu/menu_main.xml
 │   │       └── values/ (colors, strings, themes)
+│   ├── src/test/
+│   │   └── java/com/cblol/scout/
+│   │       ├── PickBanSerializationTest.kt            ← teste serialização Gson
+│   │       └── LiveMatchEngineTest.kt                 ← teste engine com overrides
 │   └── build.gradle
 ├── build.gradle
 ├── settings.gradle
 └── README.md
+```
+
+## Features de Pick & Ban (v3.0+)
+
+### FullPickBanActivity
+- **Grid fullscreen 5×N** com todos os campeões do jogo
+- **Seleção visual**: clique em um campeão para selecionar
+  - Selecionado: **contorno ouro em stroke 5dp** (#FFD54F)
+  - Não-selecionado: sem contorno (fundo translúcido)
+- **Botões de navegação**: Voltar (descarta) e Confirmar (persiste)
+- **ActivityResult**: retorna campeões selecionados como comma-separated string
+
+### Integração com Simulação
+- Ao iniciar uma partida do seu time (via ScheduleActivity), FullPickBanActivity é aberta
+- Após confirmar, os picks são salvos em um **PickBanPlan** persistido no Match
+- O motor de simulação (**LiveMatchEngine**) recebe o plano e:
+  - Aplica overrides (bans e picks definidos) onde disponíveis
+  - Completa automaticamente picks faltantes com campeões aleatórios
+  - Calcula bônus de composição baseado nos picks
+  - Gera timeline BO3 com eventos de Ban, Pick, matança, objetivo, etc.
+
+### Estrutura de Dados
+```kotlin
+data class PickRecord(
+    val playerId: String?,    // ID do jogador (se disponível)
+    val playerName: String?,  // Nome do jogador (se disponível)
+    val champion: String      // Nome do campeão
+)
+
+data class PickBanMap(
+    val gameNumber: Int,
+    val homeBans: List<String> = emptyList(),
+    val awayBans: List<String> = emptyList(),
+    val homePicks: List<PickRecord> = emptyList(),
+    val awayPicks: List<PickRecord> = emptyList()
+)
+
+data class PickBanPlan(
+    val matchId: String,
+    val maps: List<PickBanMap>
+)
 ```
 
 ## Como abrir no Android Studio

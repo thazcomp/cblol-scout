@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    item_champion_pick.xml
+    Card individual na grade de pick & ban.
+
+    Camadas (de baixo para cima):
+     1. Fundo escuro (FrameLayout raiz)
+     2. ImageView da skin/ícone do campeão
+     3. Gradiente inferior (para legibilidade do nome)
+     4. TextView com nome curto
+     5. view_selection_border — FrameLayout com background drawable de borda
+     6. view_banned_overlay — overlay semi-transparente escuro com ícone X
+-->
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:foreground="?attr/selectableItemBackground">
+
+    <!-- Proporção quadrada via padding-bottom hack não funciona bem em RecyclerView;
+         usamos uma altura fixa via GridLayoutManager spanSizeLookup.
+         O tamanho real é controlado pelo GridLayoutManager (7 colunas). -->
+
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:cardElevation="0dp"
+        app:cardCornerRadius="4dp"
+        app:cardBackgroundColor="@color/champion_slot_bg"
+        xmlns:app="http://schemas.android.com/apk/res-auto">
+
+        <!-- Imagem do campeão -->
+        <ImageView
+            android:id="@+id/iv_champ_icon"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:contentDescription="@string/champ_icon_desc" />
+
+        <!-- Gradiente de rodapé para legibilidade -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="28dp"
+            android:layout_gravity="bottom"
+            android:background="@drawable/gradient_champion_name" />
+
+        <!-- Nome curto -->
+        <TextView
+            android:id="@+id/tv_champ_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:paddingStart="2dp"
+            android:paddingEnd="2dp"
+            android:paddingBottom="2dp"
+            android:textSize="8sp"
+            android:textColor="@android:color/white"
+            android:gravity="center_horizontal"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:text="Campeão" />
+
+        <!-- Overlay de banido/usado -->
+        <FrameLayout
+            android:id="@+id/view_banned_overlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#CC0A0A14"
+            android:visibility="gone"
+            android:gravity="center">
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_banned_x"
+                android:tint="#AAFFFFFF" />
+        </FrameLayout>
+
+    </androidx.cardview.widget.CardView>
+
+    <!-- Borda de seleção (sobreposta ao CardView) -->
+    <View
+        android:id="@+id/view_selection_border"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/border_champion_selected"
+        android:visibility="invisible" />
+
+</FrameLayout>

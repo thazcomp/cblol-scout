@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="#001220">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+        <Button
+            android:id="@+id/btn_pb_prev_map"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Anterior" />
+        <TextView
+            android:id="@+id/tv_pb_map"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="Mapa 1/3"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:gravity="center" />
+        <Button
+            android:id="@+id/btn_pb_next_map"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Próximo" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tv_pb_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Pick &amp; Ban - Mapa 1"
+        android:textColor="#FFFFFF"
+        android:textSize="18sp"
+        android:paddingTop="8dp" />
+
+    <TextView
+        android:id="@+id/tv_pb_hint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Clique nos campeões para banir / pickar para o seu time"
+        android:textColor="#A9A9A9"
+        android:textSize="13sp"
+        android:paddingBottom="8dp" />
+
+    <!-- Role filter buttons -->
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
+        <LinearLayout
+            android:id="@+id/container_roles"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" />
+    </HorizontalScrollView>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+        <com.google.android.flexbox.FlexboxLayout
+            android:id="@+id/container_champs"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:flexWrap="wrap"
+            app:alignItems="flex_start"
+            android:paddingTop="4dp" />
+    </ScrollView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end">
+        <Button
+            android:id="@+id/btn_pb_cancel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Cancelar" />
+        <Button
+            android:id="@+id/btn_pb_confirm"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Confirmar"
+            android:layout_marginStart="8dp" />
+    </LinearLayout>
+</LinearLayout>

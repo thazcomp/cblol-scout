@@ -15,6 +15,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.cblol.scout.R
 import com.cblol.scout.data.LogEntry
 import com.cblol.scout.data.Match
+import com.cblol.scout.data.SeriesState
+import com.cblol.scout.data.PickBanPlan
 import com.cblol.scout.databinding.ActivityManagerHubBinding
 import com.cblol.scout.game.AdvanceReport
 import com.cblol.scout.game.GameEngine
@@ -37,6 +39,12 @@ class ManagerHubActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityManagerHubBinding
     private val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+
+    // Estado de série em andamento (pick & ban lançado daqui)
+    private var pendingMatchId: String = ""
+    private var pendingMapNumber: Int = 1
+    private var pendingPlayerTeamId: String = ""
+    private var pendingOpponentTeamId: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -144,11 +152,41 @@ class ManagerHubActivity : AppCompatActivity() {
         if (days > 0) advanceDays(days)
     }
 
-    /** Abre o simulador ao vivo da próxima partida do meu time. */
+    /** Abre pick & ban (se for partida do meu time) ou simulador direto. */
     private fun openLiveSimForNextMatch() {
         val next = GameEngine.nextMatchForManager() ?: return
-        startActivity(android.content.Intent(this, MatchSimulationActivity::class.java)
-            .putExtra(MatchSimulationActivity.EXTRA_MATCH_ID, next.id))
+        val gs   = GameRepository.current()
+        val snap = GameRepository.snapshot(applicationContext)
+        val homeName = snap.times.find { it.id == next.homeTeamId }?.nome ?: next.homeTeamId
+        val awayName = snap.times.find { it.id == next.awayTeamId }?.nome ?: next.awayTeamId
+        val opponentId = if (next.homeTeamId == gs.managerTeamId) next.awayTeamId else next.homeTeamId
+
+        AlertDialog.Builder(this)
+            .setTitle("$homeName vs $awayName")
+            .setMessage("Deseja fazer o pick & ban antes da partida?")
+            .setPositiveButton("Fazer Pick & Ban") { _, _ ->
+                pendingMatchId        = next.id
+                pendingMapNumber      = 1
+                pendingPlayerTeamId   = gs.managerTeamId
+                pendingOpponentTeamId = opponentId
+                @Suppress("DEPRECATION")
+                startActivityForResult(
+                    Intent(this, PickBanActivity::class.java).apply {
+                        putExtra("player_team_id",   gs.managerTeamId)
+                        putExtra("opponent_team_id", opponentId)
+                        putExtra("match_id",         next.id)
+                        putExtra("map_number",       1)
+                    },
+                    PickBanActivity.REQUEST_PICK_BAN
+                )
+            }
+            .setNegativeButton("Simular direto") { _, _ ->
+                startActivity(
+                    Intent(this, MatchSimulationActivity::class.java)
+                        .putExtra(MatchSimulationActivity.EXTRA_MATCH_ID, next.id)
+                )
+            }
+            .show()
     }
 
     private fun showAdvanceReport(r: AdvanceReport) {
@@ -179,6 +217,112 @@ class ManagerHubActivity : AppCompatActivity() {
             }
             .setNegativeButton("Cancelar", null)
             .show()
+    }
+
+    @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != PickBanActivity.REQUEST_PICK_BAN || resultCode != RESULT_OK || data == null) return
+
+        val bluePicks = data.getStringArrayListExtra("blue_picks") ?: arrayListOf()
+        val redPicks  = data.getStringArrayListExtra("red_picks")  ?: arrayListOf()
+        val blueBans  = data.getStringArrayListExtra("blue_bans")  ?: arrayListOf()
+        val redBans   = data.getStringArrayListExtra("red_bans")   ?: arrayListOf()
+        val mapNum    = data.getIntExtra("map_number", pendingMapNumber)
+
+        // Salva o pick & ban no Match
+        val gs    = GameRepository.current()
+        val match = gs.matches.find { it.id == pendingMatchId }
+        match?.pickBanPlan = PickBanPlan(
+            mapNumber = mapNum,
+            bluePicks = bluePicks.toList(),
+            redPicks  = redPicks.toList(),
+            blueBans  = blueBans.toList(),
+            redBans   = redBans.toList()
+        )
+
+        // Simula o mapa
+        val playerIsBlue  = (mapNum % 2 == 1)
+        val playerPicks   = if (playerIsBlue) bluePicks else redPicks
+        val opponentPicks = if (playerIsBlue) redPicks  else bluePicks
+        val mapWinner     = simulateMapWithPicks(mapNum, playerPicks, opponentPicks, playerIsBlue)
+
+        val prev    = gs.seriesState[pendingMatchId] ?: SeriesState()
+        val updated = prev.recordMap(mapWinner == pendingPlayerTeamId)
+        gs.seriesState[pendingMatchId] = updated
+
+        val snap         = GameRepository.snapshot(applicationContext)
+        val playerName   = snap.times.find { it.id == pendingPlayerTeamId }?.nome  ?: "Você"
+        val opponentName = snap.times.find { it.id == pendingOpponentTeamId }?.nome ?: "Oponente"
+        val pw = updated.playerWins
+        val ow = updated.opponentWins
+
+        when {
+            updated.isFinished -> {
+                finalizeMatch(pendingMatchId, pw, ow)
+                AlertDialog.Builder(this)
+                    .setTitle(if (pw > ow) "🏆 Vitória!" else "💔 Derrota")
+                    .setMessage("$playerName  $pw — $ow  $opponentName")
+                    .setPositiveButton("OK", null)
+                    .show()
+            }
+            else -> {
+                val msg = if (mapWinner == pendingPlayerTeamId)
+                    "✅ Mapa $mapNum: você venceu!"
+                else
+                    "❌ Mapa $mapNum: oponente venceu."
+                AlertDialog.Builder(this)
+                    .setTitle("Resultado — Mapa $mapNum  ($pw–$ow)")
+                    .setMessage("$msg\n\nContinuar para o Mapa ${mapNum + 1}?")
+                    .setPositiveButton("Fazer Pick & Ban") { _, _ ->
+                        pendingMapNumber = mapNum + 1
+                        @Suppress("DEPRECATION")
+                        startActivityForResult(
+                            Intent(this, PickBanActivity::class.java).apply {
+                                putExtra("player_team_id",   pendingPlayerTeamId)
+                                putExtra("opponent_team_id", pendingOpponentTeamId)
+                                putExtra("match_id",         pendingMatchId)
+                                putExtra("map_number",       mapNum + 1)
+                            },
+                            PickBanActivity.REQUEST_PICK_BAN
+                        )
+                    }
+                    .setNegativeButton("Simular restante") { _, _ ->
+                        startActivity(
+                            Intent(this, MatchSimulationActivity::class.java)
+                                .putExtra(MatchSimulationActivity.EXTRA_MATCH_ID, pendingMatchId)
+                        )
+                    }
+                    .show()
+            }
+        }
+    }
+
+    private fun simulateMapWithPicks(
+        mapNumber: Int,
+        playerPicks: List<String>,
+        opponentPicks: List<String>,
+        playerIsBlue: Boolean
+    ): String {
+        fun avgOverall(teamId: String): Double {
+            val roster = GameRepository.rosterOf(applicationContext, teamId).filter { it.titular }
+            return if (roster.isEmpty()) 75.0 else roster.map { it.overallRating().toDouble() }.average()
+        }
+        val playerStr   = avgOverall(pendingPlayerTeamId)   + playerPicks.size.coerceAtMost(5)   + if (playerIsBlue)  2.0 else 0.0
+        val opponentStr = avgOverall(pendingOpponentTeamId) + opponentPicks.size.coerceAtMost(5) + if (!playerIsBlue) 2.0 else 0.0
+        return if (playerStr + (-8..8).random() > opponentStr) pendingPlayerTeamId else pendingOpponentTeamId
+    }
+
+    private fun finalizeMatch(matchId: String, playerScore: Int, opponentScore: Int) {
+        val gs    = GameRepository.current()
+        val match = gs.matches.find { it.id == matchId } ?: return
+        val playerIsHome = match.homeTeamId == pendingPlayerTeamId
+        match.homeScore  = if (playerIsHome) playerScore   else opponentScore
+        match.awayScore  = if (playerIsHome) opponentScore else playerScore
+        match.played     = true
+        gs.seriesState.remove(matchId)
+        GameRepository.save(applicationContext)
+        refreshHud()
     }
 
     /** Adapter inline pro log de eventos. */

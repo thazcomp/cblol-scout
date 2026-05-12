@@ -46,4 +46,21 @@
         <item name="cornerSizeBottomLeft">0dp</item>
         <item name="cornerSizeBottomRight">0dp</item>
     </style>
+
+    <style name="BanSlot">
+        <item name="android:layout_width">36dp</item>
+        <item name="android:layout_height">36dp</item>
+        <item name="android:layout_marginEnd">2dp</item>
+        <item name="android:scaleType">centerCrop</item>
+        <item name="android:background">@color/champion_slot_bg</item>
+    </style>
+
+    <style name="BanSlot.Blue">
+        <item name="android:background">@drawable/bg_ban_slot_blue</item>
+    </style>
+
+    <style name="BanSlot.Red">
+        <item name="android:background">@drawable/bg_ban_slot_red</item>
+    </style>
+
 </resources>

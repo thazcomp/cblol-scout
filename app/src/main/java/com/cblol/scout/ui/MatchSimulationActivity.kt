@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -134,7 +135,7 @@ class MatchSimulationActivity : AppCompatActivity() {
     }
 
     private fun startSimulation() {
-        binding.tvPhase.text = "Gerando timeline…"
+        binding.tvPhase.text = getString(R.string.generating_timeline)
         lifecycleScope.launch {
             val series = withContext(Dispatchers.Default) {
                 LiveMatchEngine.generateSeries(applicationContext, match)
@@ -143,6 +144,8 @@ class MatchSimulationActivity : AppCompatActivity() {
             applyResult(series.homeMaps, series.awayMaps)
         }
     }
+
+
 
     private suspend fun playEvents(events: List<MatchEvent>) {
         for (e in events) {
@@ -406,5 +409,11 @@ class MatchSimulationActivity : AppCompatActivity() {
             h.tvText.text = e.text
             h.viewBar.setBackgroundColor(e.accentColor)
         }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        // Pick & ban agora é tratado pela ScheduleActivity via PickBanActivity.
+        // MatchSimulationActivity apenas simula a partida sem pick & ban próprio.
     }
 }

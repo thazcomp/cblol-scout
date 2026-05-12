@@ -48,6 +48,13 @@
             android:exported="false"
             android:parentActivityName=".ui.ManagerHubActivity"/>
 
+        <activity
+            android:name=".ui.PickBanActivity"
+            android:screenOrientation="landscape"
+            android:exported="false"
+            android:windowSoftInputMode="adjustPan" />
+
+
     </application>
 
 </manifest>

@@ -5,6 +5,7 @@ import com.cblol.scout.data.Match
 import com.cblol.scout.data.MatchEvent
 import com.cblol.scout.data.Player
 import com.cblol.scout.data.Side
+import com.cblol.scout.data.PickBanPlan
 import kotlin.math.absoluteValue
 import kotlin.random.Random
 
@@ -24,6 +25,8 @@ object LiveMatchEngine {
 
     /**
      * Gera a timeline completa de um BO3 e devolve eventos + placar final (mapas).
+     * Se for fornecido um PickBanPlan, ele será respeitado (quando aplicável) e
+     * o motor completará automaticamente escolhas faltantes.
      */
     fun generateSeries(context: Context, match: Match): SeriesResult {
         val homeRoster = startersOrTopFive(GameRepository.rosterOf(context, match.homeTeamId))
@@ -34,11 +37,15 @@ object LiveMatchEngine {
         var awayMaps = 0
         var gameNumber = 1
 
+        // Usa o PickBanPlan salvo no match (se houver) para o mapa correspondente
         while (homeMaps < 2 && awayMaps < 2) {
             val homeStr = teamStrength(homeRoster) + 4 // bônus de mando do split
             val awayStr = teamStrength(awayRoster)
+            // O plano salvo no match refere-se ao último mapa com pick & ban feito pelo jogador.
+            // Para os demais mapas o motor gera picks automaticamente.
+            val plan = if (match.pickBanPlan?.mapNumber == gameNumber) match.pickBanPlan else null
             val (gameEvents, homeWonGame, finalKills, duration) =
-                generateGame(gameNumber, homeRoster, awayRoster, homeStr, awayStr)
+                generateGame(gameNumber, homeRoster, awayRoster, homeStr, awayStr, plan)
             events.addAll(gameEvents)
             events.add(
                 MatchEvent.GameEnd(
@@ -87,13 +94,14 @@ object LiveMatchEngine {
         homeRoster: List<Player>,
         awayRoster: List<Player>,
         homeStr: Int,
-        awayStr: Int
+        awayStr: Int,
+        plan: PickBanPlan? = null
     ): GameOutcome {
         val events = mutableListOf<MatchEvent>()
 
         events.add(MatchEvent.GameStart(gameNumber))
         events.add(MatchEvent.PhaseAnnouncement("Mapa $gameNumber · Pick & Ban"))
-        events.addAll(generatePickBan(gameNumber, homeRoster, awayRoster))
+        events.addAll(generatePickBan(gameNumber, homeRoster, awayRoster, plan))
 
         events.add(MatchEvent.PhaseAnnouncement("Início do mapa $gameNumber"))
 
@@ -215,30 +223,39 @@ object LiveMatchEngine {
     }
 
     /** Pick & Ban: 5 bans por lado intercalados, depois 5 picks por lado intercalados (snake). */
-    private fun generatePickBan(
+    internal fun generatePickBan(
         gameNumber: Int,
         homeRoster: List<Player>,
-        awayRoster: List<Player>
+        awayRoster: List<Player>,
+        plan: PickBanPlan? = null
     ): List<MatchEvent> {
         val out = mutableListOf<MatchEvent>()
         val used = mutableSetOf<String>()
 
-        fun nextBan(side: Side): MatchEvent.Ban {
+        // Bans: usa os do plano se disponíveis (blueBans = home, redBans = away), senão random
+        fun banFromPlanOrRandom(side: Side, index: Int): MatchEvent.Ban {
+            val candidate = when (side) {
+                Side.HOME -> plan?.blueBans?.getOrNull(index)
+                Side.AWAY -> plan?.redBans?.getOrNull(index)
+            }
+            if (candidate != null && candidate !in used) {
+                used += candidate
+                return MatchEvent.Ban(gameNumber, side, candidate)
+            }
             val pool = (Champions.MID + Champions.JNG + Champions.ADC + Champions.TOP)
                 .filter { it !in used }
-            val champ = pool.random()
+            val champ = pool.randomOrNull() ?: Champions.ALL_FLAT.first { it !in used }
             used += champ
             return MatchEvent.Ban(gameNumber, side, champ)
         }
 
         // 5 bans alternados
-        repeat(5) {
-            out += nextBan(Side.HOME)
-            out += nextBan(Side.AWAY)
+        repeat(5) { idx ->
+            out += banFromPlanOrRandom(Side.HOME, idx)
+            out += banFromPlanOrRandom(Side.AWAY, idx)
         }
 
-        // Picks: ordem snake do CBLOL: B1 R1 R2 B2 B3 R3 R4 B4 B5 R5
-        // (B = blue/home, R = red/away)
+        // Picks: ordem snake CBLOL: B1 R1 R2 B2 B3 R3 R4 B4 B5 R5
         val pickOrder = listOf(
             Side.HOME, Side.AWAY, Side.AWAY, Side.HOME, Side.HOME,
             Side.AWAY, Side.AWAY, Side.HOME, Side.HOME, Side.AWAY
@@ -246,14 +263,26 @@ object LiveMatchEngine {
         val homePicked = mutableListOf<Player>()
         val awayPicked = mutableListOf<Player>()
 
-        pickOrder.forEach { side ->
+        pickOrder.forEachIndexed { _, side ->
             val pickedList = if (side == Side.HOME) homePicked else awayPicked
             val rosterSide = if (side == Side.HOME) homeRoster else awayRoster
             val nextPlayer = rosterSide.firstOrNull { p -> pickedList.none { it.id == p.id } }
-                ?: return@forEach
-            val pool = Champions.forRole(nextPlayer.role).filter { it !in used }
-            val champ = pool.randomOrNull() ?: Champions.ALL_FLAT.first { it !in used }
-            used += champ
+                ?: return@forEachIndexed
+
+            // Usa pick do plano se disponível (bluePicks = home, redPicks = away)
+            val planPick = when (side) {
+                Side.HOME -> plan?.bluePicks?.getOrNull(pickedList.size)
+                Side.AWAY -> plan?.redPicks?.getOrNull(pickedList.size)
+            }
+            val champ = if (planPick != null && planPick !in used) {
+                used += planPick
+                planPick
+            } else {
+                val pool = Champions.forRole(nextPlayer.role).filter { it !in used }
+                val c = pool.randomOrNull() ?: Champions.ALL_FLAT.first { it !in used }
+                used += c
+                c
+            }
             pickedList += nextPlayer
             out += MatchEvent.Pick(
                 gameNumber = gameNumber,

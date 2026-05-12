@@ -49,4 +49,18 @@
     <color name="attr_cons">#00B894</color>
     <color name="attr_clutch">#FFB800</color>
     <color name="attr_track">#1E2D40</color>
+    <color name="pick_ban_bg">#0A0A14</color>
+    <color name="pick_ban_topbar">#12121E</color>
+    <color name="pick_ban_phase_bg">#1A1A2A</color>
+    <color name="pick_ban_center_bg">#0D0D1A</color>
+    <color name="pick_ban_blue_side_bg">#0A0F1F</color>
+    <color name="pick_ban_red_side_bg">#1F0A0A</color>
+
+    <color name="blue_side_accent">#4A9EFF</color>
+    <color name="red_side_accent">#FF5252</color>
+    <color name="champion_gold">#C9AA71</color>
+    <color name="champion_slot_bg">#1E1E2E</color>
+    <color name="champion_slot_filled">#2A2A3E</color>
+    <color name="pick_slot_empty_bg">#15151F</color>
+
 </resources>

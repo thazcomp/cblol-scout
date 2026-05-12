@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    view_pick_slot.xml
+    Slot de pick lateral (5 por time).
+    Usado pelo PickSlotView como inflate.
+-->
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/pick_slot_empty_bg">
+
+    <!-- Imagem de splash do campeão (invisível até ser preenchido) -->
+    <ImageView
+        android:id="@+id/iv_pick_champion"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:visibility="invisible"
+        android:contentDescription="@string/pick_slot_desc" />
+
+    <!-- Gradiente para o nome -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="32dp"
+        android:layout_gravity="bottom"
+        android:background="@drawable/gradient_pick_slot_name" />
+
+    <!-- Role do slot quando preenchido -->
+    <TextView
+        android:id="@+id/tv_pick_role"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:paddingBottom="3dp"
+        android:gravity="center"
+        android:textSize="9sp"
+        android:textColor="#DDFFFFFF"
+        android:textStyle="bold"
+        android:letterSpacing="0.1"
+        android:text="" />
+
+    <!-- Texto do slot vazio -->
+    <TextView
+        android:id="@+id/tv_pick_empty"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:textSize="9sp"
+        android:textColor="#44FFFFFF"
+        android:text="?" />
+
+    <!-- Borda de slot ativo (animação de pulso) -->
+    <View
+        android:id="@+id/view_pick_active_border"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/border_pick_slot_active"
+        android:visibility="invisible" />
+
+</FrameLayout>

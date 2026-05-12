@@ -1,0 +1,403 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    activity_pick_ban.xml
+    Layout da tela de Pick & Ban estilo LoL esports.
+
+    Estrutura visual:
+    ┌──────────────────────────────────────────────────────────────────┐
+    │  [BANS AZUL ×5]          Mapa N / Timer          [BANS VERM. ×5]│
+    │                                                                  │
+    │  [PICK 1]                 PHASE LABEL             [PICK 1]       │
+    │  [PICK 2]    ┌──────────────────────────────┐    [PICK 2]       │
+    │  [PICK 3]    │   GRID DE CAMPEÕES (7 cols)  │    [PICK 3]       │
+    │  [PICK 4]    │   + filtros de role + search │    [PICK 4]       │
+    │  [PICK 5]    └──────────────────────────────┘    [PICK 5]       │
+    │                    [CONFIRMAR] [SKIP IA]                         │
+    └──────────────────────────────────────────────────────────────────┘
+-->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/pick_ban_bg"
+    android:fitsSystemWindows="true">
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         FAIXA DO TOPO — bans + timer
+    ══════════════════════════════════════════════════════════════════ -->
+    <LinearLayout
+        android:id="@+id/ll_top_bar"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:background="@color/pick_ban_topbar"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- Bans lado azul (5 slots pequenos) -->
+        <LinearLayout
+            android:id="@+id/ll_blue_bans"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:orientation="horizontal"
+            android:gravity="start|center_vertical"
+            android:paddingStart="8dp"
+            android:paddingEnd="4dp">
+
+            <ImageView android:id="@+id/iv_blue_ban_1"
+                style="@style/BanSlot.Blue" />
+            <ImageView android:id="@+id/iv_blue_ban_2"
+                style="@style/BanSlot.Blue" />
+            <ImageView android:id="@+id/iv_blue_ban_3"
+                style="@style/BanSlot.Blue" />
+            <ImageView android:id="@+id/iv_blue_ban_4"
+                style="@style/BanSlot.Blue" />
+            <ImageView android:id="@+id/iv_blue_ban_5"
+                style="@style/BanSlot.Blue" />
+        </LinearLayout>
+
+        <!-- Centro: nome dos times + mapa + timer -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1.5"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center">
+
+                <TextView
+                    android:id="@+id/tv_blue_team_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/blue_side_accent"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:text="AZUL" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=" vs "
+                    android:textColor="#99FFFFFF"
+                    android:textSize="10sp" />
+
+                <TextView
+                    android:id="@+id/tv_red_team_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/red_side_accent"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:text="VERM." />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center">
+
+                <TextView
+                    android:id="@+id/tv_map_number"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Mapa 1"
+                    android:textColor="#AAFFFFFF"
+                    android:textSize="10sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="  ·  "
+                    android:textColor="#55FFFFFF"
+                    android:textSize="10sp" />
+
+                <TextView
+                    android:id="@+id/tv_timer"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="30"
+                    android:textColor="@android:color/white"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:fontFamily="monospace" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Bans lado vermelho (5 slots pequenos) -->
+        <LinearLayout
+            android:id="@+id/ll_red_bans"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="2"
+            android:orientation="horizontal"
+            android:gravity="end|center_vertical"
+            android:paddingStart="4dp"
+            android:paddingEnd="8dp">
+
+            <ImageView android:id="@+id/iv_red_ban_1"
+                style="@style/BanSlot.Red" />
+            <ImageView android:id="@+id/iv_red_ban_2"
+                style="@style/BanSlot.Red" />
+            <ImageView android:id="@+id/iv_red_ban_3"
+                style="@style/BanSlot.Red" />
+            <ImageView android:id="@+id/iv_red_ban_4"
+                style="@style/BanSlot.Red" />
+            <ImageView android:id="@+id/iv_red_ban_5"
+                style="@style/BanSlot.Red" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         LABEL DE FASE
+    ══════════════════════════════════════════════════════════════════ -->
+    <TextView
+        android:id="@+id/tv_phase_label"
+        android:layout_width="0dp"
+        android:layout_height="36dp"
+        android:gravity="center"
+        android:text="🔵 BANINDO"
+        android:textColor="@android:color/white"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.1"
+        android:background="@color/pick_ban_phase_bg"
+        app:layout_constraintTop_toBottomOf="@id/ll_top_bar"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         INDICADORES DE TURNO (linhas coloridas sob o label)
+    ══════════════════════════════════════════════════════════════════ -->
+    <View
+        android:id="@+id/view_blue_turn_indicator"
+        android:layout_width="0dp"
+        android:layout_height="3dp"
+        android:background="@color/blue_side_accent"
+        android:visibility="visible"
+        app:layout_constraintTop_toBottomOf="@id/tv_phase_label"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/view_red_turn_indicator" />
+
+    <View
+        android:id="@+id/view_red_turn_indicator"
+        android:layout_width="0dp"
+        android:layout_height="3dp"
+        android:background="@color/red_side_accent"
+        android:visibility="invisible"
+        app:layout_constraintTop_toBottomOf="@id/tv_phase_label"
+        app:layout_constraintStart_toEndOf="@id/view_blue_turn_indicator"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         CORPO PRINCIPAL: picks laterais + grade central
+    ══════════════════════════════════════════════════════════════════ -->
+    <LinearLayout
+        android:id="@+id/ll_body"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:orientation="horizontal"
+        app:layout_constraintTop_toBottomOf="@id/view_blue_turn_indicator"
+        app:layout_constraintBottom_toTopOf="@id/ll_bottom_actions"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <!-- ── PICKS LADO AZUL (5 slots verticais) ── -->
+        <LinearLayout
+            android:id="@+id/ll_blue_picks"
+            android:layout_width="80dp"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:background="@color/pick_ban_blue_side_bg"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:paddingStart="4dp"
+            android:paddingEnd="2dp">
+
+            <com.cblol.scout.ui.PickSlotView
+                android:id="@+id/psv_blue_1"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginBottom="2dp" />
+
+            <com.cblol.scout.ui.PickSlotView
+                android:id="@+id/psv_blue_2"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginBottom="2dp" />
+
+            <com.cblol.scout.ui.PickSlotView
+                android:id="@+id/psv_blue_3"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginBottom="2dp" />
+
+            <com.cblol.scout.ui.PickSlotView
+                android:id="@+id/psv_blue_4"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginBottom="2dp" />
+
+            <com.cblol.scout.ui.PickSlotView
+                android:id="@+id/psv_blue_5"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+        </LinearLayout>
+
+        <!-- ── ÁREA CENTRAL: filtros + grade de campeões ── -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:background="@color/pick_ban_center_bg"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp"
+            android:paddingTop="6dp">
+
+            <!-- Search -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:hint="@string/search_champion"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/et_search_champion"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:textSize="13sp"
+                    android:inputType="text"
+                    android:imeOptions="actionSearch" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Role filters -->
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="36dp"
+                android:scrollbars="none"
+                android:layout_marginTop="4dp">
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/cg_role_filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    app:singleSelection="true"
+                    app:selectionRequired="true" />
+            </HorizontalScrollView>
+
+            <!-- Grade de campeões -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_champions"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:clipToPadding="false"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp" />
+        </LinearLayout>
+
+        <!-- ── PICKS LADO VERMELHO (5 slots verticais) ── -->
+        <LinearLayout
+            android:id="@+id/ll_red_picks"
+            android:layout_width="80dp"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:background="@color/pick_ban_red_side_bg"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:paddingStart="2dp"
+            android:paddingEnd="4dp">
+
+            <com.cblol.scout.ui.PickSlotView
+                android:id="@+id/psv_red_1"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginBottom="2dp" />
+
+            <com.cblol.scout.ui.PickSlotView
+                android:id="@+id/psv_red_2"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginBottom="2dp" />
+
+            <com.cblol.scout.ui.PickSlotView
+                android:id="@+id/psv_red_3"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginBottom="2dp" />
+
+            <com.cblol.scout.ui.PickSlotView
+                android:id="@+id/psv_red_4"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:layout_marginBottom="2dp" />
+
+            <com.cblol.scout.ui.PickSlotView
+                android:id="@+id/psv_red_5"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         RODAPÉ: botões de confirmar e pular
+    ══════════════════════════════════════════════════════════════════ -->
+    <LinearLayout
+        android:id="@+id/ll_bottom_actions"
+        android:layout_width="0dp"
+        android:layout_height="56dp"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:background="@color/pick_ban_topbar"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_confirm_pick"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="@string/confirm_selection"
+            android:textSize="13sp"
+            android:enabled="false"
+            app:backgroundTint="@color/champion_gold"
+            android:textColor="@color/pick_ban_bg"
+            app:cornerRadius="6dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_skip"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:text="@string/skip_ia"
+            android:textSize="12sp"
+            android:visibility="gone"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            app:strokeColor="@color/champion_gold"
+            android:textColor="@color/champion_gold"
+            app:cornerRadius="6dp" />
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -65,3 +65,34 @@ data class AtributosDeriv(
     val consistencia: Int,
     val clutch: Int
 )
+
+
+/**
+ * Representa um campeão de LoL na tela de pick & ban.
+ * imageUrl e splashUrl usam a Riot Data Dragon (versão 14.10.1).
+ * Substitua a versão conforme o patch atual.
+ */
+data class Champion(
+    val id: String,           // ex: "Ahri"
+    val name: String,         // ex: "Ahri"
+    val shortName: String,    // ex: "Ahri" (truncado para o grid pequeno)
+    val roles: List<String>,  // ex: ["MID"]
+    val primaryRole: String,  // ex: "MID"
+    val imageUrl: String = "https://ddragon.leagueoflegends.com/cdn/14.10.1/img/champion/$id.png",
+    val splashUrl: String = "https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${id}_0.jpg"
+)
+
+enum class PickBanPhase { BAN, PICK }
+
+/**
+ * Estado mutável da fase de pick & ban.
+ */
+data class PickBanState(
+    var currentTurnIndex: Int,
+    val blueBans: MutableList<Champion>,
+    val redBans: MutableList<Champion>,
+    val bluePicks: MutableList<Champion>,
+    val redPicks: MutableList<Champion>,
+    val playerIsBlue: Boolean,
+    val usedChampions: MutableSet<String>
+)

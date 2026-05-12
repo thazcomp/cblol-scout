@@ -9,4 +9,26 @@
     <string name="sort_salary">Salário</string>
     <string name="change_team">Trocar de time</string>
     <string name="logout">Sair</string>
+    <string name="generating_timeline">Gerando timeline…</string>
+    <string name="btn_prev">Anterior</string>
+    <string name="btn_next">Próximo</string>
+    <string name="btn_cancel">Cancelar</string>
+    <string name="btn_confirm">Confirmar</string>
+    <string name="pb_title">Pick &amp; Ban - Mapa %1$d</string>
+    <string name="pb_hint_bans">Selecione até 5 bans</string>
+    <string name="pb_hint_picks">Selecione até 5 picks</string>
+    <string name="pb_choose_player">Escolha jogador</string>
+    <string name="max_bans">Máximo 5 bans</string>
+    <string name="max_picks">Máximo 5 picks</string>
+    <string name="champ_banned">Campeão banido</string>
+    <string name="skip_simulation_msg">A partida será simulada em segundo plano e o resultado aplicado.</string>
+    <string name="btn_skip_finish">Pular pro fim</string>
+    <string name="btn_continue_watching">Continuar assistindo</string>
+    <string name="search_champion">Buscar campeão…</string>
+    <string name="confirm_selection">CONFIRMAR</string>
+    <string name="skip_ia">IA ESCOLHE</string>
+    <string name="champ_icon_desc">Ícone do campeão</string>
+    <string name="pick_slot_desc">Slot de pick</string>
+    -->
+
 </resources>
