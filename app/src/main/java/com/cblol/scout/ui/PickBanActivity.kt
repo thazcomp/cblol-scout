@@ -3,6 +3,9 @@ package com.cblol.scout.ui
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.content.Intent
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
+import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.view.View
@@ -12,49 +15,34 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.GlideException
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.RequestOptions
+import com.bumptech.glide.request.target.Target
 import com.cblol.scout.R
 import com.cblol.scout.data.Champion
-import com.cblol.scout.data.PickBanState
 import com.cblol.scout.data.PickBanPhase
+import com.cblol.scout.data.PickBanState
 import com.cblol.scout.game.GameRepository
 import com.cblol.scout.util.ChampionRepository
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
+import java.util.concurrent.atomic.AtomicInteger
 
-/**
- * PickBanActivity — Tela de pick & ban estilo LoL esports (BO3/BO5)
- *
- * Fluxo:
- *  1. Fase de BANS alternados: azul ban → vermelho ban → (×3 each)
- *  2. Fase de PICKS alternados: azul pick → vermelho pick × 2 → azul pick × 2 → vermelho pick → azul pick × 2 → vermelho pick
- *  3. Ao finalizar → lança MatchResultActivity (ou ScheduleActivity com resultado)
- *
- * Integração: chamada por ScheduleActivity via:
- *   val intent = Intent(this, PickBanActivity::class.java)
- *   intent.putExtra("player_team_id", playerTeamId)
- *   intent.putExtra("opponent_team_id", opponentTeamId)
- *   intent.putExtra("match_id", matchId)
- *   intent.putExtra("map_number", mapNumber) // 1, 2 ou 3
- *   startActivityForResult(intent, REQUEST_PICK_BAN)
- *
- * Retorno via setResult:
- *   Intent com "blue_picks" e "red_picks" como ArrayList<String> (champion ids)
- */
 class PickBanActivity : AppCompatActivity() {
 
-    // ── Views principais ────────────────────────────────────────────────
+    // ── Views principais ─────────────────────────────────────────────────
     private lateinit var rvChampions: RecyclerView
     private lateinit var championAdapter: ChampionGridAdapter
-
     private lateinit var cgRoleFilter: ChipGroup
     private lateinit var etSearch: EditText
 
-    // Slots de ban (6 por lado)
     private lateinit var blueBanSlots: List<ImageView>
     private lateinit var redBanSlots: List<ImageView>
-
-    // Slots de pick (5 por lado)
     private lateinit var bluePickSlots: List<PickSlotView>
     private lateinit var redPickSlots: List<PickSlotView>
 
@@ -68,7 +56,12 @@ class PickBanActivity : AppCompatActivity() {
     private lateinit var viewBlueTurn: View
     private lateinit var viewRedTurn: View
 
-    // ── Estado ──────────────────────────────────────────────────────────
+    // ── Loading overlay ──────────────────────────────────────────────────
+    private lateinit var viewLoadingOverlay: View
+    private lateinit var progressBarLoading: ProgressBar
+    private lateinit var tvLoadingStatus: TextView
+
+    // ── Estado ───────────────────────────────────────────────────────────
     private lateinit var state: PickBanState
     private var selectedChampion: Champion? = null
     private var countDownTimer: CountDownTimer? = null
@@ -78,37 +71,21 @@ class PickBanActivity : AppCompatActivity() {
     private var matchId: String = ""
     private var mapNumber: Int = 1
 
-    // ── Ordem de pick/ban (formato LoL padrão) ───────────────────────────
-    // true = lado azul age; false = lado vermelho age
-    // B=ban P=pick; posições 0..17
+    // ── Ordem de pick/ban (formato LoL padrão) ────────────────────────────
     private val turnOrder: List<Pair<Boolean, PickBanPhase>> = listOf(
-        // Bans fase 1 (3 ban cada)
-        true  to PickBanPhase.BAN,
-        false to PickBanPhase.BAN,
-        true  to PickBanPhase.BAN,
-        false to PickBanPhase.BAN,
-        true  to PickBanPhase.BAN,
-        false to PickBanPhase.BAN,
-        // Picks fase 1
-        true  to PickBanPhase.PICK,
-        false to PickBanPhase.PICK,
-        false to PickBanPhase.PICK,
-        true  to PickBanPhase.PICK,
-        true  to PickBanPhase.PICK,
-        false to PickBanPhase.PICK,
-        // Bans fase 2 (2 ban cada)
-        false to PickBanPhase.BAN,
-        true  to PickBanPhase.BAN,
-        false to PickBanPhase.BAN,
-        true  to PickBanPhase.BAN,
-        // Picks fase 2
-        false to PickBanPhase.PICK,
-        true  to PickBanPhase.PICK,
-        false to PickBanPhase.PICK,
-        true  to PickBanPhase.PICK
+        true  to PickBanPhase.BAN,  false to PickBanPhase.BAN,
+        true  to PickBanPhase.BAN,  false to PickBanPhase.BAN,
+        true  to PickBanPhase.BAN,  false to PickBanPhase.BAN,
+        true  to PickBanPhase.PICK, false to PickBanPhase.PICK,
+        false to PickBanPhase.PICK, true  to PickBanPhase.PICK,
+        true  to PickBanPhase.PICK, false to PickBanPhase.PICK,
+        false to PickBanPhase.BAN,  true  to PickBanPhase.BAN,
+        false to PickBanPhase.BAN,  true  to PickBanPhase.BAN,
+        false to PickBanPhase.PICK, true  to PickBanPhase.PICK,
+        false to PickBanPhase.PICK, true  to PickBanPhase.PICK
     )
 
-    // ────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_pick_ban)
@@ -118,33 +95,41 @@ class PickBanActivity : AppCompatActivity() {
         matchId        = intent.getStringExtra("match_id") ?: ""
         mapNumber      = intent.getIntExtra("map_number", 1)
 
-        // Decide lado do jogador (azul = casa, vermelho = visitante; alterna por mapa)
         val playerIsBlue = (mapNumber % 2 == 1)
 
         bindViews()
         initState(playerIsBlue)
-        setupChampionGrid()
-        setupRoleFilters()
-        setupSearch()
-        setupButtons()
         renderTeamNames(playerIsBlue)
-        advanceTurn()
+
+        // Exibe overlay e pré-carrega todas as imagens antes de liberar a UI
+        viewLoadingOverlay.visibility = View.VISIBLE
+        preloadAllChampionImages {
+            viewLoadingOverlay.visibility = View.GONE
+            setupChampionGrid()
+            setupRoleFilters()
+            setupSearch()
+            setupButtons()
+            advanceTurn()
+        }
     }
 
-    // ────────────────────────────────────────────────────────────────────
+    // ── Bind ──────────────────────────────────────────────────────────────
     private fun bindViews() {
-        rvChampions   = findViewById(R.id.rv_champions)
-        cgRoleFilter  = findViewById(R.id.cg_role_filter)
-        etSearch      = findViewById(R.id.et_search_champion)
-        tvPhaseLabel  = findViewById(R.id.tv_phase_label)
-        tvTimerLabel  = findViewById(R.id.tv_timer)
-        tvMapNumber   = findViewById(R.id.tv_map_number)
-        tvBlueName    = findViewById(R.id.tv_blue_team_name)
-        tvRedName     = findViewById(R.id.tv_red_team_name)
-        btnConfirm    = findViewById(R.id.btn_confirm_pick)
-        btnSkip       = findViewById(R.id.btn_skip)
-        viewBlueTurn  = findViewById(R.id.view_blue_turn_indicator)
-        viewRedTurn   = findViewById(R.id.view_red_turn_indicator)
+        rvChampions        = findViewById(R.id.rv_champions)
+        cgRoleFilter       = findViewById(R.id.cg_role_filter)
+        etSearch           = findViewById(R.id.et_search_champion)
+        tvPhaseLabel       = findViewById(R.id.tv_phase_label)
+        tvTimerLabel       = findViewById(R.id.tv_timer)
+        tvMapNumber        = findViewById(R.id.tv_map_number)
+        tvBlueName         = findViewById(R.id.tv_blue_team_name)
+        tvRedName          = findViewById(R.id.tv_red_team_name)
+        btnConfirm         = findViewById(R.id.btn_confirm_pick)
+        btnSkip            = findViewById(R.id.btn_skip)
+        viewBlueTurn       = findViewById(R.id.view_blue_turn_indicator)
+        viewRedTurn        = findViewById(R.id.view_red_turn_indicator)
+        viewLoadingOverlay = findViewById(R.id.view_loading_overlay)
+        progressBarLoading = findViewById(R.id.progress_bar_loading)
+        tvLoadingStatus    = findViewById(R.id.tv_loading_status)
 
         blueBanSlots = listOf(
             findViewById(R.id.iv_blue_ban_1), findViewById(R.id.iv_blue_ban_2),
@@ -170,39 +155,78 @@ class PickBanActivity : AppCompatActivity() {
         tvMapNumber.text = "Mapa $mapNumber"
     }
 
-    // ────────────────────────────────────────────────────────────────────
+    // ── Pré-carregamento de imagens com barra de progresso ───────────────
+    /**
+     * Baixa os ícones de todos os campeões em paralelo via Glide.preload().
+     * Atualiza a ProgressBar conforme cada imagem termina (sucesso ou erro).
+     * Chama [onComplete] na main thread quando 100% das imagens resolveram.
+     */
+    private fun preloadAllChampionImages(onComplete: () -> Unit) {
+        val champions = ChampionRepository.getAll()
+        val total     = champions.size
+        val done      = AtomicInteger(0)
+
+        progressBarLoading.max      = total
+        progressBarLoading.progress = 0
+        tvLoadingStatus.text        = "Carregando campeões… 0/$total"
+
+        fun tick() {
+            val current = done.incrementAndGet()
+            runOnUiThread {
+                progressBarLoading.progress = current
+                tvLoadingStatus.text = "Carregando campeões… $current/$total"
+                if (current >= total) onComplete()
+            }
+        }
+
+        champions.forEach { champ ->
+            Glide.with(this)
+                .load(champ.imageUrl)
+                .apply(RequestOptions().centerCrop())
+                .listener(object : RequestListener<Drawable> {
+                    override fun onLoadFailed(
+                        e: GlideException?, model: Any?,
+                        target: Target<Drawable>, isFirstResource: Boolean
+                    ): Boolean { tick(); return false }
+
+                    override fun onResourceReady(
+                        resource: Drawable, model: Any,
+                        target: Target<Drawable>, dataSource: DataSource,
+                        isFirstResource: Boolean
+                    ): Boolean { tick(); return false }
+                })
+                .preload()
+        }
+    }
+
+    // ── Setup ─────────────────────────────────────────────────────────────
     private fun initState(playerIsBlue: Boolean) {
         state = PickBanState(
             currentTurnIndex = 0,
-            blueBans   = mutableListOf(),
-            redBans    = mutableListOf(),
-            bluePicks  = mutableListOf(),
-            redPicks   = mutableListOf(),
-            playerIsBlue = playerIsBlue,
-            usedChampions = mutableSetOf()
+            blueBans         = mutableListOf(),
+            redBans          = mutableListOf(),
+            bluePicks        = mutableListOf(),
+            redPicks         = mutableListOf(),
+            playerIsBlue     = playerIsBlue,
+            usedChampions    = mutableSetOf()
         )
     }
 
-    // ────────────────────────────────────────────────────────────────────
     private fun setupChampionGrid() {
-        val allChampions = ChampionRepository.getAll()
-        championAdapter = ChampionGridAdapter(allChampions) { champ ->
-            onChampionSelected(champ)
-        }
+        championAdapter = ChampionGridAdapter(ChampionRepository.getAll()) { onChampionSelected(it) }
         rvChampions.layoutManager = GridLayoutManager(this, 7)
         rvChampions.adapter = championAdapter
     }
 
     private fun setupRoleFilters() {
-        val roles = listOf("ALL", "TOP", "JNG", "MID", "ADC", "SUP")
-        roles.forEach { role ->
+        listOf("ALL", "TOP", "JNG", "MID", "ADC", "SUP").forEach { role ->
             val chip = Chip(this).apply {
                 text = role
                 isCheckable = true
-                isChecked = role == "ALL"
+                isChecked   = role == "ALL"
             }
             chip.setOnCheckedChangeListener { _, checked ->
-                if (checked) filterByRole(if (role == "ALL") null else role)
+                if (checked) championAdapter.filterByRole(if (role == "ALL") null else role)
             }
             cgRoleFilter.addView(chip)
         }
@@ -218,64 +242,46 @@ class PickBanActivity : AppCompatActivity() {
         })
     }
 
-    private fun filterByRole(role: String?) {
-        championAdapter.filterByRole(role)
-    }
-
-    // ────────────────────────────────────────────────────────────────────
     private fun setupButtons() {
         btnConfirm.setOnClickListener {
-            val champ = selectedChampion ?: return@setOnClickListener
-            confirmAction(champ)
+            selectedChampion?.let { confirmAction(it) }
         }
         btnSkip.setOnClickListener {
-            // IA age automaticamente (random)
-            val available = ChampionRepository.getAll()
+            ChampionRepository.getAll()
                 .filter { it.id !in state.usedChampions }
-            if (available.isNotEmpty()) {
-                confirmAction(available.random())
-            }
+                .randomOrNull()
+                ?.let { confirmAction(it) }
         }
     }
 
-    // ────────────────────────────────────────────────────────────────────
+    // ── Fluxo de turnos ───────────────────────────────────────────────────
     private fun advanceTurn() {
-        if (state.currentTurnIndex >= turnOrder.size) {
-            finishPickBan()
-            return
-        }
+        if (state.currentTurnIndex >= turnOrder.size) { finishPickBan(); return }
 
         val (isBlue, phase) = turnOrder[state.currentTurnIndex]
-        val isPlayerTurn = (isBlue == state.playerIsBlue)
+        val isPlayerTurn    = (isBlue == state.playerIsBlue)
 
-        // Atualiza label de fase
-        val phaseText = when (phase) {
-            PickBanPhase.BAN  -> if (isBlue) "🔵 BANINDO" else "🔴 BANINDO"
+        tvPhaseLabel.text = when (phase) {
+            PickBanPhase.BAN  -> if (isBlue) "🔵 BANINDO"    else "🔴 BANINDO"
             PickBanPhase.PICK -> if (isBlue) "🔵 ESCOLHENDO" else "🔴 ESCOLHENDO"
         }
-        tvPhaseLabel.text = phaseText
 
-        // Indicadores de turno
         viewBlueTurn.visibility = if (isBlue)  View.VISIBLE else View.INVISIBLE
         viewRedTurn.visibility  = if (!isBlue) View.VISIBLE else View.INVISIBLE
 
-        // Habilita grid apenas no turno do jogador
-        val gridEnabled = isPlayerTurn
-        rvChampions.alpha = if (gridEnabled) 1f else 0.4f
-        rvChampions.isEnabled = gridEnabled
-        btnConfirm.isEnabled = false
-        btnSkip.visibility = if (!isPlayerTurn) View.VISIBLE else View.GONE
+        rvChampions.alpha   = if (isPlayerTurn) 1f else 0.4f
+        rvChampions.isEnabled = isPlayerTurn
+        btnConfirm.isEnabled  = false
+        btnSkip.visibility    = if (!isPlayerTurn) View.VISIBLE else View.GONE
 
         highlightActivePickSlot(isBlue, phase)
         selectedChampion = null
         championAdapter.clearSelection()
 
-        if (!isPlayerTurn) {
-            // IA age após 1.5s
-            startTimer(1500L, autoAct = true)
-        } else {
-            startTimer(30_000L, autoAct = false)
-        }
+        startTimer(
+            durationMs = if (isPlayerTurn) 30_000L else 1_500L,
+            autoAct    = !isPlayerTurn
+        )
     }
 
     private fun startTimer(durationMs: Long, autoAct: Boolean) {
@@ -283,43 +289,37 @@ class PickBanActivity : AppCompatActivity() {
         countDownTimer = object : CountDownTimer(durationMs, 1000) {
             override fun onTick(ms: Long) {
                 tvTimerLabel.text = (ms / 1000).toString()
-                if (ms / 1000 <= 5L) {
-                    tvTimerLabel.setTextColor(ContextCompat.getColor(this@PickBanActivity, android.R.color.holo_red_light))
-                } else {
-                    tvTimerLabel.setTextColor(ContextCompat.getColor(this@PickBanActivity, android.R.color.white))
-                }
+                tvTimerLabel.setTextColor(
+                    if (ms / 1000 <= 5L)
+                        ContextCompat.getColor(this@PickBanActivity, android.R.color.holo_red_light)
+                    else
+                        ContextCompat.getColor(this@PickBanActivity, android.R.color.white)
+                )
             }
             override fun onFinish() {
-                if (autoAct) {
-                    // IA faz escolha automática
-                    val available = ChampionRepository.getAll().filter { it.id !in state.usedChampions }
-                    if (available.isNotEmpty()) confirmAction(available.random())
-                } else {
-                    // Jogador esgotou tempo → random
-                    val available = ChampionRepository.getAll().filter { it.id !in state.usedChampions }
-                    if (available.isNotEmpty()) confirmAction(available.random())
-                }
+                ChampionRepository.getAll()
+                    .filter { it.id !in state.usedChampions }
+                    .randomOrNull()
+                    ?.let { confirmAction(it) }
             }
         }.start()
     }
 
-    // ────────────────────────────────────────────────────────────────────
     private fun onChampionSelected(champ: Champion) {
         if (champ.id in state.usedChampions) return
         val (isBlue, _) = turnOrder[state.currentTurnIndex]
-        val isPlayerTurn = (isBlue == state.playerIsBlue)
-        if (!isPlayerTurn) return
+        if (isBlue != state.playerIsBlue) return
 
         selectedChampion = champ
         championAdapter.setSelected(champ.id)
         btnConfirm.isEnabled = true
 
-        // Animação de pulso no botão confirmar
-        val scaleX = ObjectAnimator.ofFloat(btnConfirm, "scaleX", 1f, 1.05f, 1f)
-        val scaleY = ObjectAnimator.ofFloat(btnConfirm, "scaleY", 1f, 1.05f, 1f)
         AnimatorSet().apply {
-            playTogether(scaleX, scaleY)
-            duration = 200
+            playTogether(
+                ObjectAnimator.ofFloat(btnConfirm, "scaleX", 1f, 1.05f, 1f),
+                ObjectAnimator.ofFloat(btnConfirm, "scaleY", 1f, 1.05f, 1f)
+            )
+            duration     = 200
             interpolator = DecelerateInterpolator()
             start()
         }
@@ -334,34 +334,26 @@ class PickBanActivity : AppCompatActivity() {
             PickBanPhase.BAN -> {
                 if (isBlue) {
                     state.blueBans.add(champ)
-                    val idx = state.blueBans.size - 1
-                    if (idx < blueBanSlots.size) {
-                        loadChampionImage(blueBanSlots[idx], champ, grayscale = true)
-                        animateBanSlot(blueBanSlots[idx])
+                    blueBanSlots.getOrNull(state.blueBans.size - 1)?.let {
+                        loadChampionImage(it, champ, grayscale = true); animateBanSlot(it)
                     }
                 } else {
                     state.redBans.add(champ)
-                    val idx = state.redBans.size - 1
-                    if (idx < redBanSlots.size) {
-                        loadChampionImage(redBanSlots[idx], champ, grayscale = true)
-                        animateBanSlot(redBanSlots[idx])
+                    redBanSlots.getOrNull(state.redBans.size - 1)?.let {
+                        loadChampionImage(it, champ, grayscale = true); animateBanSlot(it)
                     }
                 }
             }
             PickBanPhase.PICK -> {
                 if (isBlue) {
                     state.bluePicks.add(champ)
-                    val idx = state.bluePicks.size - 1
-                    if (idx < bluePickSlots.size) {
-                        bluePickSlots[idx].setChampion(champ)
-                        bluePickSlots[idx].setActive(false)
+                    bluePickSlots.getOrNull(state.bluePicks.size - 1)?.let {
+                        it.setChampion(champ); it.setActive(false)
                     }
                 } else {
                     state.redPicks.add(champ)
-                    val idx = state.redPicks.size - 1
-                    if (idx < redPickSlots.size) {
-                        redPickSlots[idx].setChampion(champ)
-                        redPickSlots[idx].setActive(false)
+                    redPickSlots.getOrNull(state.redPicks.size - 1)?.let {
+                        it.setChampion(champ); it.setActive(false)
                     }
                 }
             }
@@ -373,16 +365,13 @@ class PickBanActivity : AppCompatActivity() {
         advanceTurn()
     }
 
-    // ────────────────────────────────────────────────────────────────────
     private fun highlightActivePickSlot(isBlue: Boolean, phase: PickBanPhase) {
         if (phase != PickBanPhase.PICK) return
         if (isBlue) {
-            val idx = state.bluePicks.size
-            bluePickSlots.forEachIndexed { i, slot -> slot.setActive(i == idx) }
+            bluePickSlots.forEachIndexed { i, s -> s.setActive(i == state.bluePicks.size) }
             redPickSlots.forEach { it.setActive(false) }
         } else {
-            val idx = state.redPicks.size
-            redPickSlots.forEachIndexed { i, slot -> slot.setActive(i == idx) }
+            redPickSlots.forEachIndexed { i, s -> s.setActive(i == state.redPicks.size) }
             bluePickSlots.forEach { it.setActive(false) }
         }
     }
@@ -392,46 +381,38 @@ class PickBanActivity : AppCompatActivity() {
         view.animate().alpha(1f).setDuration(300).start()
     }
 
-    /**
-     * Carrega imagem do campeão via URL da Data Dragon da Riot.
-     * Ex: https://ddragon.leagueoflegends.com/cdn/14.10.1/img/champion/Ahri.png
-     * Se quiser usar Glide/Coil, substitua aqui.
-     */
     private fun loadChampionImage(view: ImageView, champ: Champion, grayscale: Boolean = false) {
-        // Placeholder com cor de fundo e inicial — substitua por Glide/Coil
-        view.setBackgroundColor(ContextCompat.getColor(this, R.color.champion_slot_bg))
-        // TODO: Glide.with(this).load(champ.imageUrl).into(view)
-        // Com Glide e filtro de escala de cinza para bans:
-        // val options = RequestOptions().let { if (grayscale) it.colorSpace(ColorSpace.Named.LINEAR_SRGB) else it }
-        // Glide.with(this).load(champ.imageUrl).apply(options).into(view)
+        Glide.with(this)
+            .load(champ.imageUrl)
+            .transition(DrawableTransitionOptions.withCrossFade(150))
+            .apply(RequestOptions().centerCrop()
+                .placeholder(R.color.champion_slot_bg)
+                .error(R.color.champion_slot_bg))
+            .into(view)
+
+        view.colorFilter = if (grayscale) {
+            ColorMatrixColorFilter(ColorMatrix().apply { setSaturation(0f) })
+        } else null
     }
 
-    // ────────────────────────────────────────────────────────────────────
     private fun renderTeamNames(playerIsBlue: Boolean) {
         val snap         = GameRepository.snapshot(applicationContext)
         val playerName   = snap.times.find { it.id == playerTeamId }?.nome   ?: playerTeamId
         val opponentName = snap.times.find { it.id == opponentTeamId }?.nome ?: opponentTeamId
-        if (playerIsBlue) {
-            tvBlueName.text = playerName
-            tvRedName.text  = opponentName
-        } else {
-            tvBlueName.text = opponentName
-            tvRedName.text  = playerName
-        }
+        tvBlueName.text = if (playerIsBlue) playerName   else opponentName
+        tvRedName.text  = if (playerIsBlue) opponentName else playerName
     }
 
-    // ────────────────────────────────────────────────────────────────────
     private fun finishPickBan() {
         countDownTimer?.cancel()
-        val result = Intent().apply {
+        setResult(RESULT_OK, Intent().apply {
             putStringArrayListExtra("blue_picks", ArrayList(state.bluePicks.map { it.id }))
             putStringArrayListExtra("red_picks",  ArrayList(state.redPicks.map  { it.id }))
             putStringArrayListExtra("blue_bans",  ArrayList(state.blueBans.map  { it.id }))
             putStringArrayListExtra("red_bans",   ArrayList(state.redBans.map   { it.id }))
-            putExtra("match_id", matchId)
+            putExtra("match_id",   matchId)
             putExtra("map_number", mapNumber)
-        }
-        setResult(RESULT_OK, result)
+        })
         finish()
     }
 

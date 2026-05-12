@@ -5,6 +5,9 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import com.bumptech.glide.request.RequestOptions
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.cblol.scout.R
@@ -49,11 +52,14 @@ class ChampionGridAdapter(
 
         holder.tvName.text = champ.shortName
 
-        // Imagem — substitua pelo Glide/Coil real
-        // Glide.with(holder.itemView).load(champ.imageUrl).centerCrop().into(holder.ivChampion)
-        holder.ivChampion.setBackgroundColor(
-            ContextCompat.getColor(holder.itemView.context, R.color.champion_slot_bg)
-        )
+        // Ícone quadrado da Data Dragon (ex: Ahri.png)
+        Glide.with(holder.itemView.context)
+            .load(champ.imageUrl)
+            .transition(DrawableTransitionOptions.withCrossFade(100))
+            .apply(RequestOptions().centerCrop()
+                .placeholder(R.color.champion_slot_bg)
+                .error(R.color.champion_slot_bg))
+            .into(holder.ivChampion)
 
         // ── Estado: USADO/BANIDO ────────────────────────────────────────
         if (isUsed) {

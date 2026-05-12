@@ -26,18 +26,22 @@
         android:layout_gravity="bottom"
         android:background="@drawable/gradient_pick_slot_name" />
 
-    <!-- Role do slot quando preenchido -->
+    <!-- Nome do campeão quando preenchido -->
     <TextView
         android:id="@+id/tv_pick_role"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
         android:paddingBottom="3dp"
+        android:paddingStart="2dp"
+        android:paddingEnd="2dp"
         android:gravity="center"
-        android:textSize="9sp"
-        android:textColor="#DDFFFFFF"
+        android:textSize="8sp"
+        android:textColor="#FFFFFFFF"
         android:textStyle="bold"
-        android:letterSpacing="0.1"
+        android:letterSpacing="0.05"
+        android:maxLines="1"
+        android:ellipsize="end"
         android:text="" />
 
     <!-- Texto do slot vazio -->

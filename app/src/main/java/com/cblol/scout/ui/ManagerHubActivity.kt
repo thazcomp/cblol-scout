@@ -9,32 +9,20 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.cblol.scout.R
 import com.cblol.scout.data.LogEntry
 import com.cblol.scout.data.Match
-import com.cblol.scout.data.SeriesState
 import com.cblol.scout.data.PickBanPlan
+import com.cblol.scout.data.SeriesState
 import com.cblol.scout.databinding.ActivityManagerHubBinding
-import com.cblol.scout.game.AdvanceReport
 import com.cblol.scout.game.GameEngine
 import com.cblol.scout.game.GameRepository
 import com.cblol.scout.util.TeamColors
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-/**
- * Tela central do modo carreira. Mostra:
- *  - Status do time (data atual, orçamento, próxima partida)
- *  - Botões pra acessar elenco, mercado, calendário, classificação
- *  - "Avançar dia" (1d ou até a próxima partida)
- *  - Log de eventos recentes
- */
 class ManagerHubActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityManagerHubBinding
@@ -53,17 +41,12 @@ class ManagerHubActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbar)
 
         if (GameRepository.load(applicationContext) == null) {
-            // Sem save — volta pra seleção
             startActivity(Intent(this, TeamSelectActivity::class.java))
             finish()
             return
         }
 
-        binding.btnAdvanceDay.setOnClickListener { advanceDays(1) }
-        binding.btnAdvanceWeek.setOnClickListener { advanceDays(7) }
-        binding.btnAdvanceMatch.setOnClickListener { advanceUntilNextMatch() }
-        binding.tvNextMatch.setOnClickListener { openLiveSimForNextMatch() }
-        binding.tvNextMatchDate.setOnClickListener { openLiveSimForNextMatch() }
+        binding.btnPlayNextMatch.setOnClickListener { openLiveSimForNextMatch() }
         binding.cardSquad.setOnClickListener {
             startActivity(Intent(this, SquadActivity::class.java))
         }
@@ -85,11 +68,11 @@ class ManagerHubActivity : AppCompatActivity() {
     }
 
     private fun refreshHud() {
-        val gs = GameRepository.current()
+        val gs   = GameRepository.current()
         val snap = GameRepository.snapshot(applicationContext)
         val team = snap.times.find { it.id == gs.managerTeamId }!!
 
-        binding.toolbar.title = team.nome
+        binding.toolbar.title    = team.nome
         binding.toolbar.subtitle = "Técnico: ${gs.managerName}"
         binding.toolbar.setBackgroundColor(TeamColors.forTeam(team.id))
         binding.toolbar.setTitleTextColor(Color.WHITE)
@@ -105,60 +88,35 @@ class ManagerHubActivity : AppCompatActivity() {
         binding.tvPayroll.text = "R$ ${"%,d".format(payroll)} / mês"
 
         val rosterSize = GameRepository.rosterOf(applicationContext, gs.managerTeamId).size
-        val starters = GameRepository.rosterOf(applicationContext, gs.managerTeamId)
-            .count { it.titular }
+        val starters   = GameRepository.rosterOf(applicationContext, gs.managerTeamId).count { it.titular }
         binding.tvSquadInfo.text = "$rosterSize jogadores ($starters titulares)"
 
-        // Próxima partida
         val next = GameEngine.nextMatchForManager()
         if (next != null) {
-            val home = snap.times.find { it.id == next.homeTeamId }!!.nome
-            val away = snap.times.find { it.id == next.awayTeamId }!!.nome
-            val dateStr = LocalDate.parse(next.date).format(dateFormatter)
+            val home      = snap.times.find { it.id == next.homeTeamId }!!.nome
+            val away      = snap.times.find { it.id == next.awayTeamId }!!.nome
+            val dateStr   = LocalDate.parse(next.date).format(dateFormatter)
             val daysUntil = LocalDate.parse(gs.currentDate).until(LocalDate.parse(next.date)).days
-            binding.tvNextMatch.text = "$home  vs  $away"
+            binding.tvNextMatch.text     = "$home  vs  $away"
             binding.tvNextMatchDate.text = "$dateStr · Rodada ${next.round} · em $daysUntil dias"
+            binding.btnPlayNextMatch.isEnabled = true
         } else {
-            binding.tvNextMatch.text = "Sem partidas pendentes"
+            binding.tvNextMatch.text     = "Sem partidas pendentes"
             binding.tvNextMatchDate.text = "Split encerrado"
+            binding.btnPlayNextMatch.isEnabled = false
         }
 
-        // Log
         binding.recyclerLog.layoutManager = LinearLayoutManager(this)
         binding.recyclerLog.adapter = LogAdapter(gs.gameLog.take(30))
     }
 
-    private fun advanceDays(days: Int) {
-        binding.btnAdvanceDay.isEnabled = false
-        binding.btnAdvanceWeek.isEnabled = false
-        binding.btnAdvanceMatch.isEnabled = false
-
-        lifecycleScope.launch {
-            val report = withContext(Dispatchers.Default) {
-                GameEngine.advanceDays(applicationContext, days)
-            }
-            refreshHud()
-            showAdvanceReport(report)
-            binding.btnAdvanceDay.isEnabled = true
-            binding.btnAdvanceWeek.isEnabled = true
-            binding.btnAdvanceMatch.isEnabled = true
-        }
-    }
-
-    private fun advanceUntilNextMatch() {
-        val next = GameEngine.nextMatchForManager() ?: return
-        val days = LocalDate.parse(GameRepository.current().currentDate)
-            .until(LocalDate.parse(next.date)).days + 1
-        if (days > 0) advanceDays(days)
-    }
-
-    /** Abre pick & ban (se for partida do meu time) ou simulador direto. */
+    // ── Abre pick & ban ou simulador direto ──────────────────────────────
     private fun openLiveSimForNextMatch() {
         val next = GameEngine.nextMatchForManager() ?: return
         val gs   = GameRepository.current()
         val snap = GameRepository.snapshot(applicationContext)
-        val homeName = snap.times.find { it.id == next.homeTeamId }?.nome ?: next.homeTeamId
-        val awayName = snap.times.find { it.id == next.awayTeamId }?.nome ?: next.awayTeamId
+        val homeName   = snap.times.find { it.id == next.homeTeamId }?.nome ?: next.homeTeamId
+        val awayName   = snap.times.find { it.id == next.awayTeamId }?.nome ?: next.awayTeamId
         val opponentId = if (next.homeTeamId == gs.managerTeamId) next.awayTeamId else next.homeTeamId
 
         AlertDialog.Builder(this)
@@ -189,36 +147,7 @@ class ManagerHubActivity : AppCompatActivity() {
             .show()
     }
 
-    private fun showAdvanceReport(r: AdvanceReport) {
-        if (r.matchesPlayed == 0 && r.income == 0L && r.expense == 0L) return
-        val sb = StringBuilder()
-        if (r.matchesPlayed > 0) sb.appendLine("⚔️  ${r.matchesPlayed} partida(s) simulada(s)")
-        if (r.myWin) sb.appendLine("🏆 Seu time venceu!")
-        if (r.myLoss) sb.appendLine("💔 Seu time perdeu.")
-        if (r.income > 0) sb.appendLine("💵 +R$ ${"%,d".format(r.income)}")
-        if (r.expense > 0) sb.appendLine("💸 −R$ ${"%,d".format(r.expense)}")
-
-        AlertDialog.Builder(this)
-            .setTitle("Resumo")
-            .setMessage(sb.toString().trim())
-            .setPositiveButton("OK", null)
-            .show()
-    }
-
-    private fun confirmQuit() {
-        AlertDialog.Builder(this)
-            .setTitle("Encerrar carreira?")
-            .setMessage("Isso apagará seu save permanentemente.")
-            .setPositiveButton("Sim, encerrar") { _, _ ->
-                GameRepository.clear(applicationContext)
-                startActivity(Intent(this, TeamSelectActivity::class.java)
-                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP))
-                finish()
-            }
-            .setNegativeButton("Cancelar", null)
-            .show()
-    }
-
+    // ── Recebe resultado do PickBanActivity ──────────────────────────────
     @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
@@ -230,7 +159,6 @@ class ManagerHubActivity : AppCompatActivity() {
         val redBans   = data.getStringArrayListExtra("red_bans")   ?: arrayListOf()
         val mapNum    = data.getIntExtra("map_number", pendingMapNumber)
 
-        // Salva o pick & ban no Match
         val gs    = GameRepository.current()
         val match = gs.matches.find { it.id == pendingMatchId }
         match?.pickBanPlan = PickBanPlan(
@@ -241,7 +169,6 @@ class ManagerHubActivity : AppCompatActivity() {
             redBans   = redBans.toList()
         )
 
-        // Simula o mapa
         val playerIsBlue  = (mapNum % 2 == 1)
         val playerPicks   = if (playerIsBlue) bluePicks else redPicks
         val opponentPicks = if (playerIsBlue) redPicks  else bluePicks
@@ -325,14 +252,28 @@ class ManagerHubActivity : AppCompatActivity() {
         refreshHud()
     }
 
-    /** Adapter inline pro log de eventos. */
+    private fun confirmQuit() {
+        AlertDialog.Builder(this)
+            .setTitle("Encerrar carreira?")
+            .setMessage("Isso apagará seu save permanentemente.")
+            .setPositiveButton("Sim, encerrar") { _, _ ->
+                GameRepository.clear(applicationContext)
+                startActivity(Intent(this, TeamSelectActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP))
+                finish()
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+    }
+
+    // ── Adapter do log ───────────────────────────────────────────────────
     private class LogAdapter(private val items: List<LogEntry>) :
         RecyclerView.Adapter<LogAdapter.VH>() {
 
         class VH(v: View) : RecyclerView.ViewHolder(v) {
             val tvIcon: TextView = v.findViewById(R.id.tv_log_icon)
             val tvDate: TextView = v.findViewById(R.id.tv_log_date)
-            val tvMsg: TextView = v.findViewById(R.id.tv_log_msg)
+            val tvMsg: TextView  = v.findViewById(R.id.tv_log_msg)
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = VH(
@@ -344,16 +285,16 @@ class ManagerHubActivity : AppCompatActivity() {
         override fun onBindViewHolder(h: VH, i: Int) {
             val e = items[i]
             h.tvIcon.text = when (e.type) {
-                "MATCH" -> "⚔️"
+                "MATCH"    -> "⚔️"
                 "TRANSFER" -> "🔄"
-                "ECONOMY" -> "💰"
+                "ECONOMY"  -> "💰"
                 "CONTRACT" -> "📝"
-                "SQUAD" -> "👥"
-                "CAREER" -> "🎯"
-                else -> "•"
+                "SQUAD"    -> "👥"
+                "CAREER"   -> "🎯"
+                else       -> "•"
             }
             h.tvDate.text = e.date
-            h.tvMsg.text = e.message
+            h.tvMsg.text  = e.message
         }
     }
 }

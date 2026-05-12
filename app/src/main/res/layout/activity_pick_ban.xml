@@ -400,4 +400,68 @@
             app:cornerRadius="6dp" />
     </LinearLayout>
 
+    <!-- ═══ OVERLAY DE LOADING ════════════════════════════════════════ -->
+    <FrameLayout
+        android:id="@+id/view_loading_overlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="#F0080810"
+        android:visibility="gone"
+        android:elevation="32dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="280dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="24dp"
+            android:background="#CC12121E"
+            android:elevation="4dp">
+
+            <!-- Logo / ícone -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="⚔️"
+                android:textSize="40sp"
+                android:layout_marginBottom="12dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="PICK \&amp; BAN"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#C9AA71"
+                android:letterSpacing="0.15"
+                android:layout_marginBottom="20dp" />
+
+            <!-- Barra de progresso -->
+            <ProgressBar
+                android:id="@+id/progress_bar_loading"
+                style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="8dp"
+                android:progressTint="#C9AA71"
+                android:progressBackgroundTint="#33C9AA71"
+                android:max="100"
+                android:progress="0" />
+
+            <!-- Status de texto -->
+            <TextView
+                android:id="@+id/tv_loading_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="Carregando campeões…"
+                android:textSize="12sp"
+                android:textColor="#AAFFFFFF" />
+        </LinearLayout>
+    </FrameLayout>
+
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -6,7 +6,9 @@ import android.view.LayoutInflater
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.core.content.ContextCompat
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
+import com.bumptech.glide.request.RequestOptions
 import com.cblol.scout.R
 import com.cblol.scout.data.Champion
 
@@ -42,12 +44,18 @@ class PickSlotView @JvmOverloads constructor(
     fun setChampion(champ: Champion) {
         tvEmpty.visibility = android.view.View.GONE
         ivChampion.visibility = android.view.View.VISIBLE
-        tvRole.text = champ.primaryRole
+        tvRole.text = champ.name
         viewActiveBorder.visibility = android.view.View.INVISIBLE
         stopPulse()
 
-        // Substitua por Glide.with(context).load(champ.splashUrl).centerCrop().into(ivChampion)
-        ivChampion.setBackgroundColor(ContextCompat.getColor(context, R.color.champion_slot_filled))
+        // Splash art landscape da Data Dragon — enquadrado no slot vertical com centerCrop
+        Glide.with(context)
+            .load(champ.splashUrl)
+            .transition(DrawableTransitionOptions.withCrossFade(200))
+            .apply(RequestOptions().centerCrop()
+                .placeholder(R.color.champion_slot_bg)
+                .error(R.color.champion_slot_filled))
+            .into(ivChampion)
     }
 
     fun setActive(active: Boolean) {

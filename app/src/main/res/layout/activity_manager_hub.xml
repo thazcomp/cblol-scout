@@ -137,54 +137,19 @@
                         android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:textSize="13sp"
                         android:textColor="@color/color_on_surface_variant"/>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_play_next_match"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="12dp"
+                        android:text="▶  Jogar Próxima Partida"
+                        android:textSize="14sp"
+                        app:cornerRadius="8dp"/>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- Botões avançar -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginTop="10dp">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_advance_day"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="50dp"
-                    android:layout_marginEnd="4dp"
-                    android:text="+1 dia"
-                    android:textSize="13sp"
-                    app:cornerRadius="12dp"/>
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_advance_week"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="50dp"
-                    android:layout_marginHorizontal="4dp"
-                    android:text="+7 dias"
-                    android:textSize="13sp"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:textColor="@color/color_primary"
-                    app:strokeColor="@color/color_primary"
-                    app:cornerRadius="12dp"/>
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_advance_match"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="50dp"
-                    android:layout_marginStart="4dp"
-                    android:text="Próx. jogo"
-                    android:textSize="13sp"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:textColor="@color/color_primary"
-                    app:strokeColor="@color/color_primary"
-                    app:cornerRadius="12dp"/>
-            </LinearLayout>
-
-            <!-- Cards de navegação -->
+<!-- Cards de navegação -->
             <GridLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
