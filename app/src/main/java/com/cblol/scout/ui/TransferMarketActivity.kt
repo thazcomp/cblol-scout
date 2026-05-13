@@ -17,13 +17,14 @@ import com.cblol.scout.data.Player
 import com.cblol.scout.databinding.ActivityTransferMarketBinding
 import com.cblol.scout.game.BuyResult
 import com.cblol.scout.game.GameRepository
-import com.cblol.scout.game.TransferMarket
+import com.cblol.scout.ui.viewmodel.TransferMarketViewModel
 import com.cblol.scout.util.TeamColors
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 class TransferMarketActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityTransferMarketBinding
-    private var roleFilter: String = "ALL"
+    private val vm: TransferMarketViewModel by viewModel()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,46 +35,40 @@ class TransferMarketActivity : AppCompatActivity() {
         binding.toolbar.setNavigationOnClickListener { finish() }
 
         GameRepository.load(applicationContext)
-        binding.recycler.layoutManager = LinearLayoutManager(this)
-        refresh()
+
+        vm.players.observe(this) { players ->
+            binding.tvBudget.text = "Orçamento: R$ ${"%,d".format(GameRepository.current().budget)}"
+            binding.recycler.layoutManager = LinearLayoutManager(this)
+            binding.recycler.adapter = MarketAdapter(players) { confirmBuy(it) }
+        }
+
+        vm.buyResult.observe(this) { result ->
+            when (result) {
+                is BuyResult.Ok    -> Toast.makeText(this, "Jogador contratado!", Toast.LENGTH_SHORT).show()
+                is BuyResult.Error -> AlertDialog.Builder(this).setMessage(result.msg)
+                    .setPositiveButton("OK", null).show()
+            }
+        }
 
         val chips = listOf(
-            binding.chipAll to "ALL",
-            binding.chipTop to "TOP",
-            binding.chipJng to "JNG",
-            binding.chipMid to "MID",
-            binding.chipAdc to "ADC",
-            binding.chipSup to "SUP"
+            binding.chipAll to "ALL", binding.chipTop to "TOP", binding.chipJng to "JNG",
+            binding.chipMid to "MID", binding.chipAdc to "ADC", binding.chipSup to "SUP"
         )
         chips.forEach { (chip, role) ->
             chip.setOnClickListener {
-                roleFilter = role
-                chips.forEach { (c, r) -> c.isChecked = (r == roleFilter) }
-                refresh()
+                chips.forEach { (c, r) -> c.isChecked = (r == role) }
+                vm.load(role)
             }
         }
         binding.chipAll.isChecked = true
+        vm.load()
     }
 
     override fun onSupportNavigateUp(): Boolean { finish(); return true }
 
-    private fun refresh() {
-        val gs = GameRepository.current()
-        binding.tvBudget.text = "Orçamento: R$ ${"%,d".format(gs.budget)}"
-
-        var market = GameRepository.marketRoster(applicationContext)
-        if (roleFilter != "ALL") market = market.filter { it.role == roleFilter }
-        market = market.sortedByDescending { it.overallRating() }
-
-        binding.recycler.adapter = MarketAdapter(market) { player ->
-            confirmBuy(player)
-        }
-    }
-
     private fun confirmBuy(player: Player) {
-        val price = TransferMarket.marketPriceOf(player)
+        val price  = vm.priceOf(player)
         val budget = GameRepository.current().budget
-
         AlertDialog.Builder(this)
             .setTitle("Contratar ${player.nome_jogo}?")
             .setMessage(
@@ -84,21 +79,8 @@ class TransferMarketActivity : AppCompatActivity() {
                 "Orçamento atual: R$ ${"%,d".format(budget)}\n" +
                 "Após compra: R$ ${"%,d".format(budget - price)}"
             )
-            .setPositiveButton("Contratar") { _, _ ->
-                when (val r = TransferMarket.buyPlayer(applicationContext, player.id)) {
-                    is BuyResult.Ok -> {
-                        Toast.makeText(this,
-                            "${player.nome_jogo} contratado!", Toast.LENGTH_SHORT).show()
-                        refresh()
-                    }
-                    is BuyResult.Error -> {
-                        AlertDialog.Builder(this).setMessage(r.msg)
-                            .setPositiveButton("OK", null).show()
-                    }
-                }
-            }
-            .setNegativeButton("Cancelar", null)
-            .show()
+            .setPositiveButton("Contratar") { _, _ -> vm.buy(player.id) }
+            .setNegativeButton("Cancelar", null).show()
     }
 
     private class MarketAdapter(
@@ -124,20 +106,15 @@ class TransferMarketActivity : AppCompatActivity() {
         override fun onBindViewHolder(h: VH, i: Int) {
             val p = players[i]
             h.viewBar.setBackgroundColor(TeamColors.forTeam(p.time_id))
-
-            val roleBg = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = 18f
+            h.tvRole.background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE; cornerRadius = 18f
                 setColor(TeamColors.roleColor(p.role))
             }
-            h.tvRole.background = roleBg
-            h.tvRole.text = p.role
-
-            h.tvName.text = p.nome_jogo
-            h.tvTeam.text = p.time_nome
+            h.tvRole.text    = p.role
+            h.tvName.text    = p.nome_jogo
+            h.tvTeam.text    = p.time_nome
             h.tvOverall.text = p.overallRating().toString()
-            h.tvPrice.text = "R$ ${"%,d".format(TransferMarket.marketPriceOf(p))}"
-
+            h.tvPrice.text   = "R$ ${"%,d".format(com.cblol.scout.game.TransferMarket.marketPriceOf(p))}"
             h.itemView.setOnClickListener { onClick(p) }
         }
     }
