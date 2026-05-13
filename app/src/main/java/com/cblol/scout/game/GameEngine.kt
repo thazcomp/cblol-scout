@@ -141,6 +141,26 @@ object GameEngine {
         "A" -> 3_000_000L to 350_000L
         else -> 1_500_000L to 200_000L
     }
+
+    fun recordMatchResult(context: Context, matchId: String, mapNumber: Int, winnerTeamId: String) {
+        val gs = GameRepository.current()
+        val match = gs.matches.find { it.id == matchId } ?: error("Partida não encontrada: $matchId")
+
+        if (mapNumber == 1) {
+            if (winnerTeamId == match.homeTeamId) match.homeScore = 1 else match.awayScore = 1
+        } else if (mapNumber == 2) {
+            if (winnerTeamId == match.homeTeamId) match.homeScore = 2 else match.awayScore = 2
+        } else {
+            error("Número de mapa inválido: $mapNumber")
+        }
+
+        val series = gs.seriesState[matchId]
+        if (series != null && series.isFinished) {
+            match.played = true
+            gs.seriesState.remove(matchId)
+            GameRepository.save(context)
+        }
+    }
 }
 
 /** Relatório consolidado do `advanceDays`. */

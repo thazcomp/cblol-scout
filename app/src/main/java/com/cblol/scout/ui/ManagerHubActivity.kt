@@ -3,6 +3,7 @@ package com.cblol.scout.ui
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -174,9 +175,15 @@ class ManagerHubActivity : AppCompatActivity() {
         val opponentPicks = if (playerIsBlue) redPicks  else bluePicks
         val mapWinner     = simulateMapWithPicks(mapNum, playerPicks, opponentPicks, playerIsBlue)
 
-        val prev    = gs.seriesState[pendingMatchId] ?: SeriesState()
+        var prev  =  SeriesState()
+        try {
+            prev = gs.seriesState[pendingMatchId] ?: SeriesState()
+        }catch (e: Exception) {
+            Log.e("ManagerHubActivity", "Erro ao ler estado da série para a partida $pendingMatchId", e)
+            gs.seriesState = mutableMapOf()
+        }
         val updated = prev.recordMap(mapWinner == pendingPlayerTeamId)
-        gs.seriesState[pendingMatchId] = updated
+        gs.seriesState.put(pendingMatchId, updated)
 
         val snap         = GameRepository.snapshot(applicationContext)
         val playerName   = snap.times.find { it.id == pendingPlayerTeamId }?.nome  ?: "Você"

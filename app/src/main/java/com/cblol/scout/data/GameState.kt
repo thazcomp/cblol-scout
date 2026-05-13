@@ -22,7 +22,7 @@ data class GameState(
      * Não precisa ser persistido entre sessões (série sempre recomeça do mapa 1
      * se o app for fechado), mas fica aqui para consistência com o Gson.
      */
-    val seriesState: MutableMap<String, SeriesState> = mutableMapOf()
+    var seriesState: MutableMap<String, SeriesState> = mutableMapOf()
 )
 
 /**
