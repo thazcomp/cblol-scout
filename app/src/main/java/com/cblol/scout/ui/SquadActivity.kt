@@ -87,6 +87,17 @@ class SquadActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+
+        // Validação automática do elenco
+        val logs = SquadManager.validateAndFixRoster(applicationContext)
+        if (logs.isNotEmpty()) {
+            val message = logs.joinToString("\n")
+            AlertDialog.Builder(this)
+                .setTitle("⚠ Elenco ajustado automaticamente")
+                .setMessage(message)
+                .setPositiveButton("OK", null).show()
+        }
+
         vm.load()
     }
 

@@ -13,6 +13,9 @@ val appModule = module {
     factory { LoadCareerUseCase(androidContext()) }
     factory { HasSaveUseCase(androidContext()) }
     factory { ClearCareerUseCase(androidContext()) }
+    factory { ValidateRosterUseCase(androidContext()) }
+    factory { IsMissingStarterUseCase(androidContext()) }
+    factory { StarterCountUseCase(androidContext()) }
 
     // ── UseCases — Hub ───────────────────────────────────────────────────
     factory { GetHubStateUseCase(androidContext()) }

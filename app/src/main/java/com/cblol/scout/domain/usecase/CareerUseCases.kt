@@ -21,3 +21,15 @@ class HasSaveUseCase(private val context: Context) {
 class ClearCareerUseCase(private val context: Context) {
     operator fun invoke() = GameRepository.clear(context)
 }
+
+class ValidateRosterUseCase(private val context: Context) {
+    operator fun invoke() = com.cblol.scout.game.SquadManager.validateAndFixRoster(context)
+}
+
+class IsMissingStarterUseCase(private val context: Context) {
+    operator fun invoke(): Boolean = com.cblol.scout.game.SquadManager.isMissingStarter(context)
+}
+
+class StarterCountUseCase(private val context: Context) {
+    operator fun invoke(): Int = com.cblol.scout.game.SquadManager.starterCount(context)
+}

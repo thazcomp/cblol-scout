@@ -45,6 +45,10 @@ object TransferMarket {
             "${player.nome_jogo} vendido para ${newTeam.nome} por R$ ${"%,d".format(price)}"
         )
         GameRepository.save(context)
+
+        // Validação automática: se era titular, promove um reserva
+        SquadManager.validateAndFixRoster(context)
+
         return SellResult.Ok(price, newTeam.nome)
     }
 
@@ -68,6 +72,10 @@ object TransferMarket {
             "${player.nome_jogo} contratado por R$ ${"%,d".format(price)}"
         )
         GameRepository.save(context)
+
+        // Validação automática: se tiver vaga de titular, promove o novo jogador
+        SquadManager.validateAndFixRoster(context)
+
         return BuyResult.Ok(price)
     }
 
@@ -115,6 +123,9 @@ object TransferMarket {
             "${player.nome_jogo} agora é $newStatus"
         )
         GameRepository.save(context)
+
+        // Validação automática: garante que há sempre 5 titulares
+        SquadManager.validateAndFixRoster(context)
     }
 }
 

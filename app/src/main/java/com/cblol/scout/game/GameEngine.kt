@@ -49,6 +49,10 @@ object GameEngine {
 
             // 3. Simula partidas do dia
             val todayMatches = gs.matches.filter { it.date == iso && !it.played }
+            if (todayMatches.isNotEmpty()) {
+                // Validação: garante que há 5 titulares antes de jogar
+                SquadManager.validateAndFixRoster(context)
+            }
             todayMatches.forEach { m ->
                 MatchSimulator.simulate(context, m)
                 report.matchesPlayed += 1

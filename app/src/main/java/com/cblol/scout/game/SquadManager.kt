@@ -55,6 +55,94 @@ object SquadManager {
             .filter { !it.titular && it.role == starter.role }
             .sortedByDescending { it.overallRating() }
     }
+
+    /** Validação automática: garante que há sempre 5 titulares (1 por role). */
+    fun validateAndFixRoster(context: Context): List<String> {
+        val gs = GameRepository.current()
+        val roster = GameRepository.rosterOf(context, gs.managerTeamId)
+        val logs = mutableListOf<String>()
+
+        // Identifica roles com problema
+        val startersByRole = roster.filter { it.titular }.groupBy { it.role }
+        val roles = listOf("TOP", "JNG", "MID", "ADC", "SUP")
+
+        for (role in roles) {
+            val starters = startersByRole[role] ?: emptyList()
+
+            when (starters.size) {
+                0 -> {
+                    // Sem titular nessa role — promove melhor reserva
+                    val bestReserve = roster
+                        .filter { !it.titular && it.role == role }
+                        .maxByOrNull { it.overallRating() }
+
+                    if (bestReserve != null) {
+                        GameRepository.updateOverride(bestReserve.id) { it.copy(titular = true) }
+                        logs.add("AUTO: ${bestReserve.nome_jogo} promovido a titular de $role")
+                    } else {
+                        logs.add("ERRO: Sem reserva disponível para $role")
+                    }
+                }
+                in 2..5 -> {
+                    // Mais de 1 titular nessa role — rebaixa os piores
+                    val sorted = starters.sortedByDescending { it.overallRating() }
+                    for (i in 1 until sorted.size) {
+                        GameRepository.updateOverride(sorted[i].id) { it.copy(titular = false) }
+                        logs.add("AUTO: ${sorted[i].nome_jogo} rebaixado a reserva de $role")
+                    }
+                }
+            }
+        }
+
+        if (logs.isNotEmpty()) {
+            for (log in logs) {
+                GameRepository.log("SQUAD_AUTO", log.replace("AUTO: ", ""))
+            }
+            GameRepository.save(context)
+        }
+
+        return logs
+    }
+
+    /** Verifica se o elenco está com um jogador faltando em alguma role. */
+    fun isMissingStarter(context: Context): Boolean {
+        val gs = GameRepository.current()
+        val roster = GameRepository.rosterOf(context, gs.managerTeamId)
+        val startersByRole = roster.filter { it.titular }.groupBy { it.role }
+        val roles = listOf("TOP", "JNG", "MID", "ADC", "SUP")
+        return roles.any { startersByRole[it]?.size != 1 }
+    }
+
+    /** Retorna o número de titulares no elenco. */
+    fun starterCount(context: Context): Int {
+        val gs = GameRepository.current()
+        return GameRepository.rosterOf(context, gs.managerTeamId).count { it.titular }
+    }
+
+    /** Inicializa um elenco válido para um novo jogo (garante 5 titulares no primeiro carregamento). */
+    fun initializeRoster(context: Context) {
+        val gs = GameRepository.current()
+        val roster = GameRepository.rosterOf(context, gs.managerTeamId)
+
+        // Agrupa jogadores por role
+        val playersByRole = roster.groupBy { it.role }
+        val roles = listOf("TOP", "JNG", "MID", "ADC", "SUP")
+
+        // Para cada role, define o melhor jogador como titular e os outros como reservas
+        for (role in roles) {
+            val playersInRole = playersByRole[role] ?: continue
+            val sorted = playersInRole.sortedByDescending { it.overallRating() }
+
+            for ((index, player) in sorted.withIndex()) {
+                GameRepository.updateOverride(player.id) { ov ->
+                    ov.copy(titular = index == 0)
+                }
+            }
+        }
+
+        GameRepository.log("SQUAD_INIT", "Elenco inicializado com 5 titulares")
+        GameRepository.save(context)
+    }
 }
 
 sealed class PromoteResult {
