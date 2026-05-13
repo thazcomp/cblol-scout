@@ -29,8 +29,24 @@ object TransferMarket {
     fun sellPlayer(context: Context, playerId: String): SellResult {
         val gs = GameRepository.current()
         val snap = GameRepository.snapshot(context)
-        val player = GameRepository.rosterOf(context, gs.managerTeamId).find { it.id == playerId }
+        val roster = GameRepository.rosterOf(context, gs.managerTeamId)
+        val player = roster.find { it.id == playerId }
             ?: return SellResult.Error("Jogador não está no seu elenco")
+
+        // Validação: se é titular, verificar se há reserva para substituir
+        if (player.titular) {
+            val reserve = roster
+                .filter { !it.titular && it.role == player.role }
+                .maxByOrNull { it.overallRating() }
+
+            if (reserve == null) {
+                return SellResult.Error(
+                    "Não é possível vender o jogador ${player.nome_jogo}. " +
+                    "Ele é o único titular de ${player.role} e não há reserva disponível. " +
+                    "Contrate um substituto primeiro."
+                )
+            }
+        }
 
         val price = marketPriceOf(player)
         val otherTeams = snap.times.filter { it.id != gs.managerTeamId }
@@ -46,7 +62,7 @@ object TransferMarket {
         )
         GameRepository.save(context)
 
-        // Validação automática: se era titular, promove um reserva
+        // Validação automática: promove reserva se necessário
         SquadManager.validateAndFixRoster(context)
 
         return SellResult.Ok(price, newTeam.nome)

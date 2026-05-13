@@ -14,18 +14,38 @@ Foi implementado um sistema automático que **garante que o time sempre possui e
 
 ### Cenários Automáticos
 
-**1️⃣ Venda de Titular**
+**1️⃣ Venda de Titular COM Reserva ✅**
 ```
-Usuário vende TOP titular
+Usuário vende TOP titular (há TOP reserva)
     ↓
-Sistema detecta vaga de TOP
+Sistema permite a venda
     ↓
-Promove automaticamente o melhor TOP da reserva
+Promove automaticamente o TOP reserva
     ↓
 Time mantém 5 titulares
 ```
 
-**2️⃣ Compra de Jogador**
+**2️⃣ Venda de Titular SEM Reserva ❌**
+```
+Usuário tenta vender TOP titular (SEM TOP reserva)
+    ↓
+Sistema BLOQUEIA a venda
+    ↓
+Mensagem: "Contrate um substituto primeiro"
+    ↓
+Time continua com 5 titulares (protegido)
+```
+
+**3️⃣ Venda de Reserva ✅**
+```
+Usuário vende TOP reserva
+    ↓
+Sistema permite a venda
+    ↓
+Time mantém 5 titulares (TOP titular continua)
+```
+
+**4️⃣ Compra de Jogador**
 ```
 Usuário compra novo MID (após vender titular)
     ↓
@@ -36,7 +56,7 @@ Promove novo MID para titular automaticamente
 Time mantém 5 titulares
 ```
 
-**3️⃣ Antes de Simular Partida**
+**5️⃣ Antes de Simular Partida**
 ```
 Usuário simula partida
     ↓
@@ -47,7 +67,7 @@ Se falta alguém, promove automaticamente
 Partida ocorre com elenco válido (sempre 5 titulares)
 ```
 
-**4️⃣ Tela de Elenco**
+**6️⃣ Tela de Elenco**
 ```
 Usuário abre tela de elenco
     ↓
@@ -89,6 +109,9 @@ val count = SquadManager.starterCount(context)
 
 // Inicializa elenco para novo jogo
 SquadManager.initializeRoster(context)
+
+// Verifica se é seguro vender um jogador
+val canSell = SquadManager.canSellPlayer(context, playerId)
 ```
 
 ### Exemplo de Uso

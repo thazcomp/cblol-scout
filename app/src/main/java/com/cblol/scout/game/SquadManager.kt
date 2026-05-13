@@ -143,6 +143,23 @@ object SquadManager {
         GameRepository.log("SQUAD_INIT", "Elenco inicializado com 5 titulares")
         GameRepository.save(context)
     }
+
+    /** Verifica se é seguro vender um jogador (se é reserva ou há substituto disponível). */
+    fun canSellPlayer(context: Context, playerId: String): Boolean {
+        val gs = GameRepository.current()
+        val roster = GameRepository.rosterOf(context, gs.managerTeamId)
+        val player = roster.find { it.id == playerId } ?: return false
+
+        // Se for reserva, sempre pode vender
+        if (!player.titular) return true
+
+        // Se for titular, precisa haver reserva para substituir
+        val hasReserve = roster
+            .filter { !it.titular && it.role == player.role }
+            .isNotEmpty()
+
+        return hasReserve
+    }
 }
 
 sealed class PromoteResult {

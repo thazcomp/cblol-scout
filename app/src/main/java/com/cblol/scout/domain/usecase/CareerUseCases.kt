@@ -33,3 +33,8 @@ class IsMissingStarterUseCase(private val context: Context) {
 class StarterCountUseCase(private val context: Context) {
     operator fun invoke(): Int = com.cblol.scout.game.SquadManager.starterCount(context)
 }
+
+class CanSellPlayerUseCase(private val context: Context) {
+    operator fun invoke(playerId: String): Boolean =
+        com.cblol.scout.game.SquadManager.canSellPlayer(context, playerId)
+}

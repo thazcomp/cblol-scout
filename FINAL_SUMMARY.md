@@ -58,28 +58,52 @@
 
 ## 🔄 Fluxos Automáticos Implementados
 
-### 1️⃣ Venda de Titular
+### 1️⃣ Venda de Jogador (COM VALIDAÇÃO)
 ```
-sellPlayer() → updateOverride() → save() → validateAndFixRoster()
-                                                     ↓
-                                        Promove melhor reserva
+Usuário tenta vender titular
+    ↓
+Sistema valida:
+  - É titular? Sim
+  - Há reserva? Não
+    ↓
+Venda BLOQUEADA ❌
+Mensagem clara: "Contrate um substituto"
 ```
 
-### 2️⃣ Compra de Jogador
+### 2️⃣ Venda de Reserva (PERMITIDA)
+```
+Usuário vende reserva
+    ↓
+Validação: é reserva? Sim
+    ↓
+Venda permitida ✅
+```
+
+### 3️⃣ Venda de Titular COM Reserva (PERMITIDA)
+```
+Usuário vende TOP titular (há TOP reserva)
+    ↓
+Sistema valida: há reserva? Sim
+    ↓
+Venda permitida ✅
+Sistema promove reserva automaticamente
+```
+
+### 4️⃣ Compra de Jogador
 ```
 buyPlayer() → updateOverride() → save() → validateAndFixRoster()
                                                      ↓
                                         Promove se há vaga
 ```
 
-### 3️⃣ Alternância Manual
+### 5️⃣ Alternância Manual
 ```
 toggleStarter() → updateOverride() → save() → validateAndFixRoster()
                                                      ↓
                                         Rebalanceia se necessário
 ```
 
-### 4️⃣ Simulação de Partida
+### 6️⃣ Simulação de Partida
 ```
 advanceDays() → (para cada dia com partida)
                         ↓
@@ -88,7 +112,7 @@ advanceDays() → (para cada dia com partida)
                 MatchSimulator.simulate()
 ```
 
-### 5️⃣ Abertura de Tela
+### 7️⃣ Abertura de Tela
 ```
 SquadActivity.onResume() → validateAndFixRoster()
                                   ↓
@@ -144,6 +168,7 @@ Todas as ações são atômicas (tudo ou nada)
 │ ✅ 1 titular por role (TOP, JNG, MID, ADC, SUP)  │
 │ ✅ Sem role vazia se há reserva                   │
 │ ✅ Sem role com 2+ titulares                      │
+│ ✅ Não é possível vender titular sem reserva ◄── NOVO │
 └───────────────────────────────────────────────────┘
 
 ┌─ PROPRIEDADES ────────────────────────────────────┐
