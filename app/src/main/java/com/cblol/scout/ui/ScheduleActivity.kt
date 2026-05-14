@@ -43,9 +43,9 @@ class ScheduleActivity : AppCompatActivity() {
 
         vm.event.observe(this) { event ->
             when (event) {
-                is ScheduleEvent.ShowResult -> showSeriesResult(
-                    event.playerName, event.opponentName, event.pw, event.ow
-                )
+                is ScheduleEvent.ShowResult -> {
+                    startActivity(event.result.toResultIntent(this))
+                }
                 is ScheduleEvent.NextMap -> showNextMapDialog(
                     event.mapNum, event.playerWon, event.pw, event.ow
                 )
@@ -150,7 +150,7 @@ class ScheduleActivity : AppCompatActivity() {
         val playerName   = snap.times.find { it.id == vm.pendingPlayerTeamId }?.nome  ?: "Você"
         val opponentName = snap.times.find { it.id == vm.pendingOpponentTeamId }?.nome ?: "Oponente"
 
-        vm.handlePickBanResult(bluePicks, redPicks, blueBans, redBans, mapNum, playerName, opponentName)
+        vm.handlePickBanResult(bluePicks, redPicks, blueBans, redBans, mapNum)
     }
 
     private fun showSeriesResult(playerName: String, opponentName: String, pw: Int, ow: Int) {

@@ -1,0 +1,381 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    activity_match_result.xml
+    Tela de resultado pós-partida com layout imersivo:
+    ┌──────────────────────────────────────────────────────┐
+    │              fundo gradiente escuro                  │
+    │                                                      │
+    │          🏆 VITÓRIA  /  💔 DERROTA                   │
+    │                                                      │
+    │   [LOUD]        2 — 1        [paiN]                  │
+    │   barra cor                  barra cor               │
+    │                                                      │
+    │  ┌────────────────────────────────────────────────┐  │
+    │  │  Estatísticas da série (kills, torres, drag…)  │  │
+    │  └────────────────────────────────────────────────┘  │
+    │                                                      │
+    │  ┌────────────────────────────────────────────────┐  │
+    │  │  Bônus financeiro recebido                      │  │
+    │  └────────────────────────────────────────────────┘  │
+    │                                                      │
+    │              [CONTINUAR]                             │
+    └──────────────────────────────────────────────────────┘
+-->
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_screen">
+
+    <!-- Gradiente de fundo animado (layer de baixo) -->
+    <View
+        android:id="@+id/view_result_bg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:alpha="0" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:paddingTop="56dp"
+            android:paddingBottom="32dp"
+            android:paddingHorizontal="20dp">
+
+            <!-- Ícone de resultado (troféu ou coração partido) -->
+            <TextView
+                android:id="@+id/tv_result_icon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🏆"
+                android:textSize="72sp"
+                android:alpha="0"
+                android:layout_marginBottom="8dp" />
+
+            <!-- Label VITÓRIA / DERROTA / EMPATE -->
+            <TextView
+                android:id="@+id/tv_result_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="VITÓRIA"
+                android:textSize="36sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.15"
+                android:textColor="#C9AA71"
+                android:alpha="0"
+                android:layout_marginBottom="32dp" />
+
+            <!-- Placar da série -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:alpha="0"
+                android:id="@+id/ll_scoreboard">
+
+                <!-- Time Home -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center">
+
+                    <View
+                        android:id="@+id/view_home_color"
+                        android:layout_width="48dp"
+                        android:layout_height="4dp"
+                        android:layout_marginBottom="6dp" />
+
+                    <TextView
+                        android:id="@+id/tv_home_name"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="LOUD"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="#F0E6D2"
+                        android:gravity="center" />
+                </LinearLayout>
+
+                <!-- Placar central -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:paddingHorizontal="24dp">
+
+                    <TextView
+                        android:id="@+id/tv_series_score"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="2 — 1"
+                        android:textSize="48sp"
+                        android:textStyle="bold"
+                        android:textColor="#C9AA71"
+                        android:fontFamily="monospace" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="MAPAS"
+                        android:textSize="10sp"
+                        android:textColor="#66FFFFFF"
+                        android:letterSpacing="0.15" />
+                </LinearLayout>
+
+                <!-- Time Away -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center">
+
+                    <View
+                        android:id="@+id/view_away_color"
+                        android:layout_width="48dp"
+                        android:layout_height="4dp"
+                        android:layout_marginBottom="6dp" />
+
+                    <TextView
+                        android:id="@+id/tv_away_name"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="paiN"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="#F0E6D2"
+                        android:gravity="center" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="#22FFFFFF"
+                android:layout_marginVertical="24dp" />
+
+            <!-- Card de estatísticas -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/card_stats"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:alpha="0"
+                app:cardBackgroundColor="#1A1A2A"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="ESTATÍSTICAS DA SÉRIE"
+                        android:textSize="11sp"
+                        android:textColor="#C9AA71"
+                        android:letterSpacing="0.1"
+                        android:layout_marginBottom="12dp" />
+
+                    <!-- Kills -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="10dp">
+
+                        <TextView
+                            android:id="@+id/tv_stat_home_kills"
+                            android:layout_width="40dp"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="#F0E6D2"
+                            android:gravity="center" />
+
+                        <View android:id="@+id/bar_kills_home"
+                            android:layout_width="0dp"
+                            android:layout_height="6dp"
+                            android:layout_weight="1"
+                            android:background="#C9AA71" />
+
+                        <TextView
+                            android:layout_width="60dp"
+                            android:layout_height="wrap_content"
+                            android:text="⚔️ Abates"
+                            android:textSize="11sp"
+                            android:textColor="#88FFFFFF"
+                            android:gravity="center" />
+
+                        <View android:id="@+id/bar_kills_away"
+                            android:layout_width="0dp"
+                            android:layout_height="6dp"
+                            android:layout_weight="1"
+                            android:background="#C9AA71" />
+
+                        <TextView
+                            android:id="@+id/tv_stat_away_kills"
+                            android:layout_width="40dp"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:textColor="#F0E6D2"
+                            android:gravity="center" />
+                    </LinearLayout>
+
+                    <!-- Torres -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="10dp">
+
+                        <TextView android:id="@+id/tv_stat_home_towers"
+                            android:layout_width="40dp" android:layout_height="wrap_content"
+                            android:text="0" android:textSize="16sp" android:textStyle="bold"
+                            android:textColor="#F0E6D2" android:gravity="center" />
+                        <View android:id="@+id/bar_towers_home"
+                            android:layout_width="0dp" android:layout_height="6dp"
+                            android:layout_weight="1" android:background="#C8AA6E" />
+                        <TextView android:layout_width="60dp" android:layout_height="wrap_content"
+                            android:text="🏰 Torres" android:textSize="11sp"
+                            android:textColor="#88FFFFFF" android:gravity="center" />
+                        <View android:id="@+id/bar_towers_away"
+                            android:layout_width="0dp" android:layout_height="6dp"
+                            android:layout_weight="1" android:background="#C8AA6E" />
+                        <TextView android:id="@+id/tv_stat_away_towers"
+                            android:layout_width="40dp" android:layout_height="wrap_content"
+                            android:text="0" android:textSize="16sp" android:textStyle="bold"
+                            android:textColor="#F0E6D2" android:gravity="center" />
+                    </LinearLayout>
+
+                    <!-- Dragões -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="10dp">
+
+                        <TextView android:id="@+id/tv_stat_home_dragons"
+                            android:layout_width="40dp" android:layout_height="wrap_content"
+                            android:text="0" android:textSize="16sp" android:textStyle="bold"
+                            android:textColor="#F0E6D2" android:gravity="center" />
+                        <View android:id="@+id/bar_dragons_home"
+                            android:layout_width="0dp" android:layout_height="6dp"
+                            android:layout_weight="1" android:background="#0AC8B9" />
+                        <TextView android:layout_width="60dp" android:layout_height="wrap_content"
+                            android:text="🐉 Drakes" android:textSize="11sp"
+                            android:textColor="#88FFFFFF" android:gravity="center" />
+                        <View android:id="@+id/bar_dragons_away"
+                            android:layout_width="0dp" android:layout_height="6dp"
+                            android:layout_weight="1" android:background="#0AC8B9" />
+                        <TextView android:id="@+id/tv_stat_away_dragons"
+                            android:layout_width="40dp" android:layout_height="wrap_content"
+                            android:text="0" android:textSize="16sp" android:textStyle="bold"
+                            android:textColor="#F0E6D2" android:gravity="center" />
+                    </LinearLayout>
+
+                    <!-- Barons -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView android:id="@+id/tv_stat_home_barons"
+                            android:layout_width="40dp" android:layout_height="wrap_content"
+                            android:text="0" android:textSize="16sp" android:textStyle="bold"
+                            android:textColor="#F0E6D2" android:gravity="center" />
+                        <View android:id="@+id/bar_barons_home"
+                            android:layout_width="0dp" android:layout_height="6dp"
+                            android:layout_weight="1" android:background="#B19CD9" />
+                        <TextView android:layout_width="60dp" android:layout_height="wrap_content"
+                            android:text="🦣 Barons" android:textSize="11sp"
+                            android:textColor="#88FFFFFF" android:gravity="center" />
+                        <View android:id="@+id/bar_barons_away"
+                            android:layout_width="0dp" android:layout_height="6dp"
+                            android:layout_weight="1" android:background="#B19CD9" />
+                        <TextView android:id="@+id/tv_stat_away_barons"
+                            android:layout_width="40dp" android:layout_height="wrap_content"
+                            android:text="0" android:textSize="16sp" android:textStyle="bold"
+                            android:textColor="#F0E6D2" android:gravity="center" />
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Card de prêmio financeiro -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/card_prize"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:alpha="0"
+                app:cardBackgroundColor="#1A2010"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="💰 Prêmio recebido"
+                        android:textSize="13sp"
+                        android:textColor="#AAFFFFFF" />
+
+                    <TextView
+                        android:id="@+id/tv_prize"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="+ R$ 0"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:textColor="#4CAF50" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Spacer -->
+            <View android:layout_width="match_parent" android:layout_height="32dp" />
+
+            <!-- Botão continuar -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_continue"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:text="CONTINUAR"
+                android:textSize="14sp"
+                android:letterSpacing="0.1"
+                android:alpha="0"
+                app:backgroundTint="#C9AA71"
+                android:textColor="#0A0A14"
+                app:cornerRadius="8dp" />
+
+        </LinearLayout>
+    </ScrollView>
+</FrameLayout>

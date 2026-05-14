@@ -56,6 +56,11 @@
             android:exported="false"
             android:windowSoftInputMode="adjustPan" />
 
+        <activity
+            android:name=".ui.MatchResultActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
 
     </application>
 

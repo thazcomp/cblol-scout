@@ -332,26 +332,27 @@ class MatchSimulationActivity : AppCompatActivity() {
         else binding.tvAwayName.text.toString()
 
     private fun applyResult(homeMapsFinal: Int, awayMapsFinal: Int) {
-        // Marca a partida como jogada e aplica prêmios (se eu participei)
-        match.played = true
+        match.played    = true
         match.homeScore = homeMapsFinal
         match.awayScore = awayMapsFinal
 
-        val gs = GameRepository.current()
+        val gs     = GameRepository.current()
+        val snap   = GameRepository.snapshot(applicationContext)
         val winner = if (homeMapsFinal > awayMapsFinal) match.homeTeamId else match.awayTeamId
         val isMine = match.homeTeamId == gs.managerTeamId || match.awayTeamId == gs.managerTeamId
 
+        var prize = 0L
         if (isMine && winner == gs.managerTeamId) {
             val mapsWon = maxOf(homeMapsFinal, awayMapsFinal)
-            val prize = GameEngine.PRIZE_PER_SERIES_WIN + GameEngine.PRIZE_PER_MAP_WIN * mapsWon
+            prize = GameEngine.PRIZE_PER_SERIES_WIN + GameEngine.PRIZE_PER_MAP_WIN * mapsWon
             gs.budget += prize
         } else if (isMine) {
             val myMaps = if (match.homeTeamId == gs.managerTeamId) homeMapsFinal else awayMapsFinal
-            gs.budget += GameEngine.PRIZE_PER_MAP_WIN * myMaps
+            prize = GameEngine.PRIZE_PER_MAP_WIN * myMaps
+            gs.budget += prize
         }
 
-        // Avança a data até o dia da partida (se estiver atrás), igual ao GameEngine
-        val today = LocalDate.parse(gs.currentDate)
+        val today    = LocalDate.parse(gs.currentDate)
         val matchDay = LocalDate.parse(match.date)
         if (today.isBefore(matchDay)) gs.currentDate = match.date
 
@@ -361,14 +362,31 @@ class MatchSimulationActivity : AppCompatActivity() {
         )
         GameRepository.save(applicationContext)
 
-        // Botão de voltar com resultado
-        binding.btnSpeed.text = "OK"
-        binding.btnSpeed.setOnClickListener {
-            val intent = Intent(this, ManagerHubActivity::class.java)
-                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            startActivity(intent)
-            finish()
-        }
+        // Lança a tela de resultado animada
+        val homeName = binding.tvHomeName.text.toString()
+        val awayName = binding.tvAwayName.text.toString()
+        startActivity(
+            Intent(this, MatchResultActivity::class.java).apply {
+                putExtra(MatchResultActivity.EXTRA_HOME_NAME,    homeName)
+                putExtra(MatchResultActivity.EXTRA_AWAY_NAME,    awayName)
+                putExtra(MatchResultActivity.EXTRA_HOME_ID,      match.homeTeamId)
+                putExtra(MatchResultActivity.EXTRA_AWAY_ID,      match.awayTeamId)
+                putExtra(MatchResultActivity.EXTRA_HOME_SCORE,   homeMapsFinal)
+                putExtra(MatchResultActivity.EXTRA_AWAY_SCORE,   awayMapsFinal)
+                putExtra(MatchResultActivity.EXTRA_WINNER_ID,    winner)
+                putExtra(MatchResultActivity.EXTRA_MANAGER_ID,   gs.managerTeamId)
+                putExtra(MatchResultActivity.EXTRA_HOME_KILLS,   homeKills)
+                putExtra(MatchResultActivity.EXTRA_AWAY_KILLS,   awayKills)
+                putExtra(MatchResultActivity.EXTRA_HOME_TOWERS,  homeTowers)
+                putExtra(MatchResultActivity.EXTRA_AWAY_TOWERS,  awayTowers)
+                putExtra(MatchResultActivity.EXTRA_HOME_DRAGONS, homeDragons)
+                putExtra(MatchResultActivity.EXTRA_AWAY_DRAGONS, awayDragons)
+                putExtra(MatchResultActivity.EXTRA_HOME_BARONS,  homeBarons)
+                putExtra(MatchResultActivity.EXTRA_AWAY_BARONS,  awayBarons)
+                putExtra(MatchResultActivity.EXTRA_PRIZE,        prize)
+            }
+        )
+        finish()
     }
 
     override fun onSupportNavigateUp(): Boolean { confirmExit(); return true }

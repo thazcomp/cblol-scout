@@ -6,14 +6,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.cblol.scout.data.Match
 import com.cblol.scout.data.PickBanPlan
-import com.cblol.scout.data.SeriesState
 import com.cblol.scout.domain.usecase.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 sealed class ScheduleEvent {
-    data class ShowResult(val playerName: String, val opponentName: String, val pw: Int, val ow: Int) : ScheduleEvent()
+    data class ShowResult(val result: MatchResultData) : ScheduleEvent()
     data class NextMap(val mapNum: Int, val playerWon: Boolean, val pw: Int, val ow: Int) : ScheduleEvent()
 }
 
@@ -31,7 +30,6 @@ class ScheduleViewModel(
     private val _event = MutableLiveData<ScheduleEvent>()
     val event: LiveData<ScheduleEvent> = _event
 
-    // Estado da série em andamento
     var pendingMatchId: String = ""
     var pendingMapNumber: Int = 1
     var pendingPlayerTeamId: String = ""
@@ -46,8 +44,7 @@ class ScheduleViewModel(
     fun handlePickBanResult(
         bluePicks: List<String>, redPicks: List<String>,
         blueBans: List<String>, redBans: List<String>,
-        mapNum: Int,
-        playerName: String, opponentName: String
+        mapNum: Int
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             savePickBanPlan(pendingMatchId, PickBanPlan(mapNum, bluePicks, redPicks, blueBans, redBans))
@@ -56,7 +53,7 @@ class ScheduleViewModel(
             val playerPicks   = if (playerIsBlue) bluePicks else redPicks
             val opponentPicks = if (playerIsBlue) redPicks  else bluePicks
 
-            val winner = simulateMapWithPicks(
+            val winner  = simulateMapWithPicks(
                 pendingPlayerTeamId, pendingOpponentTeamId,
                 playerPicks, opponentPicks, playerIsBlue
             )
@@ -66,9 +63,9 @@ class ScheduleViewModel(
 
             withContext(Dispatchers.Main) {
                 if (updated.isFinished) {
-                    finalizeMatch(pendingMatchId, pendingPlayerTeamId, pw, ow)
+                    val result = finalizeMatch(pendingMatchId, pendingPlayerTeamId, pw, ow)
                     _matches.value = getAllMatches()
-                    _event.value = ScheduleEvent.ShowResult(playerName, opponentName, pw, ow)
+                    _event.value = ScheduleEvent.ShowResult(result)
                 } else {
                     _event.value = ScheduleEvent.NextMap(mapNum, winner == pendingPlayerTeamId, pw, ow)
                 }

@@ -116,6 +116,12 @@ class ManagerHubActivity : AppCompatActivity() {
                 )
             }
             .setNegativeButton("Simular direto") { _, _ ->
+                // Limpa as variáveis de estado antes de simular direto
+                // para evitar conflitos quando se volta de MatchResultActivity
+                pendingMatchId        = ""
+                pendingMapNumber      = 1
+                pendingPlayerTeamId   = ""
+                pendingOpponentTeamId = ""
                 startActivity(Intent(this, MatchSimulationActivity::class.java)
                     .putExtra(MatchSimulationActivity.EXTRA_MATCH_ID, next.matchId))
             }
@@ -126,6 +132,7 @@ class ManagerHubActivity : AppCompatActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode != PickBanActivity.REQUEST_PICK_BAN || resultCode != RESULT_OK || data == null) return
+        if (pendingMatchId.isEmpty() || pendingPlayerTeamId.isEmpty()) return
 
         val bluePicks = data.getStringArrayListExtra("blue_picks")?.toList() ?: return
         val redPicks  = data.getStringArrayListExtra("red_picks")?.toList()  ?: emptyList()
@@ -155,13 +162,10 @@ class ManagerHubActivity : AppCompatActivity() {
 
         when {
             updated.isFinished -> {
-                com.cblol.scout.domain.usecase.FinalizeMatchUseCase(applicationContext)
+                val result = com.cblol.scout.domain.usecase.FinalizeMatchUseCase(applicationContext)
                     .invoke(pendingMatchId, pendingPlayerTeamId, pw, ow)
                 vm.refresh()
-                AlertDialog.Builder(this)
-                    .setTitle(if (pw > ow) "🏆 Vitória!" else "💔 Derrota")
-                    .setMessage("$playerName  $pw — $ow  $opponentName")
-                    .setPositiveButton("OK", null).show()
+                startActivity(result.toResultIntent(this))
             }
             else -> {
                 val msg = if (winner == pendingPlayerTeamId) "✅ Mapa $mapNum: você venceu!"
