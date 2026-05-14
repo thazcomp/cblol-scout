@@ -39,7 +39,7 @@ class TransferMarketActivity : AppCompatActivity() {
         vm.players.observe(this) { players ->
             binding.tvBudget.text = "Orçamento: R$ ${"%,d".format(GameRepository.current().budget)}"
             binding.recycler.layoutManager = LinearLayoutManager(this)
-            binding.recycler.adapter = MarketAdapter(players) { confirmBuy(it) }
+            binding.recycler.adapter = MarketAdapter(players) { showPlayerDetails(it) }
         }
 
         vm.buyResult.observe(this) { result ->
@@ -65,6 +65,10 @@ class TransferMarketActivity : AppCompatActivity() {
     }
 
     override fun onSupportNavigateUp(): Boolean { finish(); return true }
+
+    private fun showPlayerDetails(player: Player) {
+        PlayerDetailDialog.show(this, player, onBuy = { confirmBuy(it) })
+    }
 
     private fun confirmBuy(player: Player) {
         val price  = vm.priceOf(player)

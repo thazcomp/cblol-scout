@@ -26,7 +26,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
  */
 object PlayerDetailDialog {
 
-    fun show(activity: Activity, player: Player, onChanged: () -> Unit = {}) {
+    fun show(activity: Activity, player: Player, onChanged: () -> Unit = {}, onBuy: ((Player) -> Unit)? = null) {
         val dialog = BottomSheetDialog(activity, R.style.ThemeOverlay_CBLOLScout_BottomSheet)
         val view = activity.layoutInflater.inflate(R.layout.bottom_sheet_player, null)
         dialog.setContentView(view)
@@ -72,7 +72,37 @@ object PlayerDetailDialog {
         // Ações de gerência (somente se houver carreira e for jogador do meu time)
         val gs = GameRepository.load(activity.applicationContext)
         val actions = view.findViewById<LinearLayout>(R.id.layout_bs_actions)
-        if (gs != null && player.time_id == gs.managerTeamId) {
+
+        // Se há callback de compra (vindo do mercado de transferências)
+        if (onBuy != null) {
+            actions.visibility = View.VISIBLE
+            actions.removeAllViews()
+
+            // Adiciona divider
+            val divider = View(activity).apply {
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    1
+                ).apply { setMargins(0, 14, 0, 14) }
+                setBackgroundColor(activity.resources.getColor(R.color.color_outline_variant, null))
+            }
+            actions.addView(divider)
+
+            val btnBuy = com.google.android.material.button.MaterialButton(activity).apply {
+                text = "Contratar Jogador"
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                setTextColor(activity.resources.getColor(android.R.color.white, null))
+                setBackgroundColor(activity.resources.getColor(R.color.color_primary, null))
+                setOnClickListener {
+                    dialog.dismiss()
+                    onBuy(player)
+                }
+            }
+            actions.addView(btnBuy)
+        } else if (gs != null && player.time_id == gs.managerTeamId) {
             actions.visibility = View.VISIBLE
             view.findViewById<Button>(R.id.btn_bs_toggle_starter).apply {
                 text = if (player.titular) "Mover para reserva" else "Promover a titular"
