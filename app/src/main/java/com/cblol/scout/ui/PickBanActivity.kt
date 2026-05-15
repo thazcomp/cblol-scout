@@ -28,6 +28,7 @@ import com.cblol.scout.data.PickBanPhase
 import com.cblol.scout.data.PickBanState
 import com.cblol.scout.game.GameRepository
 import com.cblol.scout.util.ChampionRepository
+import com.cblol.scout.util.CompositionRepository
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
@@ -109,6 +110,7 @@ class PickBanActivity : AppCompatActivity() {
             setupRoleFilters()
             setupSearch()
             setupButtons()
+            showBanSuggestions()
             advanceTurn()
         }
     }
@@ -356,6 +358,7 @@ class PickBanActivity : AppCompatActivity() {
                         it.setChampion(champ); it.setActive(false)
                     }
                 }
+                updateCompSynergyLabel()
             }
         }
 
@@ -393,6 +396,38 @@ class PickBanActivity : AppCompatActivity() {
         view.colorFilter = if (grayscale) {
             ColorMatrixColorFilter(ColorMatrix().apply { setSaturation(0f) })
         } else null
+    }
+
+    // ── Sugestão de bans baseada em composições perigosas ──────────────
+    private fun showBanSuggestions() {
+        val suggestions = CompositionRepository.suggestBans()
+        if (suggestions.isEmpty()) return
+
+        val top5 = suggestions.take(5)
+        val msg = top5.joinToString("\n") { (champ, reason) -> "⚡ Banir $champ — $reason" }
+
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("🚨 Composições Perigosas")
+            .setMessage("Banir esses campeões neutraliza as composições mais fortes do meta:\n\n$msg")
+            .setPositiveButton("Entendido", null)
+            .show()
+    }
+
+    // ── Detecta sinergia em tempo real e exibe no label de fase ──────────
+    private fun updateCompSynergyLabel() {
+        val playerIsBlue = state.playerIsBlue
+        val myPicks = if (playerIsBlue) state.bluePicks else state.redPicks
+        val opBans  = if (playerIsBlue) state.redBans   else state.blueBans
+
+        if (myPicks.size < 2) return
+
+        val result = CompositionRepository.analyze(
+            myPicks.map { it.id },
+            opBans.map  { it.id }
+        )
+        if (result.detected != null) {
+            tvPhaseLabel.text = "⚡ ${result.description}"
+        }
     }
 
     private fun renderTeamNames(playerIsBlue: Boolean) {

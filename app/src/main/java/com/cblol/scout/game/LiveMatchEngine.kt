@@ -6,6 +6,7 @@ import com.cblol.scout.data.MatchEvent
 import com.cblol.scout.data.Player
 import com.cblol.scout.data.Side
 import com.cblol.scout.data.PickBanPlan
+import com.cblol.scout.util.CompositionRepository
 import kotlin.math.absoluteValue
 import kotlin.random.Random
 
@@ -31,14 +32,38 @@ object LiveMatchEngine {
     fun generateSingleMap(context: Context, match: Match, gameNumber: Int): MapResult {
         val homeRoster = startersOrTopFive(GameRepository.rosterOf(context, match.homeTeamId))
         val awayRoster = startersOrTopFive(GameRepository.rosterOf(context, match.awayTeamId))
-        val homeStr    = teamStrength(homeRoster) + 4
-        val awayStr    = teamStrength(awayRoster)
         val plan       = if (match.pickBanPlan?.mapNumber == gameNumber) match.pickBanPlan else null
+
+        // Calcula bônus de sinergia de composição para cada lado
+        val homePicks  = plan?.bluePicks ?: emptyList()
+        val awayPicks  = plan?.redPicks  ?: emptyList()
+        val homeBans   = plan?.blueBans  ?: emptyList()
+        val awayBans   = plan?.redBans   ?: emptyList()
+        val allBans    = homeBans + awayBans
+
+        val homeComp   = CompositionRepository.analyze(homePicks, awayBans)  // bans do oponente podem quebrar a comp
+        val awayComp   = CompositionRepository.analyze(awayPicks, homeBans)
+
+        val homeStr = teamStrength(homeRoster) + 4 + homeComp.bonusStrength
+        val awayStr = teamStrength(awayRoster)     + awayComp.bonusStrength
 
         val (gameEvents, homeWon, finalKills, duration) =
             generateGame(gameNumber, homeRoster, awayRoster, homeStr, awayStr, plan)
 
         val events = gameEvents.toMutableList()
+
+        // Adiciona anúncio de sinergia no feed se alguma comp foi detectada
+        if (homeComp.detected != null) {
+            events.add(0, MatchEvent.PhaseAnnouncement(
+                "⚡ Comp detectada [HOME]: ${homeComp.description}"
+            ))
+        }
+        if (awayComp.detected != null) {
+            events.add(0, MatchEvent.PhaseAnnouncement(
+                "⚡ Comp detectada [AWAY]: ${awayComp.description}"
+            ))
+        }
+
         events.add(MatchEvent.GameEnd(
             gameNumber      = gameNumber,
             winnerSide      = if (homeWon) Side.HOME else Side.AWAY,
