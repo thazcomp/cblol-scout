@@ -284,12 +284,12 @@
                     android:imeOptions="actionSearch" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Role filters -->
+            <!-- Filtros de Role -->
             <HorizontalScrollView
                 android:layout_width="match_parent"
-                android:layout_height="36dp"
+                android:layout_height="32dp"
                 android:scrollbars="none"
-                android:layout_marginTop="4dp">
+                android:layout_marginTop="3dp">
 
                 <com.google.android.material.chip.ChipGroup
                     android:id="@+id/cg_role_filter"
@@ -297,6 +297,21 @@
                     android:layout_height="match_parent"
                     app:singleSelection="true"
                     app:selectionRequired="true" />
+            </HorizontalScrollView>
+
+            <!-- Filtros de Tag -->
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="32dp"
+                android:scrollbars="none"
+                android:layout_marginTop="2dp">
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/cg_tag_filter"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    app:singleSelection="true"
+                    app:selectionRequired="false" />
             </HorizontalScrollView>
 
             <!-- Grade de campeões -->

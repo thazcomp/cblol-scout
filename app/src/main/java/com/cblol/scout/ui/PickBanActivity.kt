@@ -1,5 +1,6 @@
 package com.cblol.scout.ui
 
+import androidx.activity.OnBackPressedCallback
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.content.Intent
@@ -24,6 +25,7 @@ import com.bumptech.glide.request.RequestOptions
 import com.bumptech.glide.request.target.Target
 import com.cblol.scout.R
 import com.cblol.scout.data.Champion
+import com.cblol.scout.data.ChampionTag
 import com.cblol.scout.data.PickBanPhase
 import com.cblol.scout.data.PickBanState
 import com.cblol.scout.game.GameRepository
@@ -40,6 +42,7 @@ class PickBanActivity : AppCompatActivity() {
     private lateinit var rvChampions: RecyclerView
     private lateinit var championAdapter: ChampionGridAdapter
     private lateinit var cgRoleFilter: ChipGroup
+    private lateinit var cgTagFilter: ChipGroup
     private lateinit var etSearch: EditText
 
     private lateinit var blueBanSlots: List<ImageView>
@@ -102,12 +105,18 @@ class PickBanActivity : AppCompatActivity() {
         initState(playerIsBlue)
         renderTeamNames(playerIsBlue)
 
+        // Intercepta o botão voltar durante o pick & ban
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() { confirmExit() }
+        })
+
         // Exibe overlay e pré-carrega todas as imagens antes de liberar a UI
         viewLoadingOverlay.visibility = View.VISIBLE
         preloadAllChampionImages {
             viewLoadingOverlay.visibility = View.GONE
             setupChampionGrid()
             setupRoleFilters()
+            setupTagFilters()
             setupSearch()
             setupButtons()
             showBanSuggestions()
@@ -119,6 +128,7 @@ class PickBanActivity : AppCompatActivity() {
     private fun bindViews() {
         rvChampions        = findViewById(R.id.rv_champions)
         cgRoleFilter       = findViewById(R.id.cg_role_filter)
+        cgTagFilter        = findViewById(R.id.cg_tag_filter)
         etSearch           = findViewById(R.id.et_search_champion)
         tvPhaseLabel       = findViewById(R.id.tv_phase_label)
         tvTimerLabel       = findViewById(R.id.tv_timer)
@@ -223,14 +233,58 @@ class PickBanActivity : AppCompatActivity() {
     private fun setupRoleFilters() {
         listOf("ALL", "TOP", "JNG", "MID", "ADC", "SUP").forEach { role ->
             val chip = Chip(this).apply {
-                text = role
+                text        = role
                 isCheckable = true
                 isChecked   = role == "ALL"
+                textSize    = 11f
             }
             chip.setOnCheckedChangeListener { _, checked ->
                 if (checked) championAdapter.filterByRole(if (role == "ALL") null else role)
             }
             cgRoleFilter.addView(chip)
+        }
+    }
+
+    private fun setupTagFilters() {
+        // Tags mais úteis para o draft — ordenadas por relevância
+        val draftTags = listOf(
+            ChampionTag.TANK          to "🛡️ Tank",
+            ChampionTag.ENGAGE        to "🚀 Engage",
+            ChampionTag.CROWD_CONTROL to "🔒 CC",
+            ChampionTag.MAGIC_DAMAGE  to "✨ AP",
+            ChampionTag.PHYSICAL_DAMAGE to "💪 AD",
+            ChampionTag.ANTI_TANK     to "🔱 Anti-Tank",
+            ChampionTag.HEAL          to "💉 Cura",
+            ChampionTag.SHIELD        to "🔰 Escudo",
+            ChampionTag.ASSASSIN      to "🗡️ Assassino",
+            ChampionTag.POKE          to "🎯 Poke",
+            ChampionTag.SPLIT_PUSH    to "🔀 Split",
+            ChampionTag.HYPERCARRY    to "🌟 HyperCarry",
+            ChampionTag.GLOBAL_ULT    to "🌐 Ult Global",
+            ChampionTag.KNOCK_UP      to "☝️ Knock-up",
+            ChampionTag.SUSTAIN       to "♻️ Sustain",
+            ChampionTag.INVISIBLE     to "🫥 Invisível",
+            ChampionTag.TRUE_DAMAGE   to "⚡ Dano Real"
+        )
+
+        draftTags.forEach { (tag, label) ->
+            val chip = Chip(this).apply {
+                text        = label
+                isCheckable = true
+                isChecked   = false
+                textSize    = 10f
+            }
+            chip.setOnCheckedChangeListener { _, checked ->
+                championAdapter.filterByTag(if (checked) tag else null)
+                // Desmarca todas as outras tags
+                if (checked) {
+                    for (i in 0 until cgTagFilter.childCount) {
+                        val other = cgTagFilter.getChildAt(i) as? Chip
+                        if (other != chip && other?.isChecked == true) other.isChecked = false
+                    }
+                }
+            }
+            cgTagFilter.addView(chip)
         }
     }
 
@@ -428,6 +482,45 @@ class PickBanActivity : AppCompatActivity() {
         if (result.detected != null) {
             tvPhaseLabel.text = "⚡ ${result.description}"
         }
+    }
+
+    /**
+     * Completa os turnos restantes com escolhas da IA e chama finishPickBan().
+     * Usado quando o jogador quer "simular até o fim" a partir do back.
+     */
+    private fun completeMissingWithAI() {
+        countDownTimer?.cancel()
+        val available = ChampionRepository.getAll().filter { it.id !in state.usedChampions }
+        val pool = available.toMutableList()
+
+        while (state.currentTurnIndex < turnOrder.size) {
+            val (isBlue, phase) = turnOrder[state.currentTurnIndex]
+            val champ = pool.randomOrNull() ?: break
+            pool.remove(champ)
+            state.usedChampions.add(champ.id)
+            when (phase) {
+                PickBanPhase.BAN  -> if (isBlue) state.blueBans.add(champ) else state.redBans.add(champ)
+                PickBanPhase.PICK -> if (isBlue) state.bluePicks.add(champ) else state.redPicks.add(champ)
+            }
+            state.currentTurnIndex++
+        }
+        finishPickBan()
+    }
+
+    private fun confirmExit() {
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Sair do Pick & Ban?")
+            .setMessage("Deseja simular o restante automaticamente e ir direto para a partida?")
+            .setPositiveButton("Simular até o fim") { _, _ ->
+                completeMissingWithAI()
+            }
+            .setNeutralButton("Cancelar partida") { _, _ ->
+                setResult(RESULT_CANCELED)
+                countDownTimer?.cancel()
+                finish()
+            }
+            .setNegativeButton("Continuar pick & ban", null)
+            .show()
     }
 
     private fun renderTeamNames(playerIsBlue: Boolean) {

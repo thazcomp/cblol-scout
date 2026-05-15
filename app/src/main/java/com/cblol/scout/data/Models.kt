@@ -73,14 +73,21 @@ data class AtributosDeriv(
  * Substitua a versão conforme o patch atual.
  */
 data class Champion(
-    val id: String,           // ex: "Ahri"
-    val name: String,         // ex: "Ahri"
-    val shortName: String,    // ex: "Ahri" (truncado para o grid pequeno)
-    val roles: List<String>,  // ex: ["MID"]
-    val primaryRole: String,  // ex: "MID"
+    val id: String,
+    val name: String,
+    val shortName: String,
+    val roles: List<String>,
+    val primaryRole: String,
+    val tags: List<ChampionTag> = emptyList(),
     val imageUrl: String = "https://ddragon.leagueoflegends.com/cdn/14.10.1/img/champion/$id.png",
     val splashUrl: String = "https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${id}_0.jpg"
-)
+) {
+    /** Tags mais importantes para exibir no card (máx 3) */
+    val primaryTags: List<ChampionTag> get() = tags.take(3)
+
+    /** true se o campeão tem a tag especificada */
+    fun hasTag(tag: ChampionTag) = tag in tags
+}
 
 enum class PickBanPhase { BAN, PICK }
 

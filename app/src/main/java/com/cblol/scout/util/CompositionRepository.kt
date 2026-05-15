@@ -1,5 +1,6 @@
 package com.cblol.scout.util
 
+import com.cblol.scout.data.ChampionTag
 import com.cblol.scout.data.CompAnalysisResult
 import com.cblol.scout.data.CompArchetype
 import com.cblol.scout.data.TeamComposition
@@ -25,7 +26,8 @@ object CompositionRepository {
 
     /**
      * Analisa uma lista de picks e retorna a composição detectada com maior sinergia.
-     * Se múltiplas composições forem parcialmente atingidas, retorna a de maior bônus.
+     * Também verifica tags funcionais: times com 3+ TANK recebem aviso de ANTI_TANK,
+     * times com 3+ HEAL recebem aviso de ignite pressure, etc.
      */
     fun analyze(picks: List<String>, bans: List<String> = emptyList()): CompAnalysisResult {
         val picksLower = picks.map { it.lowercase() }
@@ -68,6 +70,92 @@ object CompositionRepository {
 
         return CompAnalysisResult(best, bestMatched, bestBonus, desc)
     }
+
+    /**
+     * Análise enriquecida com tags funcionais dos campeões picados.
+     * Considera equilíbrio de dano, CC, frontline, anti-tank, etc.
+     */
+    fun analyzeWithTags(
+        picks: List<String>,
+        opponentPicks: List<String> = emptyList(),
+        bans: List<String> = emptyList()
+    ): TaggedAnalysisResult {
+        val base     = analyze(picks, bans)
+        val myChamps = picks.mapNotNull { ChampionRepository.getById(it) }
+        val opChamps = opponentPicks.mapNotNull { ChampionRepository.getById(it) }
+        var extra    = 0
+        val insights = mutableListOf<String>()
+
+        val hasAD = myChamps.any { it.hasTag(ChampionTag.PHYSICAL_DAMAGE) }
+        val hasAP = myChamps.any { it.hasTag(ChampionTag.MAGIC_DAMAGE) }
+        if (hasAD && hasAP) { extra += 2; insights += "✅ Dano misto (AD+AP)" }
+
+        val ccCount = myChamps.count { it.hasTag(ChampionTag.CROWD_CONTROL) || it.hasTag(ChampionTag.ENGAGE) }
+        if (ccCount >= 3) { extra += 3; insights += "✅ $ccCount fontes de CC" }
+
+        val knockUps = myChamps.count { it.hasTag(ChampionTag.KNOCK_UP) }
+        if (knockUps >= 2) { extra += 2; insights += "✅ $knockUps knock-ups (sinergia Yasuo/Yone)" }
+
+        val healers = myChamps.count { it.hasTag(ChampionTag.HEAL) || it.hasTag(ChampionTag.SHIELD) }
+        if (healers >= 3) { extra += 2; insights += "✅ $healers fontes de cura/escudo" }
+
+        val tanks = myChamps.count { it.hasTag(ChampionTag.TANK) }
+        val squishies = myChamps.count { it.hasTag(ChampionTag.MARKSMAN) || it.hasTag(ChampionTag.MAGE) }
+        if (tanks == 0 && squishies >= 3) { extra -= 3; insights += "⚠️ Sem frontline, vulnerável a engage" }
+
+        val opTanks = opChamps.count { it.hasTag(ChampionTag.TANK) || it.hasTag(ChampionTag.FIGHTER) }
+        val antiTank = myChamps.count { it.hasTag(ChampionTag.ANTI_TANK) || it.hasTag(ChampionTag.TRUE_DAMAGE) }
+        if (opTanks >= 3 && antiTank == 0) { extra -= 2; insights += "⚠️ Sem anti-tank contra frontline pesada" }
+        if (opTanks >= 2 && antiTank >= 2)  { extra += 2; insights += "✅ Bom anti-tank" }
+
+        val opHyper = opChamps.count { it.hasTag(ChampionTag.HYPERCARRY) }
+        val myEarly = myChamps.count { it.hasTag(ChampionTag.EARLY_GAME) }
+        if (opHyper >= 2 && myEarly == 0) { extra -= 1; insights += "⚠️ Oponente escala muito, force lutas cedo" }
+
+        return TaggedAnalysisResult(
+            base       = base,
+            extraBonus = extra,
+            totalBonus = (base.bonusStrength + extra).coerceAtLeast(0),
+            insights   = insights
+        )
+    }
+
+    /** Sugere picks que complementam os já escolhidos com base em tags. */
+    fun suggestPicks(currentPicks: List<String>, role: String? = null): List<SuggestedPick> {
+        val current = currentPicks.mapNotNull { ChampionRepository.getById(it) }
+        val hasEngage   = current.any { it.hasTag(ChampionTag.ENGAGE) }
+        val hasHeal     = current.any { it.hasTag(ChampionTag.HEAL) }
+        val hasAntiTank = current.any { it.hasTag(ChampionTag.ANTI_TANK) }
+        val hasAP       = current.any { it.hasTag(ChampionTag.MAGIC_DAMAGE) }
+        val hasAD       = current.any { it.hasTag(ChampionTag.PHYSICAL_DAMAGE) }
+
+        val pool = if (role != null) ChampionRepository.getByRole(role) else ChampionRepository.getAll()
+
+        return pool.filter { it.id !in currentPicks }.mapNotNull { champ ->
+            var score = 0
+            val reasons = mutableListOf<String>()
+            if (!hasEngage   && champ.hasTag(ChampionTag.ENGAGE))          { score += 3; reasons += "engage" }
+            if (!hasHeal     && champ.hasTag(ChampionTag.HEAL))            { score += 2; reasons += "cura" }
+            if (!hasAntiTank && champ.hasTag(ChampionTag.ANTI_TANK))       { score += 2; reasons += "anti-tank" }
+            if (!hasAP       && champ.hasTag(ChampionTag.MAGIC_DAMAGE))    { score += 2; reasons += "dano mágico" }
+            if (!hasAD       && champ.hasTag(ChampionTag.PHYSICAL_DAMAGE)) { score += 2; reasons += "dano físico" }
+            if (champ.hasTag(ChampionTag.CROWD_CONTROL))                   { score += 1; reasons += "CC" }
+            if (score >= 3) SuggestedPick(champ.id, score, reasons) else null
+        }.sortedByDescending { it.score }.take(5)
+    }
+
+    data class TaggedAnalysisResult(
+        val base: CompAnalysisResult,
+        val extraBonus: Int,
+        val totalBonus: Int,
+        val insights: List<String>
+    )
+
+    data class SuggestedPick(
+        val championId: String,
+        val score: Int,
+        val reasons: List<String>
+    )
 
     /**
      * Retorna a lista de composições que um conjunto de bans consegue neutralizar.

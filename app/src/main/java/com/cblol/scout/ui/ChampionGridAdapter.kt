@@ -8,17 +8,23 @@ import android.widget.TextView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions
 import com.bumptech.glide.request.RequestOptions
-import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.cblol.scout.R
 import com.cblol.scout.data.Champion
+import com.cblol.scout.data.ChampionTag
 
 /**
  * Adapter para a grade de campeões na tela de pick & ban.
- * Estados visuais por item:
- *  - Normal       : borda sutil, imagem colorida
- *  - Selecionado  : borda accent GROSSA (#C9AA71 gold), glow, escala 1.08
- *  - Usado/Banido : alpha 0.25, grayscale overlay, não clicável
+ *
+ * Filtros combinados (AND):
+ *  - role   : "TOP" / "JNG" / "MID" / "ADC" / "SUP" / null (ALL)
+ *  - tag    : ChampionTag ou null (nenhuma)
+ *  - search : string de busca no nome
+ *
+ * Estados visuais:
+ *  - Normal       : imagem colorida, sem borda
+ *  - Selecionado  : borda gold 3dp, scaleX/Y 1.08, elevation 12
+ *  - Usado/Banido : alpha 0.22, overlay escuro, não clicável
  */
 class ChampionGridAdapter(
     private val all: List<Champion>,
@@ -28,6 +34,11 @@ class ChampionGridAdapter(
     private var displayed: List<Champion> = all.toList()
     private var selectedId: String? = null
     private val usedIds: MutableSet<String> = mutableSetOf()
+
+    // Filtros ativos
+    private var activeRole: String? = null
+    private var activeTag: ChampionTag? = null
+    private var activeSearch: String = ""
 
     // ── ViewHolder ──────────────────────────────────────────────────────
     inner class VH(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -46,13 +57,12 @@ class ChampionGridAdapter(
     override fun getItemCount() = displayed.size
 
     override fun onBindViewHolder(holder: VH, position: Int) {
-        val champ = displayed[position]
+        val champ      = displayed[position]
         val isUsed     = champ.id in usedIds
         val isSelected = champ.id == selectedId
 
         holder.tvName.text = champ.shortName
 
-        // Ícone quadrado da Data Dragon (ex: Ahri.png)
         Glide.with(holder.itemView.context)
             .load(champ.imageUrl)
             .transition(DrawableTransitionOptions.withCrossFade(100))
@@ -61,46 +71,70 @@ class ChampionGridAdapter(
                 .error(R.color.champion_slot_bg))
             .into(holder.ivChampion)
 
-        // ── Estado: USADO/BANIDO ────────────────────────────────────────
         if (isUsed) {
-            holder.itemView.alpha = 0.22f
+            holder.itemView.alpha    = 0.22f
             holder.viewBanned.visibility = View.VISIBLE
             holder.viewBorder.visibility = View.INVISIBLE
-            holder.itemView.isClickable = false
+            holder.itemView.isClickable  = false
             holder.itemView.scaleX = 1f
             holder.itemView.scaleY = 1f
             return
         }
 
-        holder.itemView.alpha = 1f
+        holder.itemView.alpha    = 1f
         holder.viewBanned.visibility = View.GONE
-        holder.itemView.isClickable = true
+        holder.itemView.isClickable  = true
 
-        // ── Estado: SELECIONADO ────────────────────────────────────────
         if (isSelected) {
             holder.viewBorder.visibility = View.VISIBLE
             holder.viewBorder.setBackgroundResource(R.drawable.border_champion_selected)
-            holder.itemView.scaleX = 1.08f
-            holder.itemView.scaleY = 1.08f
+            holder.itemView.scaleX    = 1.08f
+            holder.itemView.scaleY    = 1.08f
             holder.itemView.elevation = 12f
         } else {
             holder.viewBorder.visibility = View.INVISIBLE
-            holder.itemView.scaleX = 1f
-            holder.itemView.scaleY = 1f
+            holder.itemView.scaleX    = 1f
+            holder.itemView.scaleY    = 1f
             holder.itemView.elevation = 2f
         }
 
-        holder.itemView.setOnClickListener {
-            if (!isUsed) onSelected(champ)
-        }
+        holder.itemView.setOnClickListener { onSelected(champ) }
     }
 
-    // ── API pública ─────────────────────────────────────────────────────
+    // ── API de filtros ──────────────────────────────────────────────────
+
+    fun filterByRole(role: String?) {
+        activeRole = role
+        applyFilters()
+    }
+
+    fun filterByTag(tag: ChampionTag?) {
+        activeTag = tag
+        applyFilters()
+    }
+
+    fun filter(query: String) {
+        activeSearch = query
+        applyFilters()
+    }
+
+    private fun applyFilters() {
+        displayed = all.filter { champ ->
+            val roleOk   = activeRole == null || activeRole in champ.roles
+            val tagOk    = activeTag  == null || champ.hasTag(activeTag!!)
+            val searchOk = activeSearch.isBlank() ||
+                champ.name.contains(activeSearch, ignoreCase = true)
+            roleOk && tagOk && searchOk
+        }
+        notifyDataSetChanged()
+    }
+
+    // ── API de seleção/uso ──────────────────────────────────────────────
+
     fun setSelected(id: String) {
-        val oldSelected = selectedId
+        val old = selectedId
         selectedId = id
-        // Rebind apenas os itens afetados
-        oldSelected?.let { notifyItemChanged(displayed.indexOfFirst { c -> c.id == it }) }
+        old?.let { notifyItemChanged(displayed.indexOfFirst { c -> c.id == it }) }
         notifyItemChanged(displayed.indexOfFirst { c -> c.id == id })
     }
 
@@ -113,17 +147,5 @@ class ChampionGridAdapter(
     fun markUsed(id: String) {
         usedIds.add(id)
         notifyItemChanged(displayed.indexOfFirst { c -> c.id == id })
-    }
-
-    fun filter(query: String) {
-        displayed = if (query.isBlank()) all
-        else all.filter { it.name.contains(query, ignoreCase = true) }
-        notifyDataSetChanged()
-    }
-
-    fun filterByRole(role: String?) {
-        displayed = if (role == null) all
-        else all.filter { it.roles.contains(role) }
-        notifyDataSetChanged()
     }
 }

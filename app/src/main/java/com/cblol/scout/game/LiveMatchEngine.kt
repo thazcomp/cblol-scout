@@ -41,27 +41,31 @@ object LiveMatchEngine {
         val awayBans   = plan?.redBans   ?: emptyList()
         val allBans    = homeBans + awayBans
 
-        val homeComp   = CompositionRepository.analyze(homePicks, awayBans)  // bans do oponente podem quebrar a comp
-        val awayComp   = CompositionRepository.analyze(awayPicks, homeBans)
+        val homeComp   = CompositionRepository.analyzeWithTags(homePicks, awayPicks, awayBans)
+        val awayComp   = CompositionRepository.analyzeWithTags(awayPicks, homePicks, homeBans)
 
-        val homeStr = teamStrength(homeRoster) + 4 + homeComp.bonusStrength
-        val awayStr = teamStrength(awayRoster)     + awayComp.bonusStrength
+        val homeStr = teamStrength(homeRoster) + 4 + homeComp.totalBonus
+        val awayStr = teamStrength(awayRoster)     + awayComp.totalBonus
 
         val (gameEvents, homeWon, finalKills, duration) =
             generateGame(gameNumber, homeRoster, awayRoster, homeStr, awayStr, plan)
 
         val events = gameEvents.toMutableList()
 
-        // Adiciona anúncio de sinergia no feed se alguma comp foi detectada
-        if (homeComp.detected != null) {
-            events.add(0, MatchEvent.PhaseAnnouncement(
-                "⚡ Comp detectada [HOME]: ${homeComp.description}"
-            ))
+        // Anuncia sinergia e insights no feed
+        if (homeComp.base.detected != null || homeComp.insights.isNotEmpty()) {
+            val label = buildString {
+                if (homeComp.base.detected != null) append("⚡ [HOME] ${homeComp.base.description}")
+                if (homeComp.insights.isNotEmpty()) append(" | ${homeComp.insights.first()}")
+            }
+            events.add(0, MatchEvent.PhaseAnnouncement(label))
         }
-        if (awayComp.detected != null) {
-            events.add(0, MatchEvent.PhaseAnnouncement(
-                "⚡ Comp detectada [AWAY]: ${awayComp.description}"
-            ))
+        if (awayComp.base.detected != null || awayComp.insights.isNotEmpty()) {
+            val label = buildString {
+                if (awayComp.base.detected != null) append("⚡ [AWAY] ${awayComp.base.description}")
+                if (awayComp.insights.isNotEmpty()) append(" | ${awayComp.insights.first()}")
+            }
+            events.add(0, MatchEvent.PhaseAnnouncement(label))
         }
 
         events.add(MatchEvent.GameEnd(
