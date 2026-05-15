@@ -47,6 +47,84 @@
         <item name="cornerSizeBottomRight">0dp</item>
     </style>
 
+    <!-- ═══════════════════════════════════════════════════════════════
+         DIALOG ESTILO LOL — usado em todos os AlertDialogs do app
+         Fundo navy escuro com borda dourada e cantos retos.
+         ═══════════════════════════════════════════════════════════════ -->
+    <style name="ThemeOverlay.CBLOLScout.Dialog" parent="ThemeOverlay.MaterialComponents.MaterialAlertDialog">
+        <item name="materialAlertDialogTitleTextStyle">@style/CBLOLScout.Dialog.Title</item>
+        <item name="materialAlertDialogBodyTextStyle">@style/CBLOLScout.Dialog.Body</item>
+        <item name="buttonBarPositiveButtonStyle">@style/CBLOLScout.Dialog.PositiveButton</item>
+        <item name="buttonBarNegativeButtonStyle">@style/CBLOLScout.Dialog.NeutralButton</item>
+        <item name="buttonBarNeutralButtonStyle">@style/CBLOLScout.Dialog.NeutralButton</item>
+
+        <!-- Background da CAIXA externa (drawable navy + borda dourada) -->
+        <item name="android:background">@drawable/bg_dialog_cblol</item>
+        <item name="dialogCornerRadius">4dp</item>
+
+        <!-- Os painéis internos do MaterialAlertDialog usam um
+             MaterialShapeDrawable baseado em `shapeAppearanceMediumComponent`
+             colorido por `colorSurface`. Para não desenhar nada, sobrescrevemos
+             o shape com `nothing` e o background dos painéis com transparente. -->
+        <item name="shapeAppearanceMediumComponent">@style/ShapeAppearance.CBLOLScout.Dialog.Empty</item>
+        <item name="shapeAppearanceLargeComponent">@style/ShapeAppearance.CBLOLScout.Dialog.Empty</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.CBLOLScout.Dialog</item>
+
+        <!-- Tudo de surface fica transparente para o drawable externo aparecer -->
+        <item name="colorSurface">@android:color/transparent</item>
+        <item name="colorBackgroundFloating">@android:color/transparent</item>
+        <item name="colorSurfaceContainerHigh">@android:color/transparent</item>
+        <item name="colorSurfaceContainer">@android:color/transparent</item>
+        <item name="colorSurfaceVariant">@android:color/transparent</item>
+        <item name="android:colorBackground">@android:color/transparent</item>
+        <item name="backgroundColor">@android:color/transparent</item>
+        <item name="elevationOverlayEnabled">false</item>
+        <item name="android:textColorPrimary">@color/color_on_surface</item>
+        <item name="android:textColorSecondary">@color/color_on_surface_variant</item>
+
+        <!-- Remove dividers entre título / mensagem / botões -->
+        <item name="android:divider">@null</item>
+        <item name="android:dividerHeight">0dp</item>
+        <item name="android:showDividers">none</item>
+    </style>
+
+    <!-- Shape vazio: usado para anular o shape arredondado que o MaterialAlertDialog
+         desenha em cada painel interno (título, mensagem). -->
+    <style name="ShapeAppearance.CBLOLScout.Dialog.Empty" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">0dp</item>
+    </style>
+
+    <style name="CBLOLScout.Dialog.Title" parent="MaterialAlertDialog.MaterialComponents.Title.Text">
+        <item name="android:textColor">@color/color_primary</item>
+        <item name="android:textSize">18sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.05</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:paddingTop">8dp</item>
+        <item name="android:paddingBottom">4dp</item>
+        <item name="android:background">@android:color/transparent</item>
+    </style>
+
+    <style name="CBLOLScout.Dialog.Body" parent="MaterialAlertDialog.MaterialComponents.Body.Text">
+        <item name="android:textColor">@color/color_on_surface</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:lineSpacingMultiplier">1.2</item>
+        <item name="android:background">@android:color/transparent</item>
+    </style>
+
+    <style name="CBLOLScout.Dialog.PositiveButton" parent="Widget.MaterialComponents.Button.TextButton.Dialog">
+        <item name="android:textColor">@color/color_primary</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.08</item>
+        <item name="rippleColor">@color/color_primary_dark</item>
+    </style>
+
+    <style name="CBLOLScout.Dialog.NeutralButton" parent="Widget.MaterialComponents.Button.TextButton.Dialog">
+        <item name="android:textColor">@color/color_on_surface_variant</item>
+        <item name="android:letterSpacing">0.04</item>
+    </style>
+
     <style name="BanSlot">
         <item name="android:layout_width">36dp</item>
         <item name="android:layout_height">36dp</item>

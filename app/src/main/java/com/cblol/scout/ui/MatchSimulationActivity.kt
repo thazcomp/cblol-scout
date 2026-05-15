@@ -113,7 +113,7 @@ class MatchSimulationActivity : AppCompatActivity() {
     }
 
     private fun confirmExit() {
-        AlertDialog.Builder(this)
+        stylizedDialog(this)
             .setTitle("Sair?")
             .setMessage("Deseja pular direto para o resultado?")
             .setPositiveButton("Pular pro fim") { _, _ ->

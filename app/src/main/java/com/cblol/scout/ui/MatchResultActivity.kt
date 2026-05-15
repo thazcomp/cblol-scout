@@ -165,7 +165,7 @@ class MatchResultActivity : AppCompatActivity() {
             } else {
                 // Série continua → pergunta como o jogador quer fazer o próximo mapa
                 val nextMap = mapNumber + 1
-                androidx.appcompat.app.AlertDialog.Builder(this)
+                stylizedDialog(this)
                     .setTitle("Mapa $nextMap")
                     .setMessage("Como deseja jogar o próximo mapa?")
                     .setPositiveButton("Fazer Pick & Ban") { _, _ ->

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Fundo dos AlertDialogs do app:
+    - Gradient navy escuro (top → bottom)
+    - Borda dourada de 1dp em volta
+    - Cantos suavemente arredondados (4dp)
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+
+    <gradient
+        android:angle="270"
+        android:startColor="#0F1F35"
+        android:endColor="#0A1428" />
+
+    <stroke
+        android:width="1dp"
+        android:color="#C89B3C" />
+
+    <corners android:radius="4dp" />
+</shape>

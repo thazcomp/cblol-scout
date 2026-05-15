@@ -48,7 +48,7 @@ class TeamSelectActivity : AppCompatActivity() {
             if (has) {
                 val gs = GameRepository.load(applicationContext)
                 if (gs != null) {
-                    AlertDialog.Builder(this)
+                    stylizedDialog(this)
                         .setTitle("Continuar carreira?")
                         .setMessage("Você já tem uma carreira como técnico do ${gs.managerTeamId.uppercase()}. Deseja continuar?")
                         .setPositiveButton("Continuar") { _, _ ->
@@ -91,7 +91,7 @@ class TeamSelectActivity : AppCompatActivity() {
             setText(defaultName); setSelection(text.length)
             hint = "Nome do técnico"; setPadding(48, 32, 48, 32)
         }
-        AlertDialog.Builder(this)
+        stylizedDialog(this)
             .setTitle("Iniciar carreira no ${team.nome}")
             .setMessage(
                 "Tier ${team.tier_orcamento}\n" +

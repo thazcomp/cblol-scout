@@ -129,7 +129,7 @@ object PlayerDetailDialog {
 
     private fun confirmSell(activity: Activity, player: Player, onChanged: () -> Unit) {
         val price = TransferMarket.marketPriceOf(player)
-        AlertDialog.Builder(activity)
+        stylizedDialog(activity)
             .setTitle("Vender ${player.nome_jogo}?")
             .setMessage("Você receberá R$ ${"%,d".format(price)}.\nO jogador será transferido para outra organização do CBLOL.")
             .setPositiveButton("Vender") { _, _ ->
@@ -156,7 +156,7 @@ object PlayerDetailDialog {
         etSalary.setText(current.toString())
         etDate.setText("2027-11-30")
 
-        AlertDialog.Builder(activity)
+        stylizedDialog(activity)
             .setTitle("Renegociar ${player.nome_jogo}")
             .setView(view)
             .setPositiveButton("Propor") { _, _ ->

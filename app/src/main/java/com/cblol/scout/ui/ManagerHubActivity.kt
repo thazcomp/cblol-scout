@@ -103,7 +103,7 @@ class ManagerHubActivity : AppCompatActivity() {
         val next = vm.hubState.value?.nextMatch ?: return
         val playerTeamId = com.cblol.scout.game.GameRepository.current().managerTeamId
 
-        autoORmanualPicksDialog = AlertDialog.Builder(this)
+        autoORmanualPicksDialog = stylizedDialog(this)
             .setTitle(next.label)
             .setMessage("Deseja fazer o pick & ban antes da partida?")
             .setPositiveButton("Fazer Pick & Ban") { _, _ ->
@@ -161,7 +161,7 @@ class ManagerHubActivity : AppCompatActivity() {
     }
 
     private fun confirmQuit() {
-        confirmQuitDialog = AlertDialog.Builder(this)
+        confirmQuitDialog = stylizedDialog(this)
             .setTitle("Encerrar carreira?")
             .setMessage("Isso apagará seu save permanentemente.")
             .setPositiveButton("Sim, encerrar") { _, _ ->

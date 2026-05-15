@@ -460,7 +460,7 @@ class PickBanActivity : AppCompatActivity() {
         val top5 = suggestions.take(5)
         val msg = top5.joinToString("\n") { (champ, reason) -> "⚡ Banir $champ — $reason" }
 
-        androidx.appcompat.app.AlertDialog.Builder(this)
+        stylizedDialog(this)
             .setTitle("🚨 Composições Perigosas")
             .setMessage("Banir esses campeões neutraliza as composições mais fortes do meta:\n\n$msg")
             .setPositiveButton("Entendido", null)
@@ -508,7 +508,7 @@ class PickBanActivity : AppCompatActivity() {
     }
 
     private fun confirmExit() {
-        androidx.appcompat.app.AlertDialog.Builder(this)
+        stylizedDialog(this)
             .setTitle("Sair do Pick & Ban?")
             .setMessage("Deseja simular o restante automaticamente e ir direto para a partida?")
             .setPositiveButton("Simular até o fim") { _, _ ->

@@ -337,7 +337,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun confirmSell(player: Player) {
         val price = TransferMarket.marketPriceOf(player)
-        AlertDialog.Builder(this)
+        stylizedDialog(this)
             .setTitle("Vender ${player.nome_jogo}?")
             .setMessage("Você receberá R$ ${"%,d".format(price)}.\nO jogador será transferido para outra organização do CBLOL.")
             .setPositiveButton("Vender") { _, _ ->
@@ -363,7 +363,7 @@ class MainActivity : AppCompatActivity() {
         etSalary.setText(current.toString())
         etDate.setText("2027-11-30")
 
-        AlertDialog.Builder(this)
+        stylizedDialog(this)
             .setTitle("Renegociar ${player.nome_jogo}")
             .setView(view)
             .setPositiveButton("Propor") { _, _ ->

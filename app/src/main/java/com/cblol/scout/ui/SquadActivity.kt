@@ -92,7 +92,7 @@ class SquadActivity : AppCompatActivity() {
         val logs = SquadManager.validateAndFixRoster(applicationContext)
         if (logs.isNotEmpty()) {
             val message = logs.joinToString("\n")
-            AlertDialog.Builder(this)
+            stylizedDialog(this)
                 .setTitle("⚠ Elenco ajustado automaticamente")
                 .setMessage(message)
                 .setPositiveButton("OK", null).show()
@@ -126,14 +126,14 @@ class SquadActivity : AppCompatActivity() {
     private fun openSwapDialog(starter: Player) {
         val candidates = SquadManager.reservesForRoleOf(applicationContext, starter)
         if (candidates.isEmpty()) {
-            AlertDialog.Builder(this)
+            stylizedDialog(this)
                 .setTitle("Sem substitutos")
                 .setMessage("Não há reservas de ${starter.role} no elenco.")
                 .setPositiveButton("OK", null).show()
             return
         }
         val items = candidates.map { "${it.nome_jogo} · OVR ${it.overallRating()}" }.toTypedArray()
-        AlertDialog.Builder(this)
+        stylizedDialog(this)
             .setTitle("Substituir ${starter.nome_jogo} (${starter.role})")
             .setItems(items) { _, which -> vm.swap(starter.id, candidates[which].id) }
             .setNegativeButton("Cancelar", null).show()

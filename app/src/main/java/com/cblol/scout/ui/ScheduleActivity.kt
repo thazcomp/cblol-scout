@@ -96,7 +96,7 @@ class ScheduleActivity : AppCompatActivity() {
         val awayName = snap.times.find { it.id == m.awayTeamId }?.nome ?: m.awayTeamId
 
         if (m.played) {
-            AlertDialog.Builder(this)
+            stylizedDialog(this)
                 .setTitle("Rodada ${m.round}")
                 .setMessage("$homeName  ${m.homeScore} — ${m.awayScore}  $awayName")
                 .setPositiveButton("OK", null).show()
@@ -107,7 +107,7 @@ class ScheduleActivity : AppCompatActivity() {
 
         if (isMyMatch) {
             val opponentId = if (m.homeTeamId == gs.managerTeamId) m.awayTeamId else m.homeTeamId
-            AlertDialog.Builder(this)
+            stylizedDialog(this)
                 .setTitle("$homeName vs $awayName")
                 .setMessage("Deseja fazer o pick & ban antes da partida?")
                 .setPositiveButton("Fazer Pick & Ban") { _, _ ->
@@ -120,7 +120,7 @@ class ScheduleActivity : AppCompatActivity() {
                     )
                 }.show()
         } else {
-            AlertDialog.Builder(this)
+            stylizedDialog(this)
                 .setTitle("$homeName vs $awayName")
                 .setMessage("Acompanhar partida?")
                 .setPositiveButton("Assistir") { _, _ ->

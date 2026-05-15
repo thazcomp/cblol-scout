@@ -45,7 +45,7 @@ class TransferMarketActivity : AppCompatActivity() {
         vm.buyResult.observe(this) { result ->
             when (result) {
                 is BuyResult.Ok    -> Toast.makeText(this, "Jogador contratado!", Toast.LENGTH_SHORT).show()
-                is BuyResult.Error -> AlertDialog.Builder(this).setMessage(result.msg)
+                is BuyResult.Error -> stylizedDialog(this).setMessage(result.msg)
                     .setPositiveButton("OK", null).show()
             }
         }
@@ -73,7 +73,7 @@ class TransferMarketActivity : AppCompatActivity() {
     private fun confirmBuy(player: Player) {
         val price  = vm.priceOf(player)
         val budget = GameRepository.current().budget
-        AlertDialog.Builder(this)
+        stylizedDialog(this)
             .setTitle("Contratar ${player.nome_jogo}?")
             .setMessage(
                 "${player.role} · ${player.time_nome}\n" +
