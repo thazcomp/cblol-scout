@@ -24,9 +24,39 @@ import kotlin.random.Random
 object LiveMatchEngine {
 
     /**
-     * Gera a timeline completa de um BO3 e devolve eventos + placar final (mapas).
-     * Se for fornecido um PickBanPlan, ele será respeitado (quando aplicável) e
-     * o motor completará automaticamente escolhas faltantes.
+     * Gera a timeline de UM Único mapa e devolve o resultado.
+     * O MatchSimulationActivity chama este método uma vez por mapa,
+     * acumulando o placar externamente até a série terminar.
+     */
+    fun generateSingleMap(context: Context, match: Match, gameNumber: Int): MapResult {
+        val homeRoster = startersOrTopFive(GameRepository.rosterOf(context, match.homeTeamId))
+        val awayRoster = startersOrTopFive(GameRepository.rosterOf(context, match.awayTeamId))
+        val homeStr    = teamStrength(homeRoster) + 4
+        val awayStr    = teamStrength(awayRoster)
+        val plan       = if (match.pickBanPlan?.mapNumber == gameNumber) match.pickBanPlan else null
+
+        val (gameEvents, homeWon, finalKills, duration) =
+            generateGame(gameNumber, homeRoster, awayRoster, homeStr, awayStr, plan)
+
+        val events = gameEvents.toMutableList()
+        events.add(MatchEvent.GameEnd(
+            gameNumber      = gameNumber,
+            winnerSide      = if (homeWon) Side.HOME else Side.AWAY,
+            durationMinutes = duration,
+            finalKills      = finalKills
+        ))
+        return MapResult(events, homeWon)
+    }
+
+    data class MapResult(
+        val events: List<MatchEvent>,
+        val homeWon: Boolean
+    )
+
+    /**
+     * Mantido para compatibilidade com testes e simulações automáticas
+     * (partidas entre outros times sem pick & ban manual).
+     * Simula o BO3 completo de uma vez.
      */
     fun generateSeries(context: Context, match: Match): SeriesResult {
         val homeRoster = startersOrTopFive(GameRepository.rosterOf(context, match.homeTeamId))

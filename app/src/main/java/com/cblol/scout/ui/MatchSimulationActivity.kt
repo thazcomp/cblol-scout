@@ -79,14 +79,8 @@ class MatchSimulationActivity : AppCompatActivity() {
         // Aceita partidas ainda não jogadas OU que tenham um PickBanPlan pendente
         // (pick & ban manual recém-feito, partida ainda não foi simulada)
         if (target == null) { finish(); return }
-        // Se já foi jogada E não tem plano pendente, não há nada a simular
-        if (target.played && target.pickBanPlan == null) { finish(); return }
-        // Se foi marcada como played mas tem um plano, reseta para simular com o plano
-        if (target.played && target.pickBanPlan != null) {
-            target.played = false
-            target.homeScore = 0
-            target.awayScore = 0
-        }
+        // Série encerrada → nada mais a simular
+        if (target.played) { finish(); return }
         match = target
 
         val snap = GameRepository.snapshot(applicationContext)
@@ -137,11 +131,14 @@ class MatchSimulationActivity : AppCompatActivity() {
      * para que a MatchResultActivity seja exibida.
      */
     private suspend fun skipToResult() {
-        val series = withContext(Dispatchers.Default) {
-            LiveMatchEngine.generateSeries(applicationContext, match)
+        val partialHome = match.homeScore
+        val partialAway = match.awayScore
+        val gameNumber  = partialHome + partialAway + 1
+
+        val result = withContext(Dispatchers.Default) {
+            LiveMatchEngine.generateSingleMap(applicationContext, match, gameNumber)
         }
-        // Processa os eventos sem delay para acumular stats nos contadores
-        for (e in series.events) {
+        for (e in result.events) {
             when (e) {
                 is MatchEvent.GameStart  -> resetMapCounters()
                 is MatchEvent.Kill       -> if (e.killerSide == Side.HOME) homeKills++ else awayKills++
@@ -152,25 +149,29 @@ class MatchSimulationActivity : AppCompatActivity() {
                 else -> Unit
             }
         }
+        val finalHome = partialHome + if (result.homeWon) 1 else 0
+        val finalAway = partialAway + if (!result.homeWon) 1 else 0
         withContext(Dispatchers.Main) {
-            applyResult(series.homeMaps, series.awayMaps)
+            applyResult(finalHome, finalAway)
         }
     }
 
     private fun startSimulation() {
         binding.tvPhase.text = getString(R.string.generating_timeline)
+        // Placar parcial da série (mapa anterior já jogado)
+        homeMaps = match.homeScore
+        awayMaps = match.awayScore
+        binding.tvSeriesScore.text = "$homeMaps - $awayMaps"
+        val gameNumber = homeMaps + awayMaps + 1
+
         lifecycleScope.launch {
-            val series = withContext(Dispatchers.Default) {
-                LiveMatchEngine.generateSeries(applicationContext, match)
+            val result = withContext(Dispatchers.Default) {
+                LiveMatchEngine.generateSingleMap(applicationContext, match, gameNumber)
             }
-            // Guarda os mapas finais antes de playEvents para não depender
-            // dos contadores que são resetados por mapa
-            val finalHomeMaps = series.homeMaps
-            val finalAwayMaps = series.awayMaps
-            playEvents(series.events)
-            // Garante execução no Main mesmo que a coroutine tenha mudado de contexto
+            if (result.homeWon) homeMaps++ else awayMaps++
+            playEvents(result.events)
             withContext(Dispatchers.Main) {
-                applyResult(finalHomeMaps, finalAwayMaps)
+                applyResult(homeMaps, awayMaps)
             }
         }
     }
@@ -298,7 +299,7 @@ class MatchSimulationActivity : AppCompatActivity() {
                 ))
             }
             is MatchEvent.GameEnd -> {
-                if (event.winnerSide == Side.HOME) homeMaps++ else awayMaps++
+                // homeMaps/awayMaps já foram incrementados em startSimulation antes de playEvents
                 binding.tvSeriesScore.text = "$homeMaps - $awayMaps"
                 binding.tvPhase.text =
                     "Mapa ${event.gameNumber} encerrado · ${sideName(event.winnerSide)} venceu (${event.durationMinutes}min)"
@@ -365,9 +366,16 @@ class MatchSimulationActivity : AppCompatActivity() {
         if (resultApplied) return
         resultApplied = true
 
-        match.played    = true
+        val seriesFinished = homeMapsFinal >= 2 || awayMapsFinal >= 2
+
+        // Só marca como jogada quando a série terminar (2-0 ou 2-1)
+        // Para mapas intermediários (1-0), persiste apenas o placar parcial
         match.homeScore = homeMapsFinal
         match.awayScore = awayMapsFinal
+        if (seriesFinished) {
+            match.played     = true
+            match.pickBanPlan = null  // limpa só quando a série termina
+        }
 
         val gs     = GameRepository.current()
         val snap   = GameRepository.snapshot(applicationContext)
@@ -375,50 +383,59 @@ class MatchSimulationActivity : AppCompatActivity() {
         val isMine = match.homeTeamId == gs.managerTeamId || match.awayTeamId == gs.managerTeamId
 
         var prize = 0L
-        if (isMine && winner == gs.managerTeamId) {
-            val mapsWon = maxOf(homeMapsFinal, awayMapsFinal)
-            prize = GameEngine.PRIZE_PER_SERIES_WIN + GameEngine.PRIZE_PER_MAP_WIN * mapsWon
-            gs.budget += prize
-        } else if (isMine) {
-            val myMaps = if (match.homeTeamId == gs.managerTeamId) homeMapsFinal else awayMapsFinal
-            prize = GameEngine.PRIZE_PER_MAP_WIN * myMaps
+        if (seriesFinished && isMine) {
+            if (winner == gs.managerTeamId) {
+                val mapsWon = maxOf(homeMapsFinal, awayMapsFinal)
+                prize = GameEngine.PRIZE_PER_SERIES_WIN + GameEngine.PRIZE_PER_MAP_WIN * mapsWon
+            } else {
+                val myMaps = if (match.homeTeamId == gs.managerTeamId) homeMapsFinal else awayMapsFinal
+                prize = GameEngine.PRIZE_PER_MAP_WIN * myMaps
+            }
             gs.budget += prize
         }
 
         val today    = LocalDate.parse(gs.currentDate)
         val matchDay = LocalDate.parse(match.date)
-        if (today.isBefore(matchDay)) gs.currentDate = match.date
+        if (seriesFinished && today.isBefore(matchDay)) gs.currentDate = match.date
 
-        GameRepository.log(
-            "MATCH",
-            "Rodada ${match.round}: ${binding.tvHomeName.text} $homeMapsFinal-$awayMapsFinal ${binding.tvAwayName.text}"
-        )
-        // Limpa o plano após a simulação para não re-entrar no fluxo de reset
-        match.pickBanPlan = null
+        if (seriesFinished) {
+            GameRepository.log(
+                "MATCH",
+                "Rodada ${match.round}: ${binding.tvHomeName.text} $homeMapsFinal-$awayMapsFinal ${binding.tvAwayName.text}"
+            )
+        }
         GameRepository.save(applicationContext)
 
-        // Lança a tela de resultado animada
+        val isPlayerHome   = match.homeTeamId == gs.managerTeamId
+        val playerTeamId   = gs.managerTeamId
+        val opponentTeamId = if (isPlayerHome) match.awayTeamId else match.homeTeamId
+
         val homeName = binding.tvHomeName.text.toString()
         val awayName = binding.tvAwayName.text.toString()
         startActivity(
             Intent(this, MatchResultActivity::class.java).apply {
-                putExtra(MatchResultActivity.EXTRA_HOME_NAME,    homeName)
-                putExtra(MatchResultActivity.EXTRA_AWAY_NAME,    awayName)
-                putExtra(MatchResultActivity.EXTRA_HOME_ID,      match.homeTeamId)
-                putExtra(MatchResultActivity.EXTRA_AWAY_ID,      match.awayTeamId)
-                putExtra(MatchResultActivity.EXTRA_HOME_SCORE,   homeMapsFinal)
-                putExtra(MatchResultActivity.EXTRA_AWAY_SCORE,   awayMapsFinal)
-                putExtra(MatchResultActivity.EXTRA_WINNER_ID,    winner)
-                putExtra(MatchResultActivity.EXTRA_MANAGER_ID,   gs.managerTeamId)
-                putExtra(MatchResultActivity.EXTRA_HOME_KILLS,   homeKills)
-                putExtra(MatchResultActivity.EXTRA_AWAY_KILLS,   awayKills)
-                putExtra(MatchResultActivity.EXTRA_HOME_TOWERS,  homeTowers)
-                putExtra(MatchResultActivity.EXTRA_AWAY_TOWERS,  awayTowers)
-                putExtra(MatchResultActivity.EXTRA_HOME_DRAGONS, homeDragons)
-                putExtra(MatchResultActivity.EXTRA_AWAY_DRAGONS, awayDragons)
-                putExtra(MatchResultActivity.EXTRA_HOME_BARONS,  homeBarons)
-                putExtra(MatchResultActivity.EXTRA_AWAY_BARONS,  awayBarons)
-                putExtra(MatchResultActivity.EXTRA_PRIZE,        prize)
+                putExtra(MatchResultActivity.EXTRA_HOME_NAME,     homeName)
+                putExtra(MatchResultActivity.EXTRA_AWAY_NAME,     awayName)
+                putExtra(MatchResultActivity.EXTRA_HOME_ID,       match.homeTeamId)
+                putExtra(MatchResultActivity.EXTRA_AWAY_ID,       match.awayTeamId)
+                putExtra(MatchResultActivity.EXTRA_HOME_SCORE,    homeMapsFinal)
+                putExtra(MatchResultActivity.EXTRA_AWAY_SCORE,    awayMapsFinal)
+                putExtra(MatchResultActivity.EXTRA_WINNER_ID,     winner)
+                putExtra(MatchResultActivity.EXTRA_MANAGER_ID,    gs.managerTeamId)
+                putExtra(MatchResultActivity.EXTRA_HOME_KILLS,    homeKills)
+                putExtra(MatchResultActivity.EXTRA_AWAY_KILLS,    awayKills)
+                putExtra(MatchResultActivity.EXTRA_HOME_TOWERS,   homeTowers)
+                putExtra(MatchResultActivity.EXTRA_AWAY_TOWERS,   awayTowers)
+                putExtra(MatchResultActivity.EXTRA_HOME_DRAGONS,  homeDragons)
+                putExtra(MatchResultActivity.EXTRA_AWAY_DRAGONS,  awayDragons)
+                putExtra(MatchResultActivity.EXTRA_HOME_BARONS,   homeBarons)
+                putExtra(MatchResultActivity.EXTRA_AWAY_BARONS,   awayBarons)
+                putExtra(MatchResultActivity.EXTRA_PRIZE,         prize)
+                putExtra(MatchResultActivity.EXTRA_MATCH_ID,         match.id)
+                putExtra(MatchResultActivity.EXTRA_MAP_NUMBER,        homeMaps + awayMaps)
+                putExtra(MatchResultActivity.EXTRA_PLAYER_TEAM_ID,    playerTeamId)
+                putExtra(MatchResultActivity.EXTRA_OPPONENT_TEAM_ID,  opponentTeamId)
+                putExtra(MatchResultActivity.EXTRA_SERIES_FINISHED,   seriesFinished)
             }
         )
         finish()

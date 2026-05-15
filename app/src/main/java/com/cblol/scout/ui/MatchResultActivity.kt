@@ -44,23 +44,29 @@ import com.cblol.scout.util.TeamColors
 class MatchResultActivity : AppCompatActivity() {
 
     companion object {
-        const val EXTRA_HOME_NAME    = "res_home_name"
-        const val EXTRA_AWAY_NAME    = "res_away_name"
-        const val EXTRA_HOME_ID      = "res_home_id"
-        const val EXTRA_AWAY_ID      = "res_away_id"
-        const val EXTRA_HOME_SCORE   = "res_home_score"
-        const val EXTRA_AWAY_SCORE   = "res_away_score"
-        const val EXTRA_WINNER_ID    = "res_winner_id"
-        const val EXTRA_MANAGER_ID   = "res_manager_id"
-        const val EXTRA_HOME_KILLS   = "res_home_kills"
-        const val EXTRA_AWAY_KILLS   = "res_away_kills"
-        const val EXTRA_HOME_TOWERS  = "res_home_towers"
-        const val EXTRA_AWAY_TOWERS  = "res_away_towers"
-        const val EXTRA_HOME_DRAGONS = "res_home_dragons"
-        const val EXTRA_AWAY_DRAGONS = "res_away_dragons"
-        const val EXTRA_HOME_BARONS  = "res_home_barons"
-        const val EXTRA_AWAY_BARONS  = "res_away_barons"
-        const val EXTRA_PRIZE        = "res_prize"
+        const val EXTRA_HOME_NAME     = "res_home_name"
+        const val EXTRA_AWAY_NAME     = "res_away_name"
+        const val EXTRA_HOME_ID       = "res_home_id"
+        const val EXTRA_AWAY_ID       = "res_away_id"
+        const val EXTRA_HOME_SCORE    = "res_home_score"
+        const val EXTRA_AWAY_SCORE    = "res_away_score"
+        const val EXTRA_WINNER_ID     = "res_winner_id"
+        const val EXTRA_MANAGER_ID    = "res_manager_id"
+        const val EXTRA_HOME_KILLS    = "res_home_kills"
+        const val EXTRA_AWAY_KILLS    = "res_away_kills"
+        const val EXTRA_HOME_TOWERS   = "res_home_towers"
+        const val EXTRA_AWAY_TOWERS   = "res_away_towers"
+        const val EXTRA_HOME_DRAGONS  = "res_home_dragons"
+        const val EXTRA_AWAY_DRAGONS  = "res_away_dragons"
+        const val EXTRA_HOME_BARONS   = "res_home_barons"
+        const val EXTRA_AWAY_BARONS   = "res_away_barons"
+        const val EXTRA_PRIZE         = "res_prize"
+        // Dados da série em andamento (BO3)
+        const val EXTRA_MATCH_ID      = "res_match_id"
+        const val EXTRA_MAP_NUMBER    = "res_map_number"    // mapa recém jogado (1 ou 2)
+        const val EXTRA_PLAYER_TEAM_ID   = "res_player_team_id"
+        const val EXTRA_OPPONENT_TEAM_ID = "res_opponent_team_id"
+        const val EXTRA_SERIES_FINISHED  = "res_series_finished" // true = série encerrada
     }
 
     private lateinit var binding: ActivityMatchResultBinding
@@ -142,11 +148,47 @@ class MatchResultActivity : AppCompatActivity() {
             binding.cardPrize.visibility = View.GONE
         }
 
+        // Dados de série
+        val matchId        = intent.getStringExtra(EXTRA_MATCH_ID)       ?: ""
+        val mapNumber      = intent.getIntExtra(EXTRA_MAP_NUMBER, 1)
+        val playerTeamId   = intent.getStringExtra(EXTRA_PLAYER_TEAM_ID)   ?: managerId
+        val opponentTeamId = intent.getStringExtra(EXTRA_OPPONENT_TEAM_ID) ?: ""
+        val seriesFinished = intent.getBooleanExtra(EXTRA_SERIES_FINISHED, true)
+
         // Botão continuar
         binding.btnContinue.setOnClickListener {
-            startActivity(Intent(this, ManagerHubActivity::class.java)
-                .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP))
-            finish()
+            if (seriesFinished || matchId.isEmpty()) {
+                // Série encerrada → volta ao hub
+                startActivity(Intent(this, ManagerHubActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP))
+                finish()
+            } else {
+                // Série continua → pergunta como o jogador quer fazer o próximo mapa
+                val nextMap = mapNumber + 1
+                androidx.appcompat.app.AlertDialog.Builder(this)
+                    .setTitle("Mapa $nextMap")
+                    .setMessage("Como deseja jogar o próximo mapa?")
+                    .setPositiveButton("Fazer Pick & Ban") { _, _ ->
+                        finish()
+                        startActivity(
+                            Intent(this, PickBanRouterActivity::class.java).apply {
+                                putExtra(PickBanRouterActivity.EXTRA_MATCH_ID,       matchId)
+                                putExtra(PickBanRouterActivity.EXTRA_MAP_NUMBER,     nextMap)
+                                putExtra(PickBanRouterActivity.EXTRA_PLAYER_TEAM_ID, playerTeamId)
+                                putExtra(PickBanRouterActivity.EXTRA_OPPONENT_ID,    opponentTeamId)
+                            }
+                        )
+                    }
+                    .setNeutralButton("Simular direto") { _, _ ->
+                        finish()
+                        startActivity(
+                            Intent(this, MatchSimulationActivity::class.java)
+                                .putExtra(MatchSimulationActivity.EXTRA_MATCH_ID, matchId)
+                        )
+                    }
+                    .setNegativeButton("Cancelar", null)
+                    .show()
+            }
         }
 
         // Inicia a sequência de animações
