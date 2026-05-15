@@ -38,18 +38,44 @@ class SimulateMapWithPicksUseCase(private val context: Context) {
         opponentPicks: List<String>,
         playerIsBlue: Boolean
     ): String {
-        fun avgOverall(teamId: String): Double {
-            val roster = GameRepository.rosterOf(context, teamId).filter { it.titular }
-            return if (roster.isEmpty()) 75.0
-            else roster.map { it.overallRating().toDouble() }.average()
+        val gs = GameRepository.current()
+
+        // Encontra a match atual para obter informações
+        val match = gs.matches.find { match ->
+            (match.homeTeamId == playerTeamId && match.awayTeamId == opponentTeamId) ||
+            (match.homeTeamId == opponentTeamId && match.awayTeamId == playerTeamId)
+        } ?: return if (playerIsBlue) playerTeamId else opponentTeamId // fallback
+
+        // Cria um PickBanPlan com os picks escolhidos
+        val plan = if (playerIsBlue) {
+            PickBanPlan(
+                mapNumber = 1,
+                bluePicks = playerPicks,
+                redPicks = opponentPicks,
+                blueBans = emptyList(),
+                redBans = emptyList()
+            )
+        } else {
+            PickBanPlan(
+                mapNumber = 1,
+                bluePicks = opponentPicks,
+                redPicks = playerPicks,
+                blueBans = emptyList(),
+                redBans = emptyList()
+            )
         }
-        val playerStr = avgOverall(playerTeamId) +
-            playerPicks.size.coerceAtMost(5) +
-            if (playerIsBlue) 2.0 else 0.0
-        val opponentStr = avgOverall(opponentTeamId) +
-            opponentPicks.size.coerceAtMost(5) +
-            if (!playerIsBlue) 2.0 else 0.0
-        return if (playerStr + (-8..8).random() > opponentStr) playerTeamId else opponentTeamId
+
+        // Usa um match temporário com o plano para gerar a série
+        val tempMatch = match.copy(pickBanPlan = plan)
+
+        // Simula usando o engine completo
+        val series = com.cblol.scout.game.LiveMatchEngine.generateSeries(context, tempMatch)
+
+        // Retorna o vencedor
+        return when {
+            series.homeMaps > series.awayMaps -> match.homeTeamId
+            else -> match.awayTeamId
+        }
     }
 }
 

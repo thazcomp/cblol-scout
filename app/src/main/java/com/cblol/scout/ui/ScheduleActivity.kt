@@ -37,26 +37,36 @@ class ScheduleActivity : AppCompatActivity() {
 
         GameRepository.load(applicationContext)
 
-        vm.matches.observe(this) { matches ->
-            renderList(matches)
-        }
+        vm.matches.observe(this) { renderList(it) }
 
         vm.event.observe(this) { event ->
             when (event) {
+                // Resultado de simulação automática (sem pick & ban manual)
                 is ScheduleEvent.ShowResult -> {
                     startActivity(event.result.toResultIntent(this))
                 }
-                is ScheduleEvent.NextMap -> showNextMapDialog(
-                    event.mapNum, event.playerWon, event.pw, event.ow
-                )
+                // Pick & ban manual concluído → abre simulação com o plano já salvo
+                is ScheduleEvent.LaunchSimulation -> {
+                    startActivity(
+                        Intent(this, MatchSimulationActivity::class.java)
+                            .putExtra(MatchSimulationActivity.EXTRA_MATCH_ID, event.matchId)
+                    )
+                }
             }
         }
 
         vm.loadMatches()
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Atualiza a lista quando volta da simulação (partida marcada como jogada)
+        vm.refreshMatches()
+    }
+
     override fun onSupportNavigateUp(): Boolean { finish(); return true }
 
+    // ── Lista de partidas ─────────────────────────────────────────────────
     private fun renderList(matches: List<Match>) {
         val gs   = GameRepository.current()
         val snap = GameRepository.snapshot(applicationContext)
@@ -64,10 +74,10 @@ class ScheduleActivity : AppCompatActivity() {
 
         binding.recycler.layoutManager = LinearLayoutManager(this)
         binding.recycler.adapter = MatchAdapter(
-            matches     = sorted,
-            currentDate = gs.currentDate,
-            myTeamId    = gs.managerTeamId,
-            teamNames   = snap.times.associate { it.id to it.nome },
+            matches      = sorted,
+            currentDate  = gs.currentDate,
+            myTeamId     = gs.managerTeamId,
+            teamNames    = snap.times.associate { it.id to it.nome },
             onMatchClick = { m -> handleMatchClick(m) }
         )
 
@@ -78,6 +88,7 @@ class ScheduleActivity : AppCompatActivity() {
         if (nextIdx >= 0) binding.recycler.scrollToPosition(nextIdx)
     }
 
+    // ── Clique em uma partida ─────────────────────────────────────────────
     private fun handleMatchClick(m: Match) {
         val snap     = GameRepository.snapshot(applicationContext)
         val gs       = GameRepository.current()
@@ -98,27 +109,32 @@ class ScheduleActivity : AppCompatActivity() {
             val opponentId = if (m.homeTeamId == gs.managerTeamId) m.awayTeamId else m.homeTeamId
             AlertDialog.Builder(this)
                 .setTitle("$homeName vs $awayName")
-                .setMessage("Deseja fazer o pick & ban deste mapa?")
+                .setMessage("Deseja fazer o pick & ban antes da partida?")
                 .setPositiveButton("Fazer Pick & Ban") { _, _ ->
-                    startPickBan(m.id, gs.managerTeamId, opponentId, 1)
+                    openPickBan(m.id, gs.managerTeamId, opponentId, 1)
                 }
                 .setNegativeButton("Simular direto") { _, _ ->
-                    startActivity(Intent(this, MatchSimulationActivity::class.java)
-                        .putExtra(MatchSimulationActivity.EXTRA_MATCH_ID, m.id))
+                    startActivity(
+                        Intent(this, MatchSimulationActivity::class.java)
+                            .putExtra(MatchSimulationActivity.EXTRA_MATCH_ID, m.id)
+                    )
                 }.show()
         } else {
             AlertDialog.Builder(this)
                 .setTitle("$homeName vs $awayName")
                 .setMessage("Acompanhar partida?")
                 .setPositiveButton("Assistir") { _, _ ->
-                    startActivity(Intent(this, MatchSimulationActivity::class.java)
-                        .putExtra(MatchSimulationActivity.EXTRA_MATCH_ID, m.id))
+                    startActivity(
+                        Intent(this, MatchSimulationActivity::class.java)
+                            .putExtra(MatchSimulationActivity.EXTRA_MATCH_ID, m.id)
+                    )
                 }
                 .setNegativeButton("Cancelar", null).show()
         }
     }
 
-    private fun startPickBan(matchId: String, playerTeamId: String, opponentId: String, mapNum: Int) {
+    // ── Abre o PickBanActivity ────────────────────────────────────────────
+    private fun openPickBan(matchId: String, playerTeamId: String, opponentId: String, mapNum: Int) {
         vm.pendingMatchId        = matchId
         vm.pendingMapNumber      = mapNum
         vm.pendingPlayerTeamId   = playerTeamId
@@ -135,6 +151,11 @@ class ScheduleActivity : AppCompatActivity() {
         )
     }
 
+    /**
+     * Recebe o resultado do PickBanActivity.
+     * Salva o plano e dispara LaunchSimulation — o MatchSimulationActivity
+     * lê o plano do match e usa os campeões escolhidos na simulação.
+     */
     @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
@@ -146,34 +167,10 @@ class ScheduleActivity : AppCompatActivity() {
         val redBans   = data.getStringArrayListExtra("red_bans")?.toList()   ?: emptyList()
         val mapNum    = data.getIntExtra("map_number", vm.pendingMapNumber)
 
-        val snap         = GameRepository.snapshot(applicationContext)
-        val playerName   = snap.times.find { it.id == vm.pendingPlayerTeamId }?.nome  ?: "Você"
-        val opponentName = snap.times.find { it.id == vm.pendingOpponentTeamId }?.nome ?: "Oponente"
-
         vm.handlePickBanResult(bluePicks, redPicks, blueBans, redBans, mapNum)
     }
 
-    private fun showSeriesResult(playerName: String, opponentName: String, pw: Int, ow: Int) {
-        AlertDialog.Builder(this)
-            .setTitle(if (pw > ow) "🏆 Vitória!" else "💔 Derrota")
-            .setMessage("$playerName  $pw — $ow  $opponentName")
-            .setPositiveButton("OK", null).show()
-    }
-
-    private fun showNextMapDialog(mapNum: Int, playerWon: Boolean, pw: Int, ow: Int) {
-        val msg = if (playerWon) "✅ Mapa $mapNum: você venceu!" else "❌ Mapa $mapNum: oponente venceu."
-        AlertDialog.Builder(this)
-            .setTitle("Resultado — Mapa $mapNum  ($pw–$ow)")
-            .setMessage("$msg\n\nContinuar para o Mapa ${mapNum + 1}?")
-            .setPositiveButton("Fazer Pick & Ban") { _, _ ->
-                startPickBan(vm.pendingMatchId, vm.pendingPlayerTeamId, vm.pendingOpponentTeamId, mapNum + 1)
-            }
-            .setNegativeButton("Simular restante") { _, _ ->
-                startActivity(Intent(this, MatchSimulationActivity::class.java)
-                    .putExtra(MatchSimulationActivity.EXTRA_MATCH_ID, vm.pendingMatchId))
-            }.show()
-    }
-
+    // ── Adapter ───────────────────────────────────────────────────────────
     private class MatchAdapter(
         private val matches: List<Match>,
         private val currentDate: String,
@@ -202,7 +199,7 @@ class ScheduleActivity : AppCompatActivity() {
         override fun getItemCount() = matches.size
 
         override fun onBindViewHolder(h: VH, i: Int) {
-            val m = matches[i]
+            val m        = matches[i]
             val homeName = teamNames[m.homeTeamId] ?: m.homeTeamId
             val awayName = teamNames[m.awayTeamId] ?: m.awayTeamId
             h.tvRound.text = "Rodada ${m.round}"
@@ -216,10 +213,10 @@ class ScheduleActivity : AppCompatActivity() {
                     Color.parseColor("#C89B3C") else Color.parseColor("#3C3C41")
             )
             when {
-                m.played          -> { h.tvScore.text = "${m.homeScore}-${m.awayScore}"; h.tvScore.setTextColor(Color.parseColor("#F0E6D2")) }
-                m.date == currentDate -> { h.tvScore.text = "HOJE"; h.tvScore.setTextColor(Color.parseColor("#FFB800")) }
-                m.date < currentDate  -> { h.tvScore.text = "—";    h.tvScore.setTextColor(Color.parseColor("#A09B8C")) }
-                else                  -> { h.tvScore.text = "vs";   h.tvScore.setTextColor(Color.parseColor("#A09B8C")) }
+                m.played              -> { h.tvScore.text = "${m.homeScore}-${m.awayScore}"; h.tvScore.setTextColor(Color.parseColor("#F0E6D2")) }
+                m.date == currentDate -> { h.tvScore.text = "HOJE";  h.tvScore.setTextColor(Color.parseColor("#FFB800")) }
+                m.date < currentDate  -> { h.tvScore.text = "—";     h.tvScore.setTextColor(Color.parseColor("#A09B8C")) }
+                else                  -> { h.tvScore.text = "vs";    h.tvScore.setTextColor(Color.parseColor("#A09B8C")) }
             }
             h.itemView.setOnClickListener { onMatchClick(m) }
         }

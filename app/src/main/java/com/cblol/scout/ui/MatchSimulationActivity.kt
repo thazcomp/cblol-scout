@@ -61,6 +61,7 @@ class MatchSimulationActivity : AppCompatActivity() {
     private var homeHeralds = 0; private var awayHeralds = 0
 
     private var speed = 1f  // 1x, 2x, 4x
+    private var resultApplied = false  // guard contra applyResult duplo
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -75,8 +76,16 @@ class MatchSimulationActivity : AppCompatActivity() {
         val matchId = intent.getStringExtra(EXTRA_MATCH_ID)
         val gs = GameRepository.current()
         val target = gs.matches.find { it.id == matchId }
-        if (target == null || target.played) {
-            finish(); return
+        // Aceita partidas ainda não jogadas OU que tenham um PickBanPlan pendente
+        // (pick & ban manual recém-feito, partida ainda não foi simulada)
+        if (target == null) { finish(); return }
+        // Se já foi jogada E não tem plano pendente, não há nada a simular
+        if (target.played && target.pickBanPlan == null) { finish(); return }
+        // Se foi marcada como played mas tem um plano, reseta para simular com o plano
+        if (target.played && target.pickBanPlan != null) {
+            target.played = false
+            target.homeScore = 0
+            target.awayScore = 0
         }
         match = target
 
@@ -112,25 +121,39 @@ class MatchSimulationActivity : AppCompatActivity() {
     private fun confirmExit() {
         AlertDialog.Builder(this)
             .setTitle("Sair?")
-            .setMessage("A partida será simulada em segundo plano e o resultado aplicado.")
+            .setMessage("Deseja pular direto para o resultado?")
             .setPositiveButton("Pular pro fim") { _, _ ->
                 lifecycleScope.launch {
-                    finalizeMatchSilently()
-                    finish()
+                    skipToResult()
                 }
             }
             .setNegativeButton("Continuar assistindo", null)
             .show()
     }
 
-    /** Em caso de skip: fecha a tela mas ainda processa o resultado via advanceDays. */
-    private suspend fun finalizeMatchSilently() {
-        // Avança até o dia da partida (caso usuário tenha entrado por uma partida futura)
-        val today = LocalDate.parse(GameRepository.current().currentDate)
-        val matchDay = LocalDate.parse(match.date)
-        val days = today.until(matchDay).days + 1
-        if (days > 0) withContext(Dispatchers.Default) {
-            GameEngine.advanceDays(applicationContext, days)
+    /**
+     * Gera a série completa em background sem exibir os eventos,
+     * acumula os contadores de stats e chama applyResult normalmente
+     * para que a MatchResultActivity seja exibida.
+     */
+    private suspend fun skipToResult() {
+        val series = withContext(Dispatchers.Default) {
+            LiveMatchEngine.generateSeries(applicationContext, match)
+        }
+        // Processa os eventos sem delay para acumular stats nos contadores
+        for (e in series.events) {
+            when (e) {
+                is MatchEvent.GameStart  -> resetMapCounters()
+                is MatchEvent.Kill       -> if (e.killerSide == Side.HOME) homeKills++ else awayKills++
+                is MatchEvent.TowerDown  -> if (e.side == Side.HOME) homeTowers++ else awayTowers++
+                is MatchEvent.Dragon     -> if (e.side == Side.HOME) homeDragons++ else awayDragons++
+                is MatchEvent.Baron      -> if (e.side == Side.HOME) homeBarons++ else awayBarons++
+                is MatchEvent.Herald     -> if (e.side == Side.HOME) homeHeralds++ else awayHeralds++
+                else -> Unit
+            }
+        }
+        withContext(Dispatchers.Main) {
+            applyResult(series.homeMaps, series.awayMaps)
         }
     }
 
@@ -140,8 +163,15 @@ class MatchSimulationActivity : AppCompatActivity() {
             val series = withContext(Dispatchers.Default) {
                 LiveMatchEngine.generateSeries(applicationContext, match)
             }
+            // Guarda os mapas finais antes de playEvents para não depender
+            // dos contadores que são resetados por mapa
+            val finalHomeMaps = series.homeMaps
+            val finalAwayMaps = series.awayMaps
             playEvents(series.events)
-            applyResult(series.homeMaps, series.awayMaps)
+            // Garante execução no Main mesmo que a coroutine tenha mudado de contexto
+            withContext(Dispatchers.Main) {
+                applyResult(finalHomeMaps, finalAwayMaps)
+            }
         }
     }
 
@@ -332,6 +362,9 @@ class MatchSimulationActivity : AppCompatActivity() {
         else binding.tvAwayName.text.toString()
 
     private fun applyResult(homeMapsFinal: Int, awayMapsFinal: Int) {
+        if (resultApplied) return
+        resultApplied = true
+
         match.played    = true
         match.homeScore = homeMapsFinal
         match.awayScore = awayMapsFinal
@@ -360,6 +393,8 @@ class MatchSimulationActivity : AppCompatActivity() {
             "MATCH",
             "Rodada ${match.round}: ${binding.tvHomeName.text} $homeMapsFinal-$awayMapsFinal ${binding.tvAwayName.text}"
         )
+        // Limpa o plano após a simulação para não re-entrar no fluxo de reset
+        match.pickBanPlan = null
         GameRepository.save(applicationContext)
 
         // Lança a tela de resultado animada

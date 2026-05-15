@@ -32,9 +32,16 @@ class ManagerHubActivity : AppCompatActivity() {
     private var pendingPlayerTeamId: String = ""
     private var pendingOpponentTeamId: String = ""
 
+    private var autoORmanualPicksDialog: AlertDialog? = null
+    private var confirmQuitDialog: AlertDialog? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityManagerHubBinding.inflate(layoutInflater)
+        pendingMatchId = savedInstanceState?.getString("pendingMatchId") ?: ""
+        pendingMapNumber = savedInstanceState?.getInt("pendingMapNumber", 1) ?: 1
+        pendingPlayerTeamId = savedInstanceState?.getString("pendingPlayerTeamId") ?: ""
+        pendingOpponentTeamId = savedInstanceState?.getString("pendingOpponentTeamId") ?: ""
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
 
@@ -96,7 +103,7 @@ class ManagerHubActivity : AppCompatActivity() {
         val next = vm.hubState.value?.nextMatch ?: return
         val playerTeamId = com.cblol.scout.game.GameRepository.current().managerTeamId
 
-        AlertDialog.Builder(this)
+        autoORmanualPicksDialog = AlertDialog.Builder(this)
             .setTitle(next.label)
             .setMessage("Deseja fazer o pick & ban antes da partida?")
             .setPositiveButton("Fazer Pick & Ban") { _, _ ->
@@ -140,62 +147,21 @@ class ManagerHubActivity : AppCompatActivity() {
         val redBans   = data.getStringArrayListExtra("red_bans")?.toList()   ?: emptyList()
         val mapNum    = data.getIntExtra("map_number", pendingMapNumber)
 
-        val snap         = com.cblol.scout.game.GameRepository.snapshot(applicationContext)
-        val playerName   = snap.times.find { it.id == pendingPlayerTeamId }?.nome  ?: "Você"
-        val opponentName = snap.times.find { it.id == pendingOpponentTeamId }?.nome ?: "Oponente"
-
+        // Salva o plano no match para que o LiveMatchEngine use os campeões escolhidos
         val gs = com.cblol.scout.game.GameRepository.current()
         gs.matches.find { it.id == pendingMatchId }?.pickBanPlan =
             PickBanPlan(mapNum, bluePicks, redPicks, blueBans, redBans)
+        com.cblol.scout.game.GameRepository.save(applicationContext)
 
-        val playerIsBlue  = (mapNum % 2 == 1)
-        val playerPicks   = if (playerIsBlue) bluePicks else redPicks
-        val opponentPicks = if (playerIsBlue) redPicks  else bluePicks
-
-        val prev    = gs.seriesState[pendingMatchId] ?: com.cblol.scout.data.SeriesState()
-        val winner  = com.cblol.scout.domain.usecase.SimulateMapWithPicksUseCase(applicationContext)
-            .invoke(pendingPlayerTeamId, pendingOpponentTeamId, playerPicks, opponentPicks, playerIsBlue)
-        val updated = prev.recordMap(winner == pendingPlayerTeamId)
-        gs.seriesState[pendingMatchId] = updated
-        val pw = updated.playerWins
-        val ow = updated.opponentWins
-
-        when {
-            updated.isFinished -> {
-                val result = com.cblol.scout.domain.usecase.FinalizeMatchUseCase(applicationContext)
-                    .invoke(pendingMatchId, pendingPlayerTeamId, pw, ow)
-                vm.refresh()
-                startActivity(result.toResultIntent(this))
-            }
-            else -> {
-                val msg = if (winner == pendingPlayerTeamId) "✅ Mapa $mapNum: você venceu!"
-                          else "❌ Mapa $mapNum: oponente venceu."
-                AlertDialog.Builder(this)
-                    .setTitle("Resultado — Mapa $mapNum  ($pw–$ow)")
-                    .setMessage("$msg\n\nContinuar para o Mapa ${mapNum + 1}?")
-                    .setPositiveButton("Fazer Pick & Ban") { _, _ ->
-                        pendingMapNumber = mapNum + 1
-                        @Suppress("DEPRECATION")
-                        startActivityForResult(
-                            Intent(this, PickBanActivity::class.java).apply {
-                                putExtra("player_team_id",   pendingPlayerTeamId)
-                                putExtra("opponent_team_id", pendingOpponentTeamId)
-                                putExtra("match_id",         pendingMatchId)
-                                putExtra("map_number",       mapNum + 1)
-                            },
-                            PickBanActivity.REQUEST_PICK_BAN
-                        )
-                    }
-                    .setNegativeButton("Simular restante") { _, _ ->
-                        startActivity(Intent(this, MatchSimulationActivity::class.java)
-                            .putExtra(MatchSimulationActivity.EXTRA_MATCH_ID, pendingMatchId))
-                    }.show()
-            }
-        }
+        // Abre o MatchSimulationActivity — ele lê o plano e simula com os campeões escolhidos
+        startActivity(
+            Intent(this, MatchSimulationActivity::class.java)
+                .putExtra(MatchSimulationActivity.EXTRA_MATCH_ID, pendingMatchId)
+        )
     }
 
     private fun confirmQuit() {
-        AlertDialog.Builder(this)
+        confirmQuitDialog = AlertDialog.Builder(this)
             .setTitle("Encerrar carreira?")
             .setMessage("Isso apagará seu save permanentemente.")
             .setPositiveButton("Sim, encerrar") { _, _ ->
@@ -231,5 +197,16 @@ class ManagerHubActivity : AppCompatActivity() {
             h.tvDate.text = e.date
             h.tvMsg.text  = e.message
         }
+    }
+
+    override fun onSaveInstanceState(outState:Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString("pendingMatchId", pendingMatchId)
+    }
+
+    override fun onDestroy() {
+        if (autoORmanualPicksDialog?.isShowing == true) autoORmanualPicksDialog?.dismiss()
+        if (confirmQuitDialog?.isShowing == true) confirmQuitDialog?.dismiss()
+        super.onDestroy()
     }
 }

@@ -13,6 +13,7 @@
 
         <activity
             android:name=".ui.LoginActivity"
+            android:screenOrientation="portrait"
             android:exported="true"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
@@ -21,34 +22,46 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".ui.TeamSelectActivity" android:exported="false"/>
+        <activity android:name=".ui.TeamSelectActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
 
-        <activity android:name=".ui.ManagerHubActivity" android:exported="false"/>
+        <activity android:name=".ui.ManagerHubActivity"
+            android:screenOrientation="portrait"
+            android:exported="false"/>
 
         <activity android:name=".ui.MainActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustResize"
             android:parentActivityName=".ui.ManagerHubActivity"/>
 
         <activity android:name=".ui.SquadActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:parentActivityName=".ui.ManagerHubActivity"/>
 
         <activity android:name=".ui.MatchSimulationActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
+            android:orientation="vertical"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
             android:parentActivityName=".ui.ManagerHubActivity"/>
 
         <activity android:name=".ui.ScheduleActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:parentActivityName=".ui.ManagerHubActivity"/>
 
         <activity android:name=".ui.StandingsActivity"
             android:exported="false"
+            android:screenOrientation="portrait"
             android:parentActivityName=".ui.ManagerHubActivity"/>
 
         <activity android:name=".ui.TransferMarketActivity"
             android:exported="false"
-            android:parentActivityName=".ui.ManagerHubActivity"/>
+            android:parentActivityName=".ui.ManagerHubActivity"
+            android:screenOrientation="portrait"/>
 
         <activity
             android:name=".ui.PickBanActivity"

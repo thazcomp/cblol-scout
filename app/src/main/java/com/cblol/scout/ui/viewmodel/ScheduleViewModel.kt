@@ -11,9 +11,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/**
+ * Após o pick & ban manual não há mais cálculo de vitória aqui.
+ * O evento LaunchSimulation instrui a Activity a abrir o MatchSimulationActivity
+ * com o plano já salvo no Match — o LiveMatchEngine cuida do resto.
+ */
 sealed class ScheduleEvent {
+    /** Série finalizada via simulação automática (sem pick & ban manual). */
     data class ShowResult(val result: MatchResultData) : ScheduleEvent()
-    data class NextMap(val mapNum: Int, val playerWon: Boolean, val pw: Int, val ow: Int) : ScheduleEvent()
+
+    /** Pick & ban manual concluído — abrir MatchSimulationActivity com o plano. */
+    data class LaunchSimulation(val matchId: String) : ScheduleEvent()
 }
 
 class ScheduleViewModel(
@@ -41,35 +49,33 @@ class ScheduleViewModel(
         }
     }
 
+    /**
+     * Chamado quando o pick & ban manual termina.
+     * Salva o plano no Match e dispara LaunchSimulation para que a Activity
+     * abra o MatchSimulationActivity — que usa o LiveMatchEngine com os
+     * campeões escolhidos.
+     */
     fun handlePickBanResult(
-        bluePicks: List<String>, redPicks: List<String>,
-        blueBans: List<String>, redBans: List<String>,
+        bluePicks: List<String>,
+        redPicks: List<String>,
+        blueBans: List<String>,
+        redBans: List<String>,
         mapNum: Int
     ) {
         viewModelScope.launch(Dispatchers.IO) {
-            savePickBanPlan(pendingMatchId, PickBanPlan(mapNum, bluePicks, redPicks, blueBans, redBans))
-
-            val playerIsBlue  = (mapNum % 2 == 1)
-            val playerPicks   = if (playerIsBlue) bluePicks else redPicks
-            val opponentPicks = if (playerIsBlue) redPicks  else bluePicks
-
-            val winner  = simulateMapWithPicks(
-                pendingPlayerTeamId, pendingOpponentTeamId,
-                playerPicks, opponentPicks, playerIsBlue
+            savePickBanPlan(
+                pendingMatchId,
+                PickBanPlan(mapNum, bluePicks, redPicks, blueBans, redBans)
             )
-            val updated = updateSeriesState(pendingMatchId, winner == pendingPlayerTeamId)
-            val pw = updated.playerWins
-            val ow = updated.opponentWins
-
             withContext(Dispatchers.Main) {
-                if (updated.isFinished) {
-                    val result = finalizeMatch(pendingMatchId, pendingPlayerTeamId, pw, ow)
-                    _matches.value = getAllMatches()
-                    _event.value = ScheduleEvent.ShowResult(result)
-                } else {
-                    _event.value = ScheduleEvent.NextMap(mapNum, winner == pendingPlayerTeamId, pw, ow)
-                }
+                _event.value = ScheduleEvent.LaunchSimulation(pendingMatchId)
             }
+        }
+    }
+
+    fun refreshMatches() {
+        viewModelScope.launch {
+            _matches.value = withContext(Dispatchers.IO) { getAllMatches() }
         }
     }
 }
