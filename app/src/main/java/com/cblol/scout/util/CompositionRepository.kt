@@ -25,62 +25,109 @@ object CompositionRepository {
     val all: List<TeamComposition> by lazy { buildComps() }
 
     /**
-     * Analisa uma lista de picks e retorna a composição detectada com maior sinergia.
-     * Também verifica tags funcionais: times com 3+ TANK recebem aviso de ANTI_TANK,
-     * times com 3+ HEAL recebem aviso de ignite pressure, etc.
+     * Analisa todos os picks e retorna a composição com maior sinergia (legado).
+     * Para múltiplas composições simultâneas, use [analyzeAll].
      */
     fun analyze(picks: List<String>, bans: List<String> = emptyList()): CompAnalysisResult {
-        val picksLower = picks.map { it.lowercase() }
+        val detected = analyzeAll(picks, bans)
+        val best = detected.firstOrNull()
+        val desc = if (best != null) {
+            val pct = (best.matched.size.toFloat() / best.composition.requiredPicks.size * 100).toInt()
+            "${best.composition.name} ($pct% montada) · +${best.bonus} força"
+        } else {
+            "Sem sinergia detectada"
+        }
+        return CompAnalysisResult(best?.composition, best?.matched ?: emptyList(), best?.bonus ?: 0, desc)
+    }
 
-        var best: TeamComposition? = null
-        var bestMatched = emptyList<String>()
-        var bestBonus = 0
+    /**
+     * Retorna TODAS as composições que atingem o mínimo de picks exigidos,
+     * ordenadas pelo bônus efetivo (maior primeiro).
+     *
+     * Um mesmo time pode encaixar em múltiplas composições ao mesmo tempo —
+     * por exemplo Jarvan+Malphite+Wukong pode contar tanto para "Wombo Combo"
+     * (knock-ups encadeados) quanto para "Hard Engage" (CC inicial em cadeia).
+     * Campeões que aparecem em várias comps ("coringas") naturalmente impulsionam
+     * mais de uma sinergia ao mesmo tempo.
+     */
+    fun analyzeAll(picks: List<String>, bans: List<String> = emptyList()): List<DetectedComp> {
+        val picksLower = picks.map { it.lowercase() }
+        val results = mutableListOf<DetectedComp>()
 
         for (comp in all) {
             val required = comp.requiredPicks.map { it.lowercase() }
-            val matched = required.filter { it in picksLower }
-
+            val matched  = required.filter { it in picksLower }
             if (matched.size < comp.minRequired) continue
 
-            // Verifica se algum campeão-chave foi banado (pelo oponente) — quebra o bônus
+            // Algum campeão-chave foi banido → comp neutralizada (sem bônus)
             val keyBanned = comp.keyChampions.any { key ->
                 bans.any { ban -> ban.lowercase() == key.lowercase() }
             }
             if (keyBanned) continue
 
             val bonus = when {
-                matched.size >= required.size       -> comp.bonusStrength          // comp completa
-                matched.size == comp.minRequired    -> comp.bonusStrength / 2      // comp parcial
-                else                                -> comp.bonusStrength * matched.size / required.size
+                matched.size >= required.size    -> comp.bonusStrength          // comp completa
+                matched.size == comp.minRequired -> comp.bonusStrength / 2      // mínimo atingido
+                else                              -> comp.bonusStrength * matched.size / required.size
             }
-
-            if (bonus > bestBonus) {
-                bestBonus   = bonus
-                best        = comp
-                bestMatched = matched
-            }
+            // Preserva o case original dos picks que casaram
+            val originalNames = picks.filter { it.lowercase() in matched }
+            results += DetectedComp(comp, originalNames, bonus)
         }
+        return results.sortedByDescending { it.bonus }
+    }
 
-        val desc = if (best != null) {
-            val pct = (bestMatched.size.toFloat() / best.requiredPicks.size * 100).toInt()
-            "${best.name} ($pct% montada) · +$bestBonus força"
-        } else {
-            "Sem sinergia detectada"
-        }
-
-        return CompAnalysisResult(best, bestMatched, bestBonus, desc)
+    /** Uma composição detectada nos picks atuais, com seu bônus efetivo. */
+    data class DetectedComp(
+        val composition: TeamComposition,
+        val matched: List<String>,   // campeões picados que casam com requiredPicks
+        val bonus: Int               // bônus efetivo após considerar parcialidade
+    ) {
+        val percent: Int get() =
+            (matched.size.toFloat() / composition.requiredPicks.size * 100).toInt()
     }
 
     /**
-     * Análise enriquecida com tags funcionais dos campeões picados.
-     * Considera equilíbrio de dano, CC, frontline, anti-tank, etc.
+     * Análise enriquecida com tags funcionais + múltiplas composições simultâneas.
+     *
+     * Soma bônus de TODAS as composições detectadas com diminishing returns:
+     * a primeira (maior) entra cheia, a segunda com 60%, a terceira com 30%.
+     * Isso impede que um único pick coringa exploite stacking infinito,
+     * mas premia composições genuinamente híbridas (ex: engage + wombo).
      */
     fun analyzeWithTags(
         picks: List<String>,
         opponentPicks: List<String> = emptyList(),
         bans: List<String> = emptyList()
     ): TaggedAnalysisResult {
-        val base     = analyze(picks, bans)
+        val detectedComps = analyzeAll(picks, bans)
+        // Bônus combinado com diminishing returns
+        val combinedBonus = detectedComps.foldIndexed(0) { idx, acc, comp ->
+            val factor = when (idx) {
+                0    -> 1.0      // comp principal: 100%
+                1    -> 0.6      // segunda comp: 60%
+                2    -> 0.3      // terceira comp: 30%
+                else -> 0.15     // demais: 15% cada
+            }
+            acc + (comp.bonus * factor).toInt()
+        }
+
+        val primary = detectedComps.firstOrNull()
+        val baseDesc = when {
+            detectedComps.isEmpty()  -> "Sem sinergia detectada"
+            detectedComps.size == 1  -> primary!!.let { "${it.composition.name} (${it.percent}%) · +${it.bonus} força" }
+            else                     -> {
+                val names = detectedComps.take(3).joinToString(" + ") { it.composition.name }
+                "$names · +$combinedBonus força (combinado)"
+            }
+        }
+        val base = CompAnalysisResult(
+            detected         = primary?.composition,
+            matchedChampions = primary?.matched ?: emptyList(),
+            bonusStrength    = combinedBonus,
+            description      = baseDesc
+        )
+
         val myChamps = picks.mapNotNull { ChampionRepository.getById(it) }
         val opChamps = opponentPicks.mapNotNull { ChampionRepository.getById(it) }
         var extra    = 0
@@ -112,11 +159,18 @@ object CompositionRepository {
         val myEarly = myChamps.count { it.hasTag(ChampionTag.EARLY_GAME) }
         if (opHyper >= 2 && myEarly == 0) { extra -= 1; insights += "⚠️ Oponente escala muito, force lutas cedo" }
 
+        // Insight extra quando múltiplas composições se sobrepõem
+        if (detectedComps.size >= 2) {
+            val names = detectedComps.take(2).joinToString(" + ") { it.composition.name }
+            insights.add(0, "✨ Comp híbrida: $names")
+        }
+
         return TaggedAnalysisResult(
-            base       = base,
-            extraBonus = extra,
-            totalBonus = (base.bonusStrength + extra).coerceAtLeast(0),
-            insights   = insights
+            base          = base,
+            extraBonus    = extra,
+            totalBonus    = (combinedBonus + extra).coerceAtLeast(0),
+            insights      = insights,
+            detectedComps = detectedComps
         )
     }
 
@@ -148,7 +202,9 @@ object CompositionRepository {
         val base: CompAnalysisResult,
         val extraBonus: Int,
         val totalBonus: Int,
-        val insights: List<String>
+        val insights: List<String>,
+        /** Todas as composições detectadas, ordenadas por bônus decrescente. */
+        val detectedComps: List<DetectedComp> = emptyList()
     )
 
     data class SuggestedPick(

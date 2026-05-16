@@ -490,7 +490,7 @@ class PickBanActivity : AppCompatActivity() {
         val blueResult = CompositionRepository.analyzeWithTags(
             picks         = state.bluePicks.map { it.id },
             opponentPicks = state.redPicks.map  { it.id },
-            bans          = state.redBans.map   { it.id }   // bans do oponente nos meus picks
+            bans          = state.redBans.map   { it.id }
         )
         val redResult = CompositionRepository.analyzeWithTags(
             picks         = state.redPicks.map { it.id },
@@ -503,7 +503,7 @@ class PickBanActivity : AppCompatActivity() {
             tvLabel     = tvBlueCompLabel,
             tvValue     = tvBlueCompValue,
             totalBonus  = blueResult.totalBonus,
-            detected    = blueResult.base.detected?.name,
+            comps       = blueResult.detectedComps,
             picksCount  = state.bluePicks.size
         )
         applySynergyToBar(
@@ -511,17 +511,25 @@ class PickBanActivity : AppCompatActivity() {
             tvLabel     = tvRedCompLabel,
             tvValue     = tvRedCompValue,
             totalBonus  = redResult.totalBonus,
-            detected    = redResult.base.detected?.name,
+            comps       = redResult.detectedComps,
             picksCount  = state.redPicks.size
         )
     }
 
+    /**
+     * Aplica score à barra de sinergia.
+     *
+     * Quando o time monta MAIS DE UMA composição ao mesmo tempo, o label
+     * exibe ambas: "⚡ Wombo Combo (60%) + Hard Engage (40%)". As barras
+     * ainda crescem mais rápido nesses casos porque [totalBonus] já soma
+     * os bônus parciais de cada comp detectada.
+     */
     private fun applySynergyToBar(
         bar: ProgressBar,
         tvLabel: TextView,
         tvValue: TextView,
         totalBonus: Int,
-        detected: String?,
+        comps: List<CompositionRepository.DetectedComp>,
         picksCount: Int
     ) {
         val target = (totalBonus * 5.5).toInt().coerceIn(0, 100)
@@ -532,12 +540,20 @@ class PickBanActivity : AppCompatActivity() {
         }
         tvValue.text = if (totalBonus >= 0) "+$totalBonus" else totalBonus.toString()
         tvLabel.text = when {
-            picksCount == 0     -> "Aguardando picks…"
-            detected != null    -> "⚡ $detected"
-            totalBonus < 0      -> "⚠️ Comp desbalanceada"
-            totalBonus < 4      -> "Sinergia fraca"
-            totalBonus < 8      -> "Sinergia parcial"
-            else                -> "Sinergia forte"
+            picksCount == 0    -> "Aguardando picks…"
+            comps.isEmpty()    -> when {
+                totalBonus < 0 -> "⚠️ Comp desbalanceada"
+                totalBonus < 4 -> "Sinergia fraca"
+                totalBonus < 8 -> "Sinergia parcial"
+                else           -> "Sinergia forte"
+            }
+            comps.size == 1    -> "⚡ ${comps[0].composition.name} (${comps[0].percent}%)"
+            else               -> {
+                // Múltiplas comps simultâneas — mostra as 2 principais
+                val first  = comps[0]
+                val second = comps[1]
+                "✨ ${first.composition.name} (${first.percent}%) + ${second.composition.name} (${second.percent}%)"
+            }
         }
     }
 
