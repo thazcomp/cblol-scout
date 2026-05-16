@@ -19,6 +19,7 @@ import android.widget.TextView
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
@@ -32,10 +33,12 @@ import com.cblol.scout.data.Champion
 import com.cblol.scout.data.ChampionTag
 import com.cblol.scout.data.PickBanPhase
 import com.cblol.scout.data.PickBanState
+import com.cblol.scout.data.Player
 import com.cblol.scout.domain.GameConstants
 import com.cblol.scout.game.GameRepository
 import com.cblol.scout.util.ChampionRepository
 import com.cblol.scout.util.CompositionRepository
+import com.cblol.scout.util.PickSuggestionEngine
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
@@ -86,6 +89,14 @@ class PickBanActivity : AppCompatActivity() {
     private lateinit var tvRedCompLabel: TextView
     private lateinit var tvBlueCompValue: TextView
     private lateinit var tvRedCompValue: TextView
+
+    // Sugestões contextuais de pick
+    private lateinit var llSuggestionsContainer: View
+    private lateinit var rvSuggestions: RecyclerView
+    private lateinit var suggestionsAdapter: PickSuggestionAdapter
+    /** Titulares do time do jogador ordenados por role (TOP→SUP). Usado para descobrir
+     *  qual atleta vai pickar em cada slot e oferecer seus mains como sugestão. */
+    private var playerStarters: List<Player> = emptyList()
 
     // ── Loading overlay ─────────────────────────────────────────────────
     private lateinit var viewLoadingOverlay: View
@@ -140,6 +151,7 @@ class PickBanActivity : AppCompatActivity() {
         preloadAllChampionImages {
             viewLoadingOverlay.visibility = View.GONE
             setupChampionGrid()
+            setupSuggestions()
             setupRoleFilters()
             setupTagFilters()
             setupSearch()
@@ -186,6 +198,9 @@ class PickBanActivity : AppCompatActivity() {
         tvRedCompLabel  = findViewById(R.id.tv_red_comp_label)
         tvBlueCompValue = findViewById(R.id.tv_blue_comp_value)
         tvRedCompValue  = findViewById(R.id.tv_red_comp_value)
+
+        llSuggestionsContainer = findViewById(R.id.ll_suggestions_container)
+        rvSuggestions          = findViewById(R.id.rv_suggestions)
 
         blueBanSlots = listOf(
             findViewById(R.id.iv_blue_ban_1), findViewById(R.id.iv_blue_ban_2),
@@ -269,6 +284,30 @@ class PickBanActivity : AppCompatActivity() {
         championAdapter = ChampionGridAdapter(ChampionRepository.getAll()) { onChampionSelected(it) }
         rvChampions.layoutManager = GridLayoutManager(this, GameConstants.Draft.GRID_COLUMNS)
         rvChampions.adapter = championAdapter
+
+        // Carrega o roster do time do jogador (titulares ordenados por role) para
+        // alimentar o motor de sugestões com o champion pool do atleta da role atual.
+        playerStarters = GameRepository.rosterOf(applicationContext, playerTeamId)
+            .filter { it.titular }
+            .sortedBy { roleOrder(it.role) }
+    }
+
+    /**
+     * Configura a faixa horizontal de sugestões contextuais.
+     * Tocar num card de sugestão seleciona e confirma o pick imediatamente.
+     */
+    private fun setupSuggestions() {
+        suggestionsAdapter = PickSuggestionAdapter { champ ->
+            onChampionSelected(champ)
+            confirmAction(champ)
+        }
+        rvSuggestions.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        rvSuggestions.adapter = suggestionsAdapter
+    }
+
+    /** Ordem canônica de roles (TOP→SUP). */
+    private fun roleOrder(role: String): Int = when (role) {
+        "TOP" -> 0; "JNG" -> 1; "MID" -> 2; "ADC" -> 3; "SUP" -> 4; else -> 5
     }
 
     private fun setupRoleFilters() {
@@ -354,6 +393,7 @@ class PickBanActivity : AppCompatActivity() {
         highlightActivePickSlot(isBlue, phase)
         selectedChampion = null
         championAdapter.clearSelection()
+        refreshSuggestions(isPlayerTurn, phase)
 
         cancelAiRunnable()
         if (!isPlayerTurn) {
@@ -370,6 +410,45 @@ class PickBanActivity : AppCompatActivity() {
             PickBanPhase.PICK -> if (isBlue) R.string.pb_phase_blue_picking else R.string.pb_phase_red_picking
         }
     )
+
+    /**
+     * Atualiza a faixa de sugestões contextuais.
+     *
+     * Mostrada apenas no turno do jogador em fase de PICK — bans não recebem
+     * sugestões (a UI já tem o dialog "Composições Perigosas" no início).
+     *
+     * As sugestões são computadas pelo [PickSuggestionEngine] combinando:
+     *  - Champion pool do atleta da role atual (MAIN)
+     *  - Comps que estamos montando (COMPOSITION)
+     *  - Counters à seleção do oponente (COUNTER)
+     *  - Lacunas de tags do nosso time (SYNERGY)
+     *  - Picks fortes do meta como fallback (META)
+     */
+    private fun refreshSuggestions(isPlayerTurn: Boolean, phase: PickBanPhase) {
+        if (!isPlayerTurn || phase != PickBanPhase.PICK) {
+            llSuggestionsContainer.visibility = View.GONE
+            return
+        }
+
+        val myPicks       = (if (state.playerIsBlue) state.bluePicks else state.redPicks).map { it.id }
+        val opponentPicks = (if (state.playerIsBlue) state.redPicks  else state.bluePicks).map { it.id }
+        val allBans       = (state.blueBans + state.redBans).map { it.id }
+        val currentPlayer = playerStarters.getOrNull(myPicks.size)
+
+        val suggestions = PickSuggestionEngine.suggest(
+            myPicks       = myPicks,
+            opponentPicks = opponentPicks,
+            bans          = allBans,
+            currentPlayer = currentPlayer
+        )
+
+        if (suggestions.isEmpty()) {
+            llSuggestionsContainer.visibility = View.GONE
+        } else {
+            llSuggestionsContainer.visibility = View.VISIBLE
+            suggestionsAdapter.submit(suggestions)
+        }
+    }
 
     private fun cancelAiRunnable() {
         aiRunnable?.let { handler.removeCallbacks(it) }

@@ -109,4 +109,12 @@
     <color name="salary_reported">#00B894</color>
     <color name="salary_estimated">#C89B3C</color>
 
+    <!-- ═══ Sugestões de pick (cards na PickBanActivity) ═══ -->
+    <color name="pick_ban_suggestion_bg">#1A1F2E</color>
+    <color name="suggestion_badge_main">#C89B3C</color>      <!-- Dourado: MAIN -->
+    <color name="suggestion_badge_comp">#0AC8B9</color>             <!-- Ciano: COMPOSITION -->
+    <color name="suggestion_badge_counter">#E84057</color>    <!-- Vermelho: COUNTER -->
+    <color name="suggestion_badge_synergy">#3CBEFF</color>    <!-- Azul: SYNERGY -->
+    <color name="suggestion_badge_meta">#A09B8C</color>       <!-- Cinza: META -->
+
 </resources>

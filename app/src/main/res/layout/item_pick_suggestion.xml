@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Card de sugestão de pick exibido na faixa horizontal do PickBanActivity.
+
+    Estrutura:
+      ┌──────────────────────┐
+      │   [img 56×56]        │
+      │   Nome (bold)        │
+      │   [BADGE motivo]     │
+      │   labels (até 2)     │
+      └──────────────────────┘
+
+    O card inteiro é clicável e dispara a seleção do campeão sugerido.
+-->
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="120dp"
+    android:layout_height="wrap_content"
+    android:layout_marginEnd="6dp"
+    app:cardCornerRadius="6dp"
+    app:cardElevation="3dp"
+    app:cardBackgroundColor="@color/pick_ban_suggestion_bg">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="6dp">
+
+        <!-- Imagem do campeão sugerido -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            app:cardCornerRadius="4dp"
+            app:cardElevation="0dp">
+
+            <ImageView
+                android:id="@+id/iv_suggestion_image"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:contentDescription="@string/champ_icon_desc" />
+        </androidx.cardview.widget.CardView>
+
+        <TextView
+            android:id="@+id/tv_suggestion_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="@android:color/white"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <!-- Badge colorido do motivo principal -->
+        <TextView
+            android:id="@+id/tv_suggestion_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:paddingStart="6dp"
+            android:paddingEnd="6dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="2dp"
+            android:textColor="@android:color/white"
+            android:textSize="9sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.08" />
+
+        <!-- Labels detalhados dos motivos (até 2 linhas) -->
+        <TextView
+            android:id="@+id/tv_suggestion_reasons"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:textColor="#CCFFFFFF"
+            android:textSize="9sp"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:lineSpacingMultiplier="1.05" />
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

@@ -353,4 +353,14 @@
     <string name="presim_main_line">%1$s (%2$s) jogando %3$s</string>
     <string name="presim_mains_bonus">%1$s: +%2$d força por mains</string>
 
+    <!-- ════════════════════════════════════════════════════════════════
+         SUGESTÕES DE PICK (durante o turno do jogador)
+         ═══════════════════════════════════════════════════════════════ -->
+    <string name="pb_suggestions_header">✨ SUGESTÕES DE PICK</string>
+    <string name="badge_main">MAIN</string>
+    <string name="badge_comp">COMP</string>
+    <string name="badge_counter">COUNTER</string>
+    <string name="badge_synergy">SINERGIA</string>
+    <string name="badge_meta">META</string>
+
 </resources>

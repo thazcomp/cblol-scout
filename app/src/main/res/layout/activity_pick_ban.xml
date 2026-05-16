@@ -392,6 +392,42 @@
                     android:imeOptions="actionSearch" />
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- ══════════════════════════════════════════════════════════════
+                 SUGESTÕES CONTEXTUAIS DE PICK
+                 Visíveis apenas no turno do jogador (controlado por código).
+                 Até 3 cards horizontais com:
+                   • imagem do campeão
+                   • nome
+                   • badge colorido por motivo principal (MAIN/COMP/COUNTER/SYNERGY/META)
+                 Clicar num card seleciona o campeão como se o jogador tivesse tocado.
+            ══════════════════════════════════════════════════════════════ -->
+            <LinearLayout
+                android:id="@+id/ll_suggestions_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                android:layout_marginTop="4dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/pb_suggestions_header"
+                    android:textColor="@color/champion_gold"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.1"
+                    android:layout_marginStart="2dp" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rv_suggestions"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:clipToPadding="false"
+                    android:overScrollMode="never" />
+            </LinearLayout>
+
             <!-- Filtros de Role -->
             <HorizontalScrollView
                 android:layout_width="match_parent"
