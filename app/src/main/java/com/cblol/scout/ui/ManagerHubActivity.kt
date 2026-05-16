@@ -153,7 +153,9 @@ class ManagerHubActivity : AppCompatActivity() {
             PickBanPlan(mapNum, bluePicks, redPicks, blueBans, redBans)
         com.cblol.scout.game.GameRepository.save(applicationContext)
 
-        // Abre o MatchSimulationActivity — ele lê o plano e simula com os campeões escolhidos
+        // Abre o MatchSimulationActivity — o próprio MatchSimulationActivity
+        // irá exibir o dialog de sinergia após a fase de pick & ban automatizada,
+        // antes de começar os eventos ao vivo.
         startActivity(
             Intent(this, MatchSimulationActivity::class.java)
                 .putExtra(MatchSimulationActivity.EXTRA_MATCH_ID, pendingMatchId)

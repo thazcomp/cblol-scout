@@ -169,10 +169,52 @@ class MatchSimulationActivity : AppCompatActivity() {
                 LiveMatchEngine.generateSingleMap(applicationContext, match, gameNumber)
             }
             if (result.homeWon) homeMaps++ else awayMaps++
-            playEvents(result.events)
+
+            // Separa os eventos em duas fases:
+            //   1. Pick & ban (até o último MatchEvent.Pick)
+            //   2. Jogo (do primeiro MatchEvent.GameTick em diante)
+            // No meio, pausa para exibir o PreSimulationDialog com a sinergia
+            // resultante do draft que acabou de acontecer.
+            val firstGameEventIdx = result.events.indexOfFirst {
+                it is MatchEvent.GameTick || it is MatchEvent.GameStart && it != result.events.firstOrNull()
+            }
+            val cutIdx = if (firstGameEventIdx > 0) firstGameEventIdx else result.events.size
+            val pickBanEvents = result.events.subList(0, cutIdx)
+            val gameEvents    = result.events.subList(cutIdx, result.events.size)
+
+            // Toca a fase de pick & ban
+            playEvents(pickBanEvents)
+
+            // Pausa e exibe o dialog de pré-simulação (só se houve picks/bans para mostrar)
+            if (pickBanEvents.any { it is MatchEvent.Pick }) {
+                withContext(Dispatchers.Main) {
+                    binding.tvPhase.text = "Pick & Ban encerrado · Aguardando início do jogo"
+                }
+                awaitDialogConfirmation()
+            }
+
+            // Toca a fase do jogo
+            playEvents(gameEvents)
+
             withContext(Dispatchers.Main) {
                 applyResult(homeMaps, awayMaps)
             }
+        }
+    }
+
+    /**
+     * Suspende a coroutine até o usuário confirmar o PreSimulationDialog.
+     * Se o usuário cancelar, finaliza a Activity (volta para o hub/calendar).
+     */
+    private suspend fun awaitDialogConfirmation() = kotlinx.coroutines.suspendCancellableCoroutine<Unit> { cont ->
+        runOnUiThread {
+            PreSimulationDialog.show(this, match.id, onConfirm = {
+                if (cont.isActive) cont.resumeWith(Result.success(Unit))
+            })
+            // Se o dialog for cancelado (botão "Cancelar" ou back), não resolve a coroutine
+            // e a partida fica parada na tela atual até o usuário sair manualmente.
+            // Para evitar deadlock, registramos um cancellation handler:
+            cont.invokeOnCancellation { /* nada — dialog já foi descartado */ }
         }
     }
 

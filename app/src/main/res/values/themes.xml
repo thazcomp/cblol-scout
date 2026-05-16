@@ -18,6 +18,18 @@
         <item name="materialButtonStyle">@style/Widget.CBLOLScout.Button</item>
     </style>
 
+    <!-- Tema translúcido compatível com AppCompat.
+         Usado pelo PickBanRouterActivity, que não tem UI própria mas
+         estende AppCompatActivity — não pode usar Theme.Translucent do framework. -->
+    <style name="Theme.CBLOLScout.Translucent" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
+
     <!-- Botão "ouro" no estilo do client -->
     <style name="Widget.CBLOLScout.Button" parent="Widget.MaterialComponents.Button">
         <item name="backgroundTint">@color/color_primary</item>

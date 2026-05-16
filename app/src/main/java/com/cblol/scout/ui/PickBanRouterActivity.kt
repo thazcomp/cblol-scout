@@ -84,7 +84,9 @@ class PickBanRouterActivity : AppCompatActivity() {
             PickBanPlan(mapNum, bluePicks, redPicks, blueBans, redBans)
         GameRepository.save(applicationContext)
 
-        // Abre a simulação com os campeões escolhidos e fecha esta Activity
+        // Abre a simulação — o MatchSimulationActivity vai exibir o dialog
+        // de sinergia após reanimar a fase de pick & ban e antes dos eventos
+        // ao vivo do jogo.
         startActivity(
             Intent(this, MatchSimulationActivity::class.java)
                 .putExtra(MatchSimulationActivity.EXTRA_MATCH_ID, matchId)

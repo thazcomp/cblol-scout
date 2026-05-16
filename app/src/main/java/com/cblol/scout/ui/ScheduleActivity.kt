@@ -45,7 +45,8 @@ class ScheduleActivity : AppCompatActivity() {
                 is ScheduleEvent.ShowResult -> {
                     startActivity(event.result.toResultIntent(this))
                 }
-                // Pick & ban manual concluído → abre simulação com o plano já salvo
+                // Pick & ban manual concluído → abre simulação (o dialog
+                // de sinergia aparece dentro do MatchSimulationActivity)
                 is ScheduleEvent.LaunchSimulation -> {
                     startActivity(
                         Intent(this, MatchSimulationActivity::class.java)
