@@ -63,4 +63,50 @@
     <color name="champion_slot_filled">#2A2A3E</color>
     <color name="pick_slot_empty_bg">#15151F</color>
 
+    <!-- ═══ Cores usadas dinamicamente em código Kotlin ═══ -->
+    <!-- Feed da simulação -->
+    <color name="sim_home_accent">#0AC8B9</color>
+    <color name="sim_away_accent">#E84057</color>
+    <color name="sim_tower_accent">#C8AA6E</color>
+    <color name="sim_inhibitor_accent">#FFB800</color>
+    <color name="sim_dragon_accent">#0AC8B9</color>
+    <color name="sim_baron_accent">#B19CD9</color>
+    <color name="sim_herald_accent">#C89B3C</color>
+    <color name="sim_match_end_accent">#C89B3C</color>
+    <color name="sim_buff_red">#E84057</color>
+    <color name="sim_buff_blue">#0AC8B9</color>
+    <color name="sim_pickban_chip_bg">#1E2D40</color>
+    <color name="sim_pickban_chip_pick">#C89B3C</color>
+    <color name="sim_pickban_chip_ban">#A09B8C</color>
+
+    <!-- Sinergia (barras de comp) -->
+    <color name="synergy_blue">#3CBEFF</color>
+    <color name="synergy_blue_bg">#223CBEFF</color>
+    <color name="synergy_red">#E84057</color>
+    <color name="synergy_red_bg">#22E84057</color>
+    <color name="synergy_bars_bg">#1A1A28</color>
+
+    <!-- Tela de resultado -->
+    <color name="result_victory_text">#FFD700</color>
+    <color name="result_victory_bg">#0A1F0A</color>
+    <color name="result_defeat_text">#E84057</color>
+    <color name="result_defeat_bg">#1F0A0A</color>
+    <color name="result_other_text">#C9AA71</color>
+    <color name="result_other_bg">#0A0A14</color>
+
+    <!-- Schedule -->
+    <color name="schedule_my_team_bar">#C89B3C</color>
+    <color name="schedule_other_team_bar">#3C3C41</color>
+    <color name="schedule_played_text">#F0E6D2</color>
+    <color name="schedule_today_text">#FFB800</color>
+    <color name="schedule_missed_text">#A09B8C</color>
+
+    <!-- Hub -->
+    <color name="hub_budget_negative">#E84057</color>
+    <color name="hub_budget_positive">#C89B3C</color>
+
+    <!-- Salário: fonte reportada vs estimada -->
+    <color name="salary_reported">#00B894</color>
+    <color name="salary_estimated">#C89B3C</color>
+
 </resources>

@@ -1,6 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         APP / GERAL
+         ═══════════════════════════════════════════════════════════════════ -->
     <string name="app_name">CBLOL Scout</string>
+    <string name="logout">Sair</string>
+    <string name="generating_timeline">Gerando timeline…</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         BOTÕES E AÇÕES GENÉRICAS
+         ═══════════════════════════════════════════════════════════════════ -->
+    <string name="btn_prev">Anterior</string>
+    <string name="btn_next">Próximo</string>
+    <string name="btn_cancel">Cancelar</string>
+    <string name="btn_confirm">Confirmar</string>
+    <string name="btn_ok">OK</string>
+    <string name="btn_understood">Entendido</string>
+    <string name="btn_continue">CONTINUAR</string>
+    <string name="btn_skip_finish">Pular pro fim</string>
+    <string name="btn_continue_watching">Continuar assistindo</string>
+    <string name="btn_skip_simulation">Simular direto</string>
+    <string name="btn_start_simulation">Iniciar simulação</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         SCOUT / CATÁLOGO DE JOGADORES
+         ═══════════════════════════════════════════════════════════════════ -->
     <string name="sort_by">Ordenar por</string>
     <string name="sort_overall">Overall</string>
     <string name="sort_name">Nome</string>
@@ -8,27 +33,317 @@
     <string name="sort_cs">CS/min</string>
     <string name="sort_salary">Salário</string>
     <string name="change_team">Trocar de time</string>
-    <string name="logout">Sair</string>
-    <string name="generating_timeline">Gerando timeline…</string>
-    <string name="btn_prev">Anterior</string>
-    <string name="btn_next">Próximo</string>
-    <string name="btn_cancel">Cancelar</string>
-    <string name="btn_confirm">Confirmar</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         PICK & BAN
+         ═══════════════════════════════════════════════════════════════════ -->
     <string name="pb_title">Pick &amp; Ban - Mapa %1$d</string>
     <string name="pb_hint_bans">Selecione até 5 bans</string>
     <string name="pb_hint_picks">Selecione até 5 picks</string>
     <string name="pb_choose_player">Escolha jogador</string>
+    <string name="pb_map_label">MAPA %1$d</string>
     <string name="max_bans">Máximo 5 bans</string>
     <string name="max_picks">Máximo 5 picks</string>
     <string name="champ_banned">Campeão banido</string>
-    <string name="skip_simulation_msg">A partida será simulada em segundo plano e o resultado aplicado.</string>
-    <string name="btn_skip_finish">Pular pro fim</string>
-    <string name="btn_continue_watching">Continuar assistindo</string>
     <string name="search_champion">Buscar campeão…</string>
     <string name="confirm_selection">CONFIRMAR</string>
     <string name="skip_ia">IA ESCOLHE</string>
     <string name="champ_icon_desc">Ícone do campeão</string>
     <string name="pick_slot_desc">Slot de pick</string>
-    -->
+    <string name="loading_champions">Carregando campeões…</string>
+    <string name="loading_champions_progress">Carregando campeões… %1$d/%2$d</string>
+
+    <!-- Frases de fase do draft -->
+    <string name="pb_phase_blue_banning">🔵 BANINDO</string>
+    <string name="pb_phase_red_banning">🔴 BANINDO</string>
+    <string name="pb_phase_blue_picking">🔵 ESCOLHENDO</string>
+    <string name="pb_phase_red_picking">🔴 ESCOLHENDO</string>
+    <string name="pb_phase_done">Pick &amp; Ban encerrado · Aguardando início do jogo</string>
+
+    <!-- Filtros de role -->
+    <string name="filter_all">ALL</string>
+    <string name="filter_top">TOP</string>
+    <string name="filter_jng">JNG</string>
+    <string name="filter_mid">MID</string>
+    <string name="filter_adc">ADC</string>
+    <string name="filter_sup">SUP</string>
+
+    <!-- Filtros de tag -->
+    <string name="tag_tank">🛡️ Tank</string>
+    <string name="tag_engage">🚀 Engage</string>
+    <string name="tag_cc">🔒 CC</string>
+    <string name="tag_ap">✨ AP</string>
+    <string name="tag_ad">💪 AD</string>
+    <string name="tag_anti_tank">🔱 Anti-Tank</string>
+    <string name="tag_heal">💉 Cura</string>
+    <string name="tag_shield">🔰 Escudo</string>
+    <string name="tag_assassin">🗡️ Assassino</string>
+    <string name="tag_poke">🎯 Poke</string>
+    <string name="tag_split">🔀 Split</string>
+    <string name="tag_hypercarry">🌟 HyperCarry</string>
+    <string name="tag_global_ult">🌐 Ult Global</string>
+    <string name="tag_knockup">☝️ Knock-up</string>
+    <string name="tag_sustain">♻️ Sustain</string>
+    <string name="tag_invisible">🫥 Invisível</string>
+    <string name="tag_true_damage">⚡ Dano Real</string>
+
+    <!-- Sugestão de bans dialog -->
+    <string name="dialog_ban_suggestions_title">🚨 Composições Perigosas</string>
+    <string name="dialog_ban_suggestions_message">Banir esses campeões neutraliza as composições mais fortes do meta:\n\n%1$s</string>
+    <string name="ban_suggestion_item">⚡ Banir %1$s — %2$s</string>
+    <string name="ban_suggestion_reason">Quebra %1$s (Tier %2$s)</string>
+
+    <!-- Confirmação de saída do pick & ban -->
+    <string name="dialog_exit_pickban_title">Sair do Pick &amp; Ban?</string>
+    <string name="dialog_exit_pickban_message">Deseja simular o restante automaticamente e ir direto para a partida?</string>
+    <string name="btn_simulate_until_end">Simular até o fim</string>
+    <string name="btn_cancel_match">Cancelar partida</string>
+    <string name="btn_continue_pickban">Continuar pick &amp; ban</string>
+
+    <!-- Barras de sinergia -->
+    <string name="synergy_waiting">Aguardando picks…</string>
+    <string name="synergy_unbalanced">⚠️ Comp desbalanceada</string>
+    <string name="synergy_weak">Sinergia fraca</string>
+    <string name="synergy_partial">Sinergia parcial</string>
+    <string name="synergy_strong">Sinergia forte</string>
+    <string name="synergy_single_comp">⚡ %1$s (%2$d%%)</string>
+    <string name="synergy_hybrid_comps">✨ %1$s (%2$d%%) + %3$s (%4$d%%)</string>
+    <string name="synergy_value_positive">+%1$d</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         SIMULAÇÃO DE PARTIDA
+         ═══════════════════════════════════════════════════════════════════ -->
+    <string name="sim_phase_pickban">Pick &amp; Ban</string>
+    <string name="sim_phase_in_game">Em jogo · Mapa %1$d</string>
+    <string name="sim_map_label">Mapa %1$d</string>
+    <string name="sim_timer_zero">00:00</string>
+    <string name="sim_map_ended">Mapa %1$d encerrado · %2$s venceu (%3$dmin)</string>
+    <string name="sim_map_summary">Mapa %1$d terminou: %2$d-%3$d · vitória de %4$s</string>
+    <string name="sim_series_winner">🏆 %1$s vence a série %2$d-%3$d</string>
+    <string name="sim_dialog_exit_title">Sair?</string>
+    <string name="sim_dialog_exit_message">Deseja pular direto para o resultado?</string>
+    <string name="sim_speed_button">%1$dx</string>
+
+    <!-- Eventos do feed -->
+    <string name="event_pick">%1$s (%2$s) escolhe %3$s</string>
+    <string name="event_kill">%1$s  %2$s (%3$s) abateu %4$s (%5$s)</string>
+    <string name="event_tower">%1$s  Torre %2$s destruída por %3$s</string>
+    <string name="event_inhibitor">%1$s  Inibidor %2$s destruído por %3$s</string>
+    <string name="event_dragon">%1$s  Drake %2$s para %3$s</string>
+    <string name="event_baron">%1$s  BARON NASHOR para %2$s</string>
+    <string name="event_herald">%1$s  Arauto do Vale para %2$s</string>
+    <string name="event_buff">%1$s  %2$s pegou %3$s buff</string>
+    <string name="event_role_champion">%1$s · %2$s</string>
+    <string name="event_ban_prefix">❌ %1$s</string>
+
+    <!-- Ícones de evento (códigos emoji) -->
+    <string name="icon_pick">🎯</string>
+    <string name="icon_kill">⚔️</string>
+    <string name="icon_tower">🏰</string>
+    <string name="icon_inhibitor">💎</string>
+    <string name="icon_dragon">🐉</string>
+    <string name="icon_baron">🦣</string>
+    <string name="icon_herald">🦅</string>
+    <string name="icon_buff_red">🔴</string>
+    <string name="icon_buff_blue">🔵</string>
+    <string name="icon_match_end">🏁</string>
+    <string name="icon_match">⚔️</string>
+    <string name="icon_transfer">🔄</string>
+    <string name="icon_economy">💰</string>
+    <string name="icon_contract">📝</string>
+    <string name="icon_squad">👥</string>
+    <string name="icon_career">🎯</string>
+    <string name="icon_bullet">•</string>
+    <string name="icon_trophy">🏆</string>
+    <string name="icon_heart_broken">💔</string>
+    <string name="icon_controller">🎮</string>
+
+    <!-- Scoreboard de objetivos -->
+    <string name="obj_towers_format">🏰 %1$d-%2$d</string>
+    <string name="obj_dragons_format">🐉 %1$d-%2$d</string>
+    <string name="obj_barons_format">🦣 %1$d-%2$d</string>
+    <string name="obj_heralds_format">🦅 %1$d-%2$d</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         TELA DE RESULTADO
+         ═══════════════════════════════════════════════════════════════════ -->
+    <string name="result_victory">VITÓRIA</string>
+    <string name="result_defeat">DERROTA</string>
+    <string name="result_other_match">PARTIDA ENCERRADA</string>
+    <string name="result_score_format">%1$d — %2$d</string>
+    <string name="result_prize_format">+ R$ %1$s</string>
+    <string name="result_next_map_title">Mapa %1$d</string>
+    <string name="result_next_map_message">Como deseja jogar o próximo mapa?</string>
+    <string name="btn_do_pickban">Fazer Pick &amp; Ban</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         DIALOG DE PRÉ-SIMULAÇÃO (sinergia + vantagens)
+         ═══════════════════════════════════════════════════════════════════ -->
+    <string name="presim_title">⚔️ Mapa %1$d · %2$s vs %3$s</string>
+    <string name="presim_header_synergy">📊 SINERGIA DA COMPOSIÇÃO</string>
+    <string name="presim_header_matchups">⚔️ CONFRONTOS POR LANE</string>
+    <string name="presim_header_strength">📈 FORÇA MÉDIA</string>
+    <string name="presim_header_observations">💡 OBSERVAÇÕES</string>
+    <string name="presim_no_strong_comp">%1$s: sem composição forte (+%2$d)</string>
+    <string name="presim_with_comp">%1$s: %2$s · +%3$d força</string>
+    <string name="presim_team_score">%1$s: %2$s · %3$s: %4$s</string>
+    <string name="presim_clear_advantage">✅ Vantagem clara para %1$s</string>
+    <string name="presim_slight_advantage">▫ Leve favoritismo de %1$s</string>
+    <string name="presim_balanced">▫ Times muito equilibrados</string>
+    <string name="presim_matchup_line">%1$s · %2$s (%3$d) %4$s %5$s (%6$d)</string>
+    <string name="presim_arrow_huge_home">◀◀</string>
+    <string name="presim_arrow_home">◀</string>
+    <string name="presim_arrow_huge_away">▶▶</string>
+    <string name="presim_arrow_away">▶</string>
+    <string name="presim_arrow_equal">≈</string>
+    <string name="presim_insight_prefix">[%1$s] %2$s</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         HUB DO TÉCNICO
+         ═══════════════════════════════════════════════════════════════════ -->
+    <string name="hub_coach_label">Técnico: %1$s</string>
+    <string name="hub_budget_format">R$ %1$s</string>
+    <string name="hub_payroll_format">R$ %1$s / mês</string>
+    <string name="hub_squad_info">%1$d jogadores (%2$d titulares)</string>
+    <string name="hub_next_match_date">%1$s · Rodada %2$d · em %3$d dias</string>
+    <string name="hub_no_matches">Sem partidas pendentes</string>
+    <string name="hub_split_ended">Split encerrado</string>
+    <string name="dialog_pickban_question">Deseja fazer o pick &amp; ban antes da partida?</string>
+    <string name="dialog_quit_career_title">Encerrar carreira?</string>
+    <string name="dialog_quit_career_message">Isso apagará seu save permanentemente.</string>
+    <string name="btn_yes_quit">Sim, encerrar</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         CALENDÁRIO
+         ═══════════════════════════════════════════════════════════════════ -->
+    <string name="schedule_round">Rodada %1$d</string>
+    <string name="schedule_score_today">HOJE</string>
+    <string name="schedule_score_missed">—</string>
+    <string name="schedule_score_vs">vs</string>
+    <string name="schedule_played_format">%1$s  %2$d — %3$d  %4$s</string>
+    <string name="schedule_vs_title">%1$s vs %2$s</string>
+    <string name="dialog_watch_match_message">Acompanhar partida?</string>
+    <string name="btn_watch">Assistir</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         ELENCO
+         ═══════════════════════════════════════════════════════════════════ -->
+    <string name="dialog_squad_adjusted_title">⚠ Elenco ajustado automaticamente</string>
+    <string name="dialog_no_substitutes_title">Sem substitutos</string>
+    <string name="dialog_no_substitutes_message">Não há reservas de %1$s no elenco.</string>
+    <string name="dialog_substitute_title">Substituir %1$s (%2$s)</string>
+    <string name="player_overall_format">%1$s · OVR %2$d</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         MERCADO
+         ═══════════════════════════════════════════════════════════════════ -->
+    <string name="dialog_buy_player_title">Contratar %1$s?</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         CARREIRA
+         ═══════════════════════════════════════════════════════════════════ -->
+    <string name="dialog_continue_career">Continuar carreira?</string>
+    <string name="dialog_start_career">Iniciar carreira no %1$s</string>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         DETALHES DO JOGADOR
+         ═══════════════════════════════════════════════════════════════════ -->
+    <string name="dialog_sell_player_title">Vender %1$s?</string>
+    <string name="dialog_sell_player_message">Você receberá R$ %1$s.\nO jogador será transferido para outra organização do CBLOL.</string>
+    <string name="dialog_renegotiate_title">Renegociar %1$s</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         DETALHES DO JOGADOR — ações complementares
+         ═══════════════════════════════════════════════════════════════ -->
+    <string name="btn_sell">Vender</string>
+    <string name="btn_propose">Propor</string>
+    <string name="btn_contract">Contratar</string>
+    <string name="btn_continue_career">Continuar</string>
+    <string name="btn_new_career">Nova carreira</string>
+    <string name="btn_start">Começar</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         LOGIN
+         ═══════════════════════════════════════════════════════════════ -->
+    <string name="login_guest">Convidado</string>
+    <string name="login_welcome">Bem-vindo, %1$s!</string>
+    <string name="login_error_user">Informe um usuário</string>
+    <string name="login_error_pass">Informe uma senha</string>
+    <string name="login_error_pass_short">Senha precisa ter ao menos 4 caracteres</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         TEAM SELECT
+         ═══════════════════════════════════════════════════════════════ -->
+    <string name="team_select_greeting">Olá, %1$s 👋</string>
+    <string name="team_select_subtitle">Escolha um time · CBLOL %1$s</string>
+    <string name="team_select_tier_label">Tier %1$s</string>
+    <string name="team_select_players">%1$d jogadores</string>
+    <string name="team_select_overall">OVR %1$d</string>
+    <string name="team_select_continue_message">Você já tem uma carreira como técnico do %1$s. Deseja continuar?</string>
+    <string name="team_select_start_message">Tier %1$s\n💰 Orçamento: R$ %2$s\n📈 Patrocínio: R$ %3$s/semana</string>
+    <string name="team_select_hint_coach_name">Nome do técnico</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         SQUAD
+         ═══════════════════════════════════════════════════════════════ -->
+    <string name="squad_title">Elenco · %1$s</string>
+    <string name="squad_tab_starters">Titulares</string>
+    <string name="squad_tab_bench">Banco</string>
+    <string name="squad_tab_starters_count">Titulares (%1$d)</string>
+    <string name="squad_tab_bench_count">Banco (%1$d)</string>
+    <string name="squad_swap_done">Troca realizada</string>
+    <string name="squad_promoted">Jogador promovido</string>
+    <string name="squad_replaced">%1$s substituído</string>
+    <string name="squad_status_updated">Status atualizado</string>
+    <string name="squad_empty_starters">Nenhum titular cadastrado</string>
+    <string name="squad_empty_bench">Nenhum reserva — contrate no Mercado</string>
+    <string name="squad_player_info">KDA %1$s · CS %2$s · R$ %3$s/mês</string>
+    <string name="squad_action_swap">↔ TROCAR</string>
+    <string name="squad_action_promote">↑ TITULAR</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         MERCADO
+         ═══════════════════════════════════════════════════════════════ -->
+    <string name="market_budget_label">Orçamento: R$ %1$s</string>
+    <string name="market_price_label">R$ %1$s</string>
+    <string name="market_player_hired">Jogador contratado!</string>
+    <string name="market_dialog_message">%1$s · %2$s\nOverall: %3$d\nSalário: R$ %4$s/mês\n\n💰 Preço: R$ %5$s\nOrçamento atual: R$ %6$s\nApós compra: R$ %7$s</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         PLAYER DETAIL DIALOG
+         ═══════════════════════════════════════════════════════════════ -->
+    <string name="player_no_real_name">Nome real não disponível</string>
+    <string name="player_role_age">%1$s  %2$s  %3$s</string>
+    <string name="player_age_years">%1$d anos</string>
+    <string name="player_kp_format">%1$d%%</string>
+    <string name="player_dmg_share">%1$s%%</string>
+    <string name="player_stat_not_available">N/A</string>
+    <string name="player_diff_positive">+%1$d</string>
+    <string name="player_salary_format">R$ %1$s/mês (%2$s)</string>
+    <string name="player_salary_unavailable">Salário não disponível</string>
+    <string name="player_btn_move_bench">Mover para reserva</string>
+    <string name="player_btn_promote_starter">Promover a titular</string>
+    <string name="player_btn_hire">Contratar Jogador</string>
+    <string name="player_sold_message">%1$s → %2$s (R$ %3$s)</string>
+    <string name="player_contract_renewed">Contrato renovado!</string>
+    <string name="player_contract_refused">%1$s recusou a oferta.</string>
+    <string name="player_default_contract_end">2027-11-30</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         SCHEDULE
+         ═══════════════════════════════════════════════════════════════ -->
+    <string name="schedule_played_score">%1$d-%2$d</string>
+    <string name="schedule_match_score_msg">%1$s  %2$d — %3$d  %4$s</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         STATS CARD (player list)
+         ═══════════════════════════════════════════════════════════════ -->
+    <string name="stat_games_format">%1$dJ</string>
+    <string name="stat_kda_format">KDA %1$s</string>
+    <string name="stat_cs_format">CS %1$s</string>
+    <string name="stat_kp_format">KP %1$d%%</string>
+
+    <!-- Chip "TODOS" do filtro de times em MainActivity -->
+    <string name="team_chip_all">TODOS</string>
 
 </resources>

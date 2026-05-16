@@ -4,6 +4,7 @@ import android.content.Context
 import com.cblol.scout.data.Match
 import com.cblol.scout.data.Player
 import com.cblol.scout.data.Standing
+import com.cblol.scout.domain.GameConstants
 import kotlin.random.Random
 
 /**
@@ -15,8 +16,9 @@ import kotlin.random.Random
  */
 object MatchSimulator {
 
-    private const val HOME_BONUS = 4
+    private const val HOME_BONUS  = GameConstants.Series.HOME_SIDE_BONUS
     private const val NOISE_RANGE = 14   // ±14
+    private const val MAPS_TO_WIN = GameConstants.Series.MAPS_TO_WIN
 
     fun simulate(context: Context, match: Match): Match {
         val home = teamStrength(GameRepository.rosterOf(context, match.homeTeamId)) + HOME_BONUS
@@ -24,7 +26,7 @@ object MatchSimulator {
 
         var hWins = 0
         var aWins = 0
-        while (hWins < 2 && aWins < 2) {
+        while (hWins < MAPS_TO_WIN && aWins < MAPS_TO_WIN) {
             val noise = Random.nextInt(-NOISE_RANGE, NOISE_RANGE + 1)
             if ((home - away) + noise >= 0) hWins++ else aWins++
         }
@@ -37,10 +39,10 @@ object MatchSimulator {
     /** Força do time: média de overall dos titulares. Se < 5 titulares, complementa com reservas. */
     fun teamStrength(roster: List<Player>): Int {
         val starters = roster.filter { it.titular }
-        val pool = if (starters.size >= 5) starters
+        val pool = if (starters.size >= GameConstants.Schedule.PLAYERS_PER_TEAM) starters
                    else (starters + roster.filter { !it.titular }.sortedByDescending { it.overallRating() })
-                       .take(5)
-        if (pool.isEmpty()) return 50
+                       .take(GameConstants.Schedule.PLAYERS_PER_TEAM)
+        if (pool.isEmpty()) return GameConstants.Player.DEFAULT_OVERALL
         return pool.sumOf { it.overallRating() } / pool.size
     }
 

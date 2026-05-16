@@ -113,6 +113,9 @@ object ChampionRepository {
         // JUNGLE
         // ═══════════════════════════════════════════════════════
 
+        champ("Amumu", "JNG", "SUP", tags = listOf(
+            TANK, MAGIC_DAMAGE, ENGAGE, CROWD_CONTROL, ANTI_TANK, TEAMFIGHT, GAME_CHANGING_ULT, GAP_CLOSER
+        )),
         champ("Belveth", "JNG", tags = listOf(
             FIGHTER, PHYSICAL_DAMAGE, SUSTAINED_DPS, ANTI_TANK, MOBILITY, OBJECTIVE_CONTROL
         )),

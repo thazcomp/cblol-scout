@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.cblol.scout.R
 import com.cblol.scout.data.Champion
 import com.cblol.scout.data.ChampionTag
+import com.cblol.scout.domain.GameConstants
 
 /**
  * Adapter para a grade de campeões na tela de pick & ban.
@@ -72,7 +73,7 @@ class ChampionGridAdapter(
             .into(holder.ivChampion)
 
         if (isUsed) {
-            holder.itemView.alpha    = 0.22f
+            holder.itemView.alpha    = GameConstants.Draft.DISABLED_ALPHA
             holder.viewBanned.visibility = View.VISIBLE
             holder.viewBorder.visibility = View.INVISIBLE
             holder.itemView.isClickable  = false
@@ -88,14 +89,14 @@ class ChampionGridAdapter(
         if (isSelected) {
             holder.viewBorder.visibility = View.VISIBLE
             holder.viewBorder.setBackgroundResource(R.drawable.border_champion_selected)
-            holder.itemView.scaleX    = 1.08f
-            holder.itemView.scaleY    = 1.08f
-            holder.itemView.elevation = 12f
+            holder.itemView.scaleX    = GameConstants.Draft.SELECTED_SCALE
+            holder.itemView.scaleY    = GameConstants.Draft.SELECTED_SCALE
+            holder.itemView.elevation = SELECTED_ELEVATION
         } else {
             holder.viewBorder.visibility = View.INVISIBLE
             holder.itemView.scaleX    = 1f
             holder.itemView.scaleY    = 1f
-            holder.itemView.elevation = 2f
+            holder.itemView.elevation = DEFAULT_ELEVATION
         }
 
         holder.itemView.setOnClickListener { onSelected(champ) }
@@ -147,5 +148,10 @@ class ChampionGridAdapter(
     fun markUsed(id: String) {
         usedIds.add(id)
         notifyItemChanged(displayed.indexOfFirst { c -> c.id == id })
+    }
+
+    companion object {
+        private const val SELECTED_ELEVATION = 12f
+        private const val DEFAULT_ELEVATION  = 2f
     }
 }

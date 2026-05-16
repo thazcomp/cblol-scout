@@ -7,8 +7,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import androidx.appcompat.app.AlertDialog
+import androidx.annotation.ColorRes
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.cblol.scout.R
@@ -22,10 +23,21 @@ import org.koin.androidx.viewmodel.ext.android.viewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
+/**
+ * Calendário do split. Mostra todas as 56 partidas em ordem de rodada/data.
+ * Permite simular, fazer pick & ban manual ou assistir partidas de outros times.
+ *
+ * SOLID:
+ * - **SRP**: clique em partida é roteado por [handleMatchClick] →
+ *   [showPlayedDialog] / [showMyMatchDialog] / [showOtherMatchDialog].
+ * - **DIP**: depende de [ScheduleViewModel] (Koin); strings/cores via res.
+ */
 class ScheduleActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityScheduleBinding
     private val vm: ScheduleViewModel by viewModel()
+
+    // ── Lifecycle ────────────────────────────────────────────────────────
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,38 +48,36 @@ class ScheduleActivity : AppCompatActivity() {
         binding.toolbar.setNavigationOnClickListener { finish() }
 
         GameRepository.load(applicationContext)
-
-        vm.matches.observe(this) { renderList(it) }
-
-        vm.event.observe(this) { event ->
-            when (event) {
-                // Resultado de simulação automática (sem pick & ban manual)
-                is ScheduleEvent.ShowResult -> {
-                    startActivity(event.result.toResultIntent(this))
-                }
-                // Pick & ban manual concluído → abre simulação (o dialog
-                // de sinergia aparece dentro do MatchSimulationActivity)
-                is ScheduleEvent.LaunchSimulation -> {
-                    startActivity(
-                        Intent(this, MatchSimulationActivity::class.java)
-                            .putExtra(MatchSimulationActivity.EXTRA_MATCH_ID, event.matchId)
-                    )
-                }
-            }
-        }
-
+        observeViewModel()
         vm.loadMatches()
     }
 
     override fun onResume() {
         super.onResume()
-        // Atualiza a lista quando volta da simulação (partida marcada como jogada)
         vm.refreshMatches()
     }
 
     override fun onSupportNavigateUp(): Boolean { finish(); return true }
 
-    // ── Lista de partidas ─────────────────────────────────────────────────
+    // ── Observers ────────────────────────────────────────────────────────
+
+    private fun observeViewModel() {
+        vm.matches.observe(this) { renderList(it) }
+        vm.event.observe(this) { event ->
+            when (event) {
+                is ScheduleEvent.ShowResult -> startActivity(event.result.toResultIntent(this))
+                is ScheduleEvent.LaunchSimulation -> launchSimulation(event.matchId)
+            }
+        }
+    }
+
+    private fun launchSimulation(matchId: String) {
+        startActivity(Intent(this, MatchSimulationActivity::class.java)
+            .putExtra(MatchSimulationActivity.EXTRA_MATCH_ID, matchId))
+    }
+
+    // ── Lista de partidas ────────────────────────────────────────────────
+
     private fun renderList(matches: List<Match>) {
         val gs   = GameRepository.current()
         val snap = GameRepository.snapshot(applicationContext)
@@ -89,52 +99,52 @@ class ScheduleActivity : AppCompatActivity() {
         if (nextIdx >= 0) binding.recycler.scrollToPosition(nextIdx)
     }
 
-    // ── Clique em uma partida ─────────────────────────────────────────────
+    // ── Clique em uma partida ────────────────────────────────────────────
+
     private fun handleMatchClick(m: Match) {
         val snap     = GameRepository.snapshot(applicationContext)
         val gs       = GameRepository.current()
         val homeName = snap.times.find { it.id == m.homeTeamId }?.nome ?: m.homeTeamId
         val awayName = snap.times.find { it.id == m.awayTeamId }?.nome ?: m.awayTeamId
 
-        if (m.played) {
-            stylizedDialog(this)
-                .setTitle("Rodada ${m.round}")
-                .setMessage("$homeName  ${m.homeScore} — ${m.awayScore}  $awayName")
-                .setPositiveButton("OK", null).show()
-            return
-        }
-
-        val isMyMatch = m.homeTeamId == gs.managerTeamId || m.awayTeamId == gs.managerTeamId
-
-        if (isMyMatch) {
-            val opponentId = if (m.homeTeamId == gs.managerTeamId) m.awayTeamId else m.homeTeamId
-            stylizedDialog(this)
-                .setTitle("$homeName vs $awayName")
-                .setMessage("Deseja fazer o pick & ban antes da partida?")
-                .setPositiveButton("Fazer Pick & Ban") { _, _ ->
-                    openPickBan(m.id, gs.managerTeamId, opponentId, 1)
-                }
-                .setNegativeButton("Simular direto") { _, _ ->
-                    startActivity(
-                        Intent(this, MatchSimulationActivity::class.java)
-                            .putExtra(MatchSimulationActivity.EXTRA_MATCH_ID, m.id)
-                    )
-                }.show()
-        } else {
-            stylizedDialog(this)
-                .setTitle("$homeName vs $awayName")
-                .setMessage("Acompanhar partida?")
-                .setPositiveButton("Assistir") { _, _ ->
-                    startActivity(
-                        Intent(this, MatchSimulationActivity::class.java)
-                            .putExtra(MatchSimulationActivity.EXTRA_MATCH_ID, m.id)
-                    )
-                }
-                .setNegativeButton("Cancelar", null).show()
+        when {
+            m.played -> showPlayedDialog(m, homeName, awayName)
+            m.homeTeamId == gs.managerTeamId || m.awayTeamId == gs.managerTeamId ->
+                showMyMatchDialog(m, gs.managerTeamId, homeName, awayName)
+            else ->
+                showOtherMatchDialog(m, homeName, awayName)
         }
     }
 
-    // ── Abre o PickBanActivity ────────────────────────────────────────────
+    private fun showPlayedDialog(m: Match, homeName: String, awayName: String) {
+        stylizedDialog(this)
+            .setTitle(getString(R.string.schedule_round, m.round))
+            .setMessage(getString(R.string.schedule_match_score_msg,
+                homeName, m.homeScore, m.awayScore, awayName))
+            .setPositiveButton(R.string.btn_ok, null).show()
+    }
+
+    private fun showMyMatchDialog(m: Match, managerTeamId: String, homeName: String, awayName: String) {
+        val opponentId = if (m.homeTeamId == managerTeamId) m.awayTeamId else m.homeTeamId
+        stylizedDialog(this)
+            .setTitle(getString(R.string.schedule_vs_title, homeName, awayName))
+            .setMessage(R.string.dialog_pickban_question)
+            .setPositiveButton(R.string.btn_do_pickban) { _, _ ->
+                openPickBan(m.id, managerTeamId, opponentId, 1)
+            }
+            .setNegativeButton(R.string.btn_skip_simulation) { _, _ ->
+                launchSimulation(m.id)
+            }.show()
+    }
+
+    private fun showOtherMatchDialog(m: Match, homeName: String, awayName: String) {
+        stylizedDialog(this)
+            .setTitle(getString(R.string.schedule_vs_title, homeName, awayName))
+            .setMessage(R.string.dialog_watch_match_message)
+            .setPositiveButton(R.string.btn_watch) { _, _ -> launchSimulation(m.id) }
+            .setNegativeButton(R.string.btn_cancel, null).show()
+    }
+
     private fun openPickBan(matchId: String, playerTeamId: String, opponentId: String, mapNum: Int) {
         vm.pendingMatchId        = matchId
         vm.pendingMapNumber      = mapNum
@@ -143,35 +153,31 @@ class ScheduleActivity : AppCompatActivity() {
         @Suppress("DEPRECATION")
         startActivityForResult(
             Intent(this, PickBanActivity::class.java).apply {
-                putExtra("player_team_id",   playerTeamId)
-                putExtra("opponent_team_id", opponentId)
-                putExtra("match_id",         matchId)
-                putExtra("map_number",       mapNum)
+                putExtra(PickBanActivity.EXTRA_PLAYER_TEAM_ID,   playerTeamId)
+                putExtra(PickBanActivity.EXTRA_OPPONENT_TEAM_ID, opponentId)
+                putExtra(PickBanActivity.EXTRA_MATCH_ID,         matchId)
+                putExtra(PickBanActivity.EXTRA_MAP_NUMBER,       mapNum)
             },
             PickBanActivity.REQUEST_PICK_BAN
         )
     }
 
-    /**
-     * Recebe o resultado do PickBanActivity.
-     * Salva o plano e dispara LaunchSimulation — o MatchSimulationActivity
-     * lê o plano do match e usa os campeões escolhidos na simulação.
-     */
     @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode != PickBanActivity.REQUEST_PICK_BAN || resultCode != RESULT_OK || data == null) return
 
-        val bluePicks = data.getStringArrayListExtra("blue_picks")?.toList() ?: return
-        val redPicks  = data.getStringArrayListExtra("red_picks")?.toList()  ?: emptyList()
-        val blueBans  = data.getStringArrayListExtra("blue_bans")?.toList()  ?: emptyList()
-        val redBans   = data.getStringArrayListExtra("red_bans")?.toList()   ?: emptyList()
-        val mapNum    = data.getIntExtra("map_number", vm.pendingMapNumber)
+        val bluePicks = data.getStringArrayListExtra(PickBanActivity.RESULT_BLUE_PICKS)?.toList() ?: return
+        val redPicks  = data.getStringArrayListExtra(PickBanActivity.RESULT_RED_PICKS)?.toList()  ?: emptyList()
+        val blueBans  = data.getStringArrayListExtra(PickBanActivity.RESULT_BLUE_BANS)?.toList()  ?: emptyList()
+        val redBans   = data.getStringArrayListExtra(PickBanActivity.RESULT_RED_BANS)?.toList()   ?: emptyList()
+        val mapNum    = data.getIntExtra(PickBanActivity.EXTRA_MAP_NUMBER, vm.pendingMapNumber)
 
         vm.handlePickBanResult(bluePicks, redPicks, blueBans, redBans, mapNum)
     }
 
-    // ── Adapter ───────────────────────────────────────────────────────────
+    // ── Adapter ──────────────────────────────────────────────────────────
+
     private class MatchAdapter(
         private val matches: List<Match>,
         private val currentDate: String,
@@ -180,7 +186,7 @@ class ScheduleActivity : AppCompatActivity() {
         private val onMatchClick: (Match) -> Unit
     ) : RecyclerView.Adapter<MatchAdapter.VH>() {
 
-        private val dateFmt = DateTimeFormatter.ofPattern("dd/MM")
+        private val dateFmt = DateTimeFormatter.ofPattern(DATE_PATTERN_DM)
 
         class VH(v: View) : RecyclerView.ViewHolder(v) {
             val viewBar: View     = v.findViewById(R.id.view_match_round_bar)
@@ -201,25 +207,42 @@ class ScheduleActivity : AppCompatActivity() {
 
         override fun onBindViewHolder(h: VH, i: Int) {
             val m        = matches[i]
+            val ctx      = h.itemView.context
             val homeName = teamNames[m.homeTeamId] ?: m.homeTeamId
             val awayName = teamNames[m.awayTeamId] ?: m.awayTeamId
-            h.tvRound.text = "Rodada ${m.round}"
+
+            h.tvRound.text = ctx.getString(R.string.schedule_round, m.round)
             h.tvDate.text  = LocalDate.parse(m.date).format(dateFmt)
             h.tvHome.text  = homeName
             h.tvAway.text  = awayName
             h.viewHomeBar.setBackgroundColor(TeamColors.forTeam(m.homeTeamId))
             h.viewAwayBar.setBackgroundColor(TeamColors.forTeam(m.awayTeamId))
-            h.viewBar.setBackgroundColor(
+            h.viewBar.setBackgroundColor(ContextCompat.getColor(ctx,
                 if (m.homeTeamId == myTeamId || m.awayTeamId == myTeamId)
-                    Color.parseColor("#C89B3C") else Color.parseColor("#3C3C41")
-            )
-            when {
-                m.played              -> { h.tvScore.text = "${m.homeScore}-${m.awayScore}"; h.tvScore.setTextColor(Color.parseColor("#F0E6D2")) }
-                m.date == currentDate -> { h.tvScore.text = "HOJE";  h.tvScore.setTextColor(Color.parseColor("#FFB800")) }
-                m.date < currentDate  -> { h.tvScore.text = "—";     h.tvScore.setTextColor(Color.parseColor("#A09B8C")) }
-                else                  -> { h.tvScore.text = "vs";    h.tvScore.setTextColor(Color.parseColor("#A09B8C")) }
-            }
+                    R.color.schedule_my_team_bar else R.color.schedule_other_team_bar
+            ))
+
+            val (scoreText, scoreColor) = scoreLabel(ctx, m, currentDate)
+            h.tvScore.text = scoreText
+            h.tvScore.setTextColor(scoreColor)
+
             h.itemView.setOnClickListener { onMatchClick(m) }
+        }
+
+        @ColorRes
+        private fun scoreLabel(ctx: android.content.Context, m: Match, today: String): Pair<String, Int> = when {
+            m.played -> ctx.getString(R.string.schedule_played_score, m.homeScore, m.awayScore) to
+                ContextCompat.getColor(ctx, R.color.schedule_played_text)
+            m.date == today -> ctx.getString(R.string.schedule_score_today) to
+                ContextCompat.getColor(ctx, R.color.schedule_today_text)
+            m.date < today  -> ctx.getString(R.string.schedule_score_missed) to
+                ContextCompat.getColor(ctx, R.color.schedule_missed_text)
+            else            -> ctx.getString(R.string.schedule_score_vs) to
+                ContextCompat.getColor(ctx, R.color.schedule_missed_text)
+        }
+
+        companion object {
+            private const val DATE_PATTERN_DM = "dd/MM"
         }
     }
 }

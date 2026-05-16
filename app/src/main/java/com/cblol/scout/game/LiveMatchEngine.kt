@@ -6,6 +6,7 @@ import com.cblol.scout.data.MatchEvent
 import com.cblol.scout.data.Player
 import com.cblol.scout.data.Side
 import com.cblol.scout.data.PickBanPlan
+import com.cblol.scout.domain.GameConstants
 import com.cblol.scout.util.CompositionRepository
 import kotlin.math.absoluteValue
 import kotlin.random.Random
@@ -44,8 +45,8 @@ object LiveMatchEngine {
         val homeComp   = CompositionRepository.analyzeWithTags(homePicks, awayPicks, awayBans)
         val awayComp   = CompositionRepository.analyzeWithTags(awayPicks, homePicks, homeBans)
 
-        val homeStr = teamStrength(homeRoster) + 4 + homeComp.totalBonus
-        val awayStr = teamStrength(awayRoster)     + awayComp.totalBonus
+        val homeStr = teamStrength(homeRoster) + GameConstants.Series.HOME_SIDE_BONUS + homeComp.totalBonus
+        val awayStr = teamStrength(awayRoster)                                          + awayComp.totalBonus
 
         val (gameEvents, homeWon, finalKills, duration) =
             generateGame(gameNumber, homeRoster, awayRoster, homeStr, awayStr, plan)
@@ -97,8 +98,8 @@ object LiveMatchEngine {
         var gameNumber = 1
 
         // Usa o PickBanPlan salvo no match (se houver) para o mapa correspondente
-        while (homeMaps < 2 && awayMaps < 2) {
-            val homeStr = teamStrength(homeRoster) + 4 // bônus de mando do split
+        while (homeMaps < GameConstants.Series.MAPS_TO_WIN && awayMaps < GameConstants.Series.MAPS_TO_WIN) {
+            val homeStr = teamStrength(homeRoster) + GameConstants.Series.HOME_SIDE_BONUS
             val awayStr = teamStrength(awayRoster)
             // O plano salvo no match refere-se ao último mapa com pick & ban feito pelo jogador.
             // Para os demais mapas o motor gera picks automaticamente.

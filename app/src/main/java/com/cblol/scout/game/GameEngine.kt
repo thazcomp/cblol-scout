@@ -3,6 +3,7 @@ package com.cblol.scout.game
 import android.content.Context
 import com.cblol.scout.data.GameState
 import com.cblol.scout.data.Player
+import com.cblol.scout.domain.GameConstants
 import java.time.LocalDate
 
 /**
@@ -16,8 +17,11 @@ import java.time.LocalDate
  */
 object GameEngine {
 
-    const val PRIZE_PER_MAP_WIN = 50_000L
-    const val PRIZE_PER_SERIES_WIN = 100_000L
+    /** @deprecated Use [GameConstants.Economy.PRIZE_PER_MAP_WIN]. */
+    const val PRIZE_PER_MAP_WIN = GameConstants.Economy.PRIZE_PER_MAP_WIN
+
+    /** @deprecated Use [GameConstants.Economy.PRIZE_PER_SERIES_WIN]. */
+    const val PRIZE_PER_SERIES_WIN = GameConstants.Economy.PRIZE_PER_SERIES_WIN
 
     /** Avança a data corrente em N dias, processando todos os eventos. */
     fun advanceDays(context: Context, days: Int): AdvanceReport {

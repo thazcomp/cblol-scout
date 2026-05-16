@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         PICK & BAN — dimensions
+         ═══════════════════════════════════════════════════════════════════ -->
+    <dimen name="pickban_synergy_bars_height">40dp</dimen>
+    <dimen name="pickban_synergy_bar_height">6dp</dimen>
+    <dimen name="pickban_synergy_bar_margin_top">3dp</dimen>
+    <dimen name="pickban_synergy_padding">8dp</dimen>
+    <dimen name="pickban_synergy_inner_padding">6dp</dimen>
+    <dimen name="pickban_role_filter_height">32dp</dimen>
+    <dimen name="pickban_role_filter_margin_top">3dp</dimen>
+    <dimen name="pickban_tag_filter_height">32dp</dimen>
+    <dimen name="pickban_tag_filter_margin_top">2dp</dimen>
+    <dimen name="pickban_grid_columns">7dp</dimen> <!-- usado como contagem, valor lido em código -->
+
+    <!-- Pick & ban — texto -->
+    <dimen name="pickban_label_text_size">10sp</dimen>
+    <dimen name="pickban_value_text_size">10sp</dimen>
+    <dimen name="pickban_role_chip_text_size">11sp</dimen>
+    <dimen name="pickban_tag_chip_text_size">10sp</dimen>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         SIMULAÇÃO — feed
+         ═══════════════════════════════════════════════════════════════════ -->
+    <dimen name="sim_chip_text_size">11sp</dimen>
+    <dimen name="sim_chip_padding_horizontal">10dp</dimen>
+    <dimen name="sim_chip_padding_vertical">4dp</dimen>
+    <dimen name="sim_chip_margin">2dp</dimen>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         GRADE DE CAMPEÕES
+         ═══════════════════════════════════════════════════════════════════ -->
+    <dimen name="champion_grid_selected_scale">1.08dp</dimen> <!-- multiplicador, lido em código -->
+    <dimen name="champion_grid_selected_elevation">12dp</dimen>
+    <dimen name="champion_grid_default_elevation">2dp</dimen>
+    <dimen name="champion_grid_disabled_alpha">22</dimen> <!-- /100 -->
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         DIALOG DO LOL
+         ═══════════════════════════════════════════════════════════════════ -->
+    <dimen name="dialog_title_text_size">18sp</dimen>
+    <dimen name="dialog_body_text_size">14sp</dimen>
+    <dimen name="dialog_corner_radius">4dp</dimen>
+    <dimen name="dialog_border_width">1dp</dimen>
+
+    <!-- ═══════════════════════════════════════════════════════════════════
+         TELA DE RESULTADO
+         ═══════════════════════════════════════════════════════════════════ -->
+    <dimen name="result_icon_size">72sp</dimen>
+    <dimen name="result_label_size">36sp</dimen>
+    <dimen name="result_score_size">48sp</dimen>
+
+</resources>

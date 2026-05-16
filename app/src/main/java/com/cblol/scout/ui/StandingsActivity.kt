@@ -7,7 +7,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.annotation.ColorRes
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.cblol.scout.R
@@ -18,6 +20,15 @@ import com.cblol.scout.ui.viewmodel.StandingsViewModel
 import com.cblol.scout.util.TeamColors
 import org.koin.androidx.viewmodel.ext.android.viewModel
 
+/**
+ * Tabela de classificação do split.
+ *
+ * SOLID:
+ * - **SRP**: render isolado em [renderStandings]; adapter contém apenas binding.
+ * - **DIP**: depende de [StandingsViewModel] via Koin; cores via `R.color`.
+ *
+ * Strings em `R.string.*`, cores em `R.color.*`. Sem `Color.parseColor` inline.
+ */
 class StandingsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityStandingsBinding
@@ -34,15 +45,18 @@ class StandingsActivity : AppCompatActivity() {
         GameRepository.load(applicationContext)
         val myTeamId = GameRepository.current().managerTeamId
 
-        vm.standings.observe(this) { standings ->
-            binding.recycler.layoutManager = LinearLayoutManager(this)
-            binding.recycler.adapter = StandingsAdapter(standings, myTeamId)
-        }
-
+        vm.standings.observe(this) { renderStandings(it, myTeamId) }
         vm.load()
     }
 
     override fun onSupportNavigateUp(): Boolean { finish(); return true }
+
+    private fun renderStandings(standings: List<Standing>, myTeamId: String) {
+        binding.recycler.layoutManager = LinearLayoutManager(this)
+        binding.recycler.adapter = StandingsAdapter(standings, myTeamId)
+    }
+
+    // ── Adapter ──────────────────────────────────────────────────────────
 
     private class StandingsAdapter(
         private val items: List<Standing>,
@@ -65,27 +79,36 @@ class StandingsActivity : AppCompatActivity() {
         override fun getItemCount() = items.size
 
         override fun onBindViewHolder(h: VH, i: Int) {
-            val s = items[i]
+            val s   = items[i]
+            val ctx = h.itemView.context
             h.tvPos.text  = (i + 1).toString()
             h.tvName.text = s.teamName
             h.tvW.text    = s.wins.toString()
             h.tvL.text    = s.losses.toString()
-            h.tvDiff.text = (if (s.mapDiff >= 0) "+" else "") + s.mapDiff.toString()
+            h.tvDiff.text = if (s.mapDiff >= 0)
+                ctx.getString(R.string.player_diff_positive, s.mapDiff)
+            else s.mapDiff.toString()
             h.viewBar.setBackgroundColor(TeamColors.forTeam(s.teamId))
 
-            if (s.teamId == myTeamId) {
-                h.itemView.setBackgroundColor(Color.parseColor("#1E2D40"))
-                h.tvName.setTypeface(null, Typeface.BOLD)
-                h.tvName.setTextColor(Color.parseColor("#C89B3C"))
-            } else {
-                h.itemView.setBackgroundColor(Color.TRANSPARENT)
-                h.tvName.setTypeface(null, Typeface.NORMAL)
-                h.tvName.setTextColor(Color.parseColor("#F0E6D2"))
-            }
-
-            h.tvPos.setTextColor(
-                if (i < 6) Color.parseColor("#C89B3C") else Color.parseColor("#A09B8C")
+            val isMine = s.teamId == myTeamId
+            h.itemView.setBackgroundColor(
+                if (isMine) color(ctx, R.color.color_primary_container) else Color.TRANSPARENT
             )
+            h.tvName.setTypeface(null, if (isMine) Typeface.BOLD else Typeface.NORMAL)
+            h.tvName.setTextColor(color(ctx,
+                if (isMine) R.color.color_primary else R.color.color_on_surface))
+
+            h.tvPos.setTextColor(color(ctx,
+                if (i < TOP_PLAYOFF_POSITIONS) R.color.color_primary
+                else R.color.color_on_surface_variant))
+        }
+
+        private fun color(ctx: android.content.Context, @ColorRes res: Int) =
+            ContextCompat.getColor(ctx, res)
+
+        companion object {
+            /** Posições que classificam para playoffs no CBLOL (top 6). */
+            private const val TOP_PLAYOFF_POSITIONS = 6
         }
     }
 }

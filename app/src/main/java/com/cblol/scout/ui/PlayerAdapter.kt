@@ -1,20 +1,32 @@
 package com.cblol.scout.ui
 
-import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.annotation.ColorRes
 import androidx.cardview.widget.CardView
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.cblol.scout.R
 import com.cblol.scout.data.Player
+import com.cblol.scout.domain.GameConstants
 import com.cblol.scout.util.TeamColors
 
+/**
+ * Adapter da lista de jogadores em [MainActivity].
+ *
+ * SOLID:
+ * - **SRP**: cada ViewHolder binda um único Player; helpers ([overallColorRes],
+ *   [salarySourceColorRes]) isolam decisões de cor.
+ * - **OCP**: novas faixas de overall se adicionam em [overallColorRes] sem mudar onBind.
+ *
+ * Strings via `R.string`, cores via `R.color`. Sem `Color.parseColor` inline.
+ */
 class PlayerAdapter(
     private val onItemClick: (Player) -> Unit
 ) : ListAdapter<Player, PlayerAdapter.ViewHolder>(DiffCallback) {
@@ -53,72 +65,84 @@ class PlayerAdapter(
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val player = getItem(position)
-        val teamColor = TeamColors.forTeam(player.time_id)
-        val roleColor = TeamColors.roleColor(player.role)
+        val ctx    = holder.itemView.context
 
-        // Team accent bar
-        holder.teamBar.setBackgroundColor(teamColor)
-
-        // Role badge
-        val roleBg = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = 24f
-            setColor(roleColor)
-        }
-        holder.tvRole.background = roleBg
-        holder.tvRole.text = player.role
-
-        // Name & flag
-        holder.tvName.text = player.nome_jogo
-        holder.tvFlag.text = TeamColors.flagEmoji(player.nacionalidade)
-        holder.tvTeam.text = player.time_nome
-
-        // Overall rating circle color (raridades estilo LoL)
-        val overall = player.overallRating()
-        val ratingColor = when {
-            overall >= 85 -> Color.parseColor("#C89B3C") // Mythic gold
-            overall >= 75 -> Color.parseColor("#0AC8B9") // Legendary cyan
-            overall >= 65 -> Color.parseColor("#B19CD9") // Epic purple
-            else          -> Color.parseColor("#788CA0") // Rare silver
-        }
-        val ratingBg = GradientDrawable().apply {
-            shape = GradientDrawable.OVAL
-            setColor(ratingColor)
-        }
-        holder.tvOverall.background = ratingBg
-        holder.tvOverall.text = overall.toString()
-
-        // Stats row
-        val s = player.stats_brutas
-        holder.tvGames.text  = "${s.jogos}J"
-        holder.tvKda.text    = "KDA ${s.kda}"
-        holder.tvCs.text     = "CS ${s.cs_min}"
-        holder.tvKp.text     = "KP ${s.kp_pct.toInt()}%"
-
-        // Attribute bars
-        val a = player.atributos_derivados
-        holder.pbLane.progress   = a.lane_phase;  holder.tvLaneVal.text   = a.lane_phase.toString()
-        holder.pbTf.progress     = a.team_fight;  holder.tvTfVal.text     = a.team_fight.toString()
-        holder.pbCria.progress   = a.criatividade; holder.tvCriaVal.text  = a.criatividade.toString()
-        holder.pbCons.progress   = a.consistencia; holder.tvConsVal.text  = a.consistencia.toString()
-        holder.pbClutch.progress = a.clutch;      holder.tvClutchVal.text = a.clutch.toString()
-
-        // Salary
-        val salary = player.contrato.salario_mensal_estimado_brl
-        if (salary != null) {
-            holder.tvSalary.text = "R$ ${"%,d".format(salary)}/mês"
-            holder.tvSalarySource.text = if (player.contrato.fonte_salario == "reportado") "reportado" else "estimado"
-            holder.tvSalarySource.setTextColor(
-                if (player.contrato.fonte_salario == "reportado")
-                    Color.parseColor("#00B894") else Color.parseColor("#C89B3C")
-            )
-        }
+        bindHeader(holder, player)
+        bindOverall(holder, player, ctx)
+        bindStats(holder, player, ctx)
+        bindAttributes(holder, player)
+        bindSalary(holder, player, ctx)
 
         holder.card.setOnClickListener { onItemClick(player) }
     }
 
+    private fun bindHeader(holder: ViewHolder, player: Player) {
+        holder.teamBar.setBackgroundColor(TeamColors.forTeam(player.time_id))
+        holder.tvRole.background = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = ROLE_BG_CORNER
+            setColor(TeamColors.roleColor(player.role))
+        }
+        holder.tvRole.text = player.role
+        holder.tvName.text = player.nome_jogo
+        holder.tvFlag.text = TeamColors.flagEmoji(player.nacionalidade)
+        holder.tvTeam.text = player.time_nome
+    }
+
+    private fun bindOverall(holder: ViewHolder, player: Player, ctx: android.content.Context) {
+        val overall = player.overallRating()
+        holder.tvOverall.background = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(ContextCompat.getColor(ctx, overallColorRes(overall)))
+        }
+        holder.tvOverall.text = overall.toString()
+    }
+
+    private fun bindStats(holder: ViewHolder, player: Player, ctx: android.content.Context) {
+        val s = player.stats_brutas
+        holder.tvGames.text = ctx.getString(R.string.stat_games_format, s.jogos)
+        holder.tvKda.text   = ctx.getString(R.string.stat_kda_format, s.kda.toString())
+        holder.tvCs.text    = ctx.getString(R.string.stat_cs_format,  s.cs_min.toString())
+        holder.tvKp.text    = ctx.getString(R.string.stat_kp_format,  s.kp_pct.toInt())
+    }
+
+    private fun bindAttributes(holder: ViewHolder, player: Player) {
+        val a = player.atributos_derivados
+        holder.pbLane.progress   = a.lane_phase;   holder.tvLaneVal.text   = a.lane_phase.toString()
+        holder.pbTf.progress     = a.team_fight;   holder.tvTfVal.text     = a.team_fight.toString()
+        holder.pbCria.progress   = a.criatividade; holder.tvCriaVal.text   = a.criatividade.toString()
+        holder.pbCons.progress   = a.consistencia; holder.tvConsVal.text   = a.consistencia.toString()
+        holder.pbClutch.progress = a.clutch;       holder.tvClutchVal.text = a.clutch.toString()
+    }
+
+    private fun bindSalary(holder: ViewHolder, player: Player, ctx: android.content.Context) {
+        val salary = player.contrato.salario_mensal_estimado_brl ?: return
+        holder.tvSalary.text       = ctx.getString(R.string.hub_payroll_format, "%,d".format(salary))
+        holder.tvSalarySource.text = player.contrato.fonte_salario
+        holder.tvSalarySource.setTextColor(
+            ContextCompat.getColor(ctx, salarySourceColorRes(player.contrato.fonte_salario))
+        )
+    }
+
+    @ColorRes
+    private fun overallColorRes(ovr: Int): Int = when {
+        ovr >= GameConstants.Economy.OVERALL_BRACKET_MYTHIC    -> R.color.rarity_mythic
+        ovr >= GameConstants.Economy.OVERALL_BRACKET_LEGENDARY -> R.color.rarity_legendary
+        ovr >= GameConstants.Economy.OVERALL_BRACKET_EPIC      -> R.color.rarity_epic
+        else                                                   -> R.color.rarity_rare
+    }
+
+    @ColorRes
+    private fun salarySourceColorRes(source: String): Int =
+        if (source == SALARY_SOURCE_REPORTED) R.color.salary_reported else R.color.salary_estimated
+
     object DiffCallback : DiffUtil.ItemCallback<Player>() {
         override fun areItemsTheSame(a: Player, b: Player) = a.id == b.id
         override fun areContentsTheSame(a: Player, b: Player) = a == b
+    }
+
+    companion object {
+        private const val ROLE_BG_CORNER = 24f
+        private const val SALARY_SOURCE_REPORTED = "reportado"
     }
 }

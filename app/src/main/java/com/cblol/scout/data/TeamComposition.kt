@@ -25,15 +25,18 @@ data class TeamComposition(
 )
 
 enum class CompArchetype {
-    ENGAGE,   // dive/teamfight — Malphite, Amumu, Orianna
-    POKE,     // desgaste à distância — Jayce, Ezreal, Xerath
-    SPLIT,    // pressão em lane — Fiora, Tryndamere, Camille
-    PROTECT,  // guardião do carry — Lulu, Karma, Yuumi
-    PICK,     // assassinato isolado — Blitzcrank, Lissandra, Zed
-    WOMBO,    // AoE devastador — Amumu, MF, Orianna
-    PEEL,     // suporte ao ADC — Thresh, Janna, Nautilus
-    SCALING,  // hipercarry tardio — Kassadin, Kayle, Vayne
-    CONTROL,  // controle de mapa — Taliyah, Azir, Viktor
+    ENGAGE,    // dive/teamfight — Malphite, Amumu, Orianna
+    POKE,      // desgaste à distância — Jayce, Ezreal, Xerath
+    SPLIT,     // pressão em lane — Fiora, Tryndamere, Camille
+    PROTECT,   // guardião do carry — Lulu, Karma, Yuumi
+    PICK,      // assassinato isolado — Blitzcrank, Lissandra, Zed
+    WOMBO,     // AoE devastador — Amumu, MF, Orianna
+    PEEL,      // suporte ao ADC — Thresh, Janna, Nautilus
+    SCALING,   // hipercarry tardio — Kassadin, Kayle, Vayne
+    CONTROL,   // controle de mapa — Taliyah, Azir, Viktor
+    SKIRMISH,  // brigas curtas e constantes — Graves, Ekko, LeeSin
+    DIVE,      // pula em cima do back — Diana, Hecarim, Rakan
+    INVADE,    // pressiona o jungle inimigo desde o min 1
 }
 
 /**
