@@ -3,17 +3,18 @@ package com.cblol.scout.ui
 import androidx.activity.OnBackPressedCallback
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.content.Intent
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.drawable.Drawable
 import android.os.Bundle
-import android.os.CountDownTimer
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
@@ -51,7 +52,6 @@ class PickBanActivity : AppCompatActivity() {
     private lateinit var redPickSlots: List<PickSlotView>
 
     private lateinit var tvPhaseLabel: TextView
-    private lateinit var tvTimerLabel: TextView
     private lateinit var tvMapNumber: TextView
     private lateinit var tvBlueName: TextView
     private lateinit var tvRedName: TextView
@@ -59,6 +59,14 @@ class PickBanActivity : AppCompatActivity() {
     private lateinit var btnSkip: MaterialButton
     private lateinit var viewBlueTurn: View
     private lateinit var viewRedTurn: View
+
+    // ── Barras de sinergia ──────────────────────────────────────────────
+    private lateinit var pbBlueSynergy: ProgressBar
+    private lateinit var pbRedSynergy: ProgressBar
+    private lateinit var tvBlueCompLabel: TextView
+    private lateinit var tvRedCompLabel: TextView
+    private lateinit var tvBlueCompValue: TextView
+    private lateinit var tvRedCompValue: TextView
 
     // ── Loading overlay ──────────────────────────────────────────────────
     private lateinit var viewLoadingOverlay: View
@@ -68,7 +76,10 @@ class PickBanActivity : AppCompatActivity() {
     // ── Estado ───────────────────────────────────────────────────────────
     private lateinit var state: PickBanState
     private var selectedChampion: Champion? = null
-    private var countDownTimer: CountDownTimer? = null
+
+    // Handler para IA agir com pequeno delay (sem mais countdown timer para o jogador)
+    private val handler = Handler(Looper.getMainLooper())
+    private var aiRunnable: Runnable? = null
 
     private var playerTeamId: String = ""
     private var opponentTeamId: String = ""
@@ -131,7 +142,6 @@ class PickBanActivity : AppCompatActivity() {
         cgTagFilter        = findViewById(R.id.cg_tag_filter)
         etSearch           = findViewById(R.id.et_search_champion)
         tvPhaseLabel       = findViewById(R.id.tv_phase_label)
-        tvTimerLabel       = findViewById(R.id.tv_timer)
         tvMapNumber        = findViewById(R.id.tv_map_number)
         tvBlueName         = findViewById(R.id.tv_blue_team_name)
         tvRedName          = findViewById(R.id.tv_red_team_name)
@@ -142,6 +152,13 @@ class PickBanActivity : AppCompatActivity() {
         viewLoadingOverlay = findViewById(R.id.view_loading_overlay)
         progressBarLoading = findViewById(R.id.progress_bar_loading)
         tvLoadingStatus    = findViewById(R.id.tv_loading_status)
+
+        pbBlueSynergy     = findViewById(R.id.pb_blue_synergy)
+        pbRedSynergy      = findViewById(R.id.pb_red_synergy)
+        tvBlueCompLabel   = findViewById(R.id.tv_blue_comp_label)
+        tvRedCompLabel    = findViewById(R.id.tv_red_comp_label)
+        tvBlueCompValue   = findViewById(R.id.tv_blue_comp_value)
+        tvRedCompValue    = findViewById(R.id.tv_red_comp_value)
 
         blueBanSlots = listOf(
             findViewById(R.id.iv_blue_ban_1), findViewById(R.id.iv_blue_ban_2),
@@ -164,15 +181,10 @@ class PickBanActivity : AppCompatActivity() {
             findViewById(R.id.psv_red_5)
         )
 
-        tvMapNumber.text = "Mapa $mapNumber"
+        tvMapNumber.text = "MAPA $mapNumber"
     }
 
     // ── Pré-carregamento de imagens com barra de progresso ───────────────
-    /**
-     * Baixa os ícones de todos os campeões em paralelo via Glide.preload().
-     * Atualiza a ProgressBar conforme cada imagem termina (sucesso ou erro).
-     * Chama [onComplete] na main thread quando 100% das imagens resolveram.
-     */
     private fun preloadAllChampionImages(onComplete: () -> Unit) {
         val champions = ChampionRepository.getAll()
         val total     = champions.size
@@ -246,25 +258,24 @@ class PickBanActivity : AppCompatActivity() {
     }
 
     private fun setupTagFilters() {
-        // Tags mais úteis para o draft — ordenadas por relevância
         val draftTags = listOf(
-            ChampionTag.TANK          to "🛡️ Tank",
-            ChampionTag.ENGAGE        to "🚀 Engage",
-            ChampionTag.CROWD_CONTROL to "🔒 CC",
-            ChampionTag.MAGIC_DAMAGE  to "✨ AP",
+            ChampionTag.TANK            to "🛡️ Tank",
+            ChampionTag.ENGAGE          to "🚀 Engage",
+            ChampionTag.CROWD_CONTROL   to "🔒 CC",
+            ChampionTag.MAGIC_DAMAGE    to "✨ AP",
             ChampionTag.PHYSICAL_DAMAGE to "💪 AD",
-            ChampionTag.ANTI_TANK     to "🔱 Anti-Tank",
-            ChampionTag.HEAL          to "💉 Cura",
-            ChampionTag.SHIELD        to "🔰 Escudo",
-            ChampionTag.ASSASSIN      to "🗡️ Assassino",
-            ChampionTag.POKE          to "🎯 Poke",
-            ChampionTag.SPLIT_PUSH    to "🔀 Split",
-            ChampionTag.HYPERCARRY    to "🌟 HyperCarry",
-            ChampionTag.GLOBAL_ULT    to "🌐 Ult Global",
-            ChampionTag.KNOCK_UP      to "☝️ Knock-up",
-            ChampionTag.SUSTAIN       to "♻️ Sustain",
-            ChampionTag.INVISIBLE     to "🫥 Invisível",
-            ChampionTag.TRUE_DAMAGE   to "⚡ Dano Real"
+            ChampionTag.ANTI_TANK       to "🔱 Anti-Tank",
+            ChampionTag.HEAL            to "💉 Cura",
+            ChampionTag.SHIELD          to "🔰 Escudo",
+            ChampionTag.ASSASSIN        to "🗡️ Assassino",
+            ChampionTag.POKE            to "🎯 Poke",
+            ChampionTag.SPLIT_PUSH      to "🔀 Split",
+            ChampionTag.HYPERCARRY      to "🌟 HyperCarry",
+            ChampionTag.GLOBAL_ULT      to "🌐 Ult Global",
+            ChampionTag.KNOCK_UP        to "☝️ Knock-up",
+            ChampionTag.SUSTAIN         to "♻️ Sustain",
+            ChampionTag.INVISIBLE       to "🫥 Invisível",
+            ChampionTag.TRUE_DAMAGE     to "⚡ Dano Real"
         )
 
         draftTags.forEach { (tag, label) ->
@@ -276,7 +287,6 @@ class PickBanActivity : AppCompatActivity() {
             }
             chip.setOnCheckedChangeListener { _, checked ->
                 championAdapter.filterByTag(if (checked) tag else null)
-                // Desmarca todas as outras tags
                 if (checked) {
                     for (i in 0 until cgTagFilter.childCount) {
                         val other = cgTagFilter.getChildAt(i) as? Chip
@@ -325,7 +335,7 @@ class PickBanActivity : AppCompatActivity() {
         viewBlueTurn.visibility = if (isBlue)  View.VISIBLE else View.INVISIBLE
         viewRedTurn.visibility  = if (!isBlue) View.VISIBLE else View.INVISIBLE
 
-        rvChampions.alpha   = if (isPlayerTurn) 1f else 0.4f
+        rvChampions.alpha     = if (isPlayerTurn) 1f else 0.4f
         rvChampions.isEnabled = isPlayerTurn
         btnConfirm.isEnabled  = false
         btnSkip.visibility    = if (!isPlayerTurn) View.VISIBLE else View.GONE
@@ -334,31 +344,22 @@ class PickBanActivity : AppCompatActivity() {
         selectedChampion = null
         championAdapter.clearSelection()
 
-        startTimer(
-            durationMs = if (isPlayerTurn) 30_000L else 1_500L,
-            autoAct    = !isPlayerTurn
-        )
-    }
-
-    private fun startTimer(durationMs: Long, autoAct: Boolean) {
-        countDownTimer?.cancel()
-        countDownTimer = object : CountDownTimer(durationMs, 1000) {
-            override fun onTick(ms: Long) {
-                tvTimerLabel.text = (ms / 1000).toString()
-                tvTimerLabel.setTextColor(
-                    if (ms / 1000 <= 5L)
-                        ContextCompat.getColor(this@PickBanActivity, android.R.color.holo_red_light)
-                    else
-                        ContextCompat.getColor(this@PickBanActivity, android.R.color.white)
-                )
-            }
-            override fun onFinish() {
+        // IA age com pequeno delay para visualizar a transição; jogador age livremente
+        cancelAiRunnable()
+        if (!isPlayerTurn) {
+            aiRunnable = Runnable {
                 ChampionRepository.getAll()
                     .filter { it.id !in state.usedChampions }
                     .randomOrNull()
                     ?.let { confirmAction(it) }
             }
-        }.start()
+            handler.postDelayed(aiRunnable!!, 1200L)
+        }
+    }
+
+    private fun cancelAiRunnable() {
+        aiRunnable?.let { handler.removeCallbacks(it) }
+        aiRunnable = null
     }
 
     private fun onChampionSelected(champ: Champion) {
@@ -382,7 +383,7 @@ class PickBanActivity : AppCompatActivity() {
     }
 
     private fun confirmAction(champ: Champion) {
-        countDownTimer?.cancel()
+        cancelAiRunnable()
         val (isBlue, phase) = turnOrder[state.currentTurnIndex]
         state.usedChampions.add(champ.id)
 
@@ -412,9 +413,11 @@ class PickBanActivity : AppCompatActivity() {
                         it.setChampion(champ); it.setActive(false)
                     }
                 }
-                updateCompSynergyLabel()
             }
         }
+
+        // Atualiza barras de sinergia após CADA ação (bans podem destruir comps já formadas)
+        updateSynergyBars()
 
         championAdapter.markUsed(champ.id)
         state.currentTurnIndex++
@@ -467,29 +470,82 @@ class PickBanActivity : AppCompatActivity() {
             .show()
     }
 
-    // ── Detecta sinergia em tempo real e exibe no label de fase ──────────
-    private fun updateCompSynergyLabel() {
-        val playerIsBlue = state.playerIsBlue
-        val myPicks = if (playerIsBlue) state.bluePicks else state.redPicks
-        val opBans  = if (playerIsBlue) state.redBans   else state.blueBans
-
-        if (myPicks.size < 2) return
-
-        val result = CompositionRepository.analyze(
-            myPicks.map { it.id },
-            opBans.map  { it.id }
+    /**
+     * Atualiza as barras de sinergia de AMBOS os lados.
+     *
+     * O score considera:
+     *  - bônus da composição detectada (analyzeWithTags.base.bonusStrength)
+     *  - bônus extra por equilíbrio de tags (extraBonus: AD+AP misto, CC abundante,
+     *    knock-ups, anti-tank, etc.)
+     *  - penalidades por falta de frontline ou anti-tank contra tanques inimigos
+     *
+     * Os bans do OPONENTE podem quebrar uma comp do nosso lado (se o
+     * campeão-chave já banido fosse exigido). Por isso a atualização ocorre
+     * tanto após picks quanto após bans.
+     *
+     * Escala visual: bonusStrength máx ≈ 18 (comp completa Tier S + tags). Mapeamos
+     * para 0–100 multiplicando por 5.5 e capando em 100.
+     */
+    private fun updateSynergyBars() {
+        val blueResult = CompositionRepository.analyzeWithTags(
+            picks         = state.bluePicks.map { it.id },
+            opponentPicks = state.redPicks.map  { it.id },
+            bans          = state.redBans.map   { it.id }   // bans do oponente nos meus picks
         )
-        if (result.detected != null) {
-            tvPhaseLabel.text = "⚡ ${result.description}"
+        val redResult = CompositionRepository.analyzeWithTags(
+            picks         = state.redPicks.map { it.id },
+            opponentPicks = state.bluePicks.map { it.id },
+            bans          = state.blueBans.map  { it.id }
+        )
+
+        applySynergyToBar(
+            bar         = pbBlueSynergy,
+            tvLabel     = tvBlueCompLabel,
+            tvValue     = tvBlueCompValue,
+            totalBonus  = blueResult.totalBonus,
+            detected    = blueResult.base.detected?.name,
+            picksCount  = state.bluePicks.size
+        )
+        applySynergyToBar(
+            bar         = pbRedSynergy,
+            tvLabel     = tvRedCompLabel,
+            tvValue     = tvRedCompValue,
+            totalBonus  = redResult.totalBonus,
+            detected    = redResult.base.detected?.name,
+            picksCount  = state.redPicks.size
+        )
+    }
+
+    private fun applySynergyToBar(
+        bar: ProgressBar,
+        tvLabel: TextView,
+        tvValue: TextView,
+        totalBonus: Int,
+        detected: String?,
+        picksCount: Int
+    ) {
+        val target = (totalBonus * 5.5).toInt().coerceIn(0, 100)
+        ValueAnimator.ofInt(bar.progress, target).apply {
+            duration = 400
+            addUpdateListener { bar.progress = it.animatedValue as Int }
+            start()
+        }
+        tvValue.text = if (totalBonus >= 0) "+$totalBonus" else totalBonus.toString()
+        tvLabel.text = when {
+            picksCount == 0     -> "Aguardando picks…"
+            detected != null    -> "⚡ $detected"
+            totalBonus < 0      -> "⚠️ Comp desbalanceada"
+            totalBonus < 4      -> "Sinergia fraca"
+            totalBonus < 8      -> "Sinergia parcial"
+            else                -> "Sinergia forte"
         }
     }
 
     /**
      * Completa os turnos restantes com escolhas da IA e chama finishPickBan().
-     * Usado quando o jogador quer "simular até o fim" a partir do back.
      */
     private fun completeMissingWithAI() {
-        countDownTimer?.cancel()
+        cancelAiRunnable()
         val available = ChampionRepository.getAll().filter { it.id !in state.usedChampions }
         val pool = available.toMutableList()
 
@@ -516,7 +572,7 @@ class PickBanActivity : AppCompatActivity() {
             }
             .setNeutralButton("Cancelar partida") { _, _ ->
                 setResult(RESULT_CANCELED)
-                countDownTimer?.cancel()
+                cancelAiRunnable()
                 finish()
             }
             .setNegativeButton("Continuar pick & ban", null)
@@ -532,7 +588,7 @@ class PickBanActivity : AppCompatActivity() {
     }
 
     private fun finishPickBan() {
-        countDownTimer?.cancel()
+        cancelAiRunnable()
         setResult(RESULT_OK, Intent().apply {
             putStringArrayListExtra("blue_picks", ArrayList(state.bluePicks.map { it.id }))
             putStringArrayListExtra("red_picks",  ArrayList(state.redPicks.map  { it.id }))
@@ -546,7 +602,7 @@ class PickBanActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        countDownTimer?.cancel()
+        cancelAiRunnable()
     }
 
     companion object {
