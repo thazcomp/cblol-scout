@@ -107,6 +107,14 @@ object GameConstants {
         const val DEFAULT_OVERALL   = 75   // fallback quando não há roster
         const val OVERALL_DIFF_HUGE = 5    // ▶▶ ou ◀◀
         const val OVERALL_DIFF_MILD = 2    // ▶ ou ◀
+
+        /**
+         * Bônus de força aplicado por jogador que picka um dos seus mains.
+         * O time inteiro ganha este valor por jogador-com-main — então um time
+         * que monta 5 jogadores em seus mains ganha até 5 × [CHAMP_POOL_MAIN_BONUS]
+         * pontos de força, equivalente a quase um Wombo Combo (Tier S).
+         */
+        const val CHAMP_POOL_MAIN_BONUS = 3
     }
 
     /** Configuração do calendário. */

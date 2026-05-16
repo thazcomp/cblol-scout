@@ -346,4 +346,11 @@
     <!-- Chip "TODOS" do filtro de times em MainActivity -->
     <string name="team_chip_all">TODOS</string>
 
+    <!-- ════════════════════════════════════════════════════════════════
+         CHAMPION POOL (jogadores no main)
+         ═══════════════════════════════════════════════════════════════ -->
+    <string name="presim_header_mains">🎯 JOGADORES NO MAIN</string>
+    <string name="presim_main_line">%1$s (%2$s) jogando %3$s</string>
+    <string name="presim_mains_bonus">%1$s: +%2$d força por mains</string>
+
 </resources>

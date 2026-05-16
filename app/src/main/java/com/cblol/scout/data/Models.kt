@@ -31,7 +31,19 @@ data class Player(
     val nacionalidade: String,
     val contrato: Contrato,
     val stats_brutas: StatsBrutas,
-    val atributos_derivados: AtributosDeriv
+    val atributos_derivados: AtributosDeriv,
+    /**
+     * Champion pool do jogador — campeões nos quais ele tem mais experiência
+     * e maior taxa de vitória. Quando ele pickar um campeão desta lista no
+     * pick & ban, o motor de simulação aplica um bônus de força (ver
+     * [com.cblol.scout.domain.GameConstants.Player.CHAMP_POOL_MAIN_BONUS]).
+     *
+     * Tipicamente 3-5 campeões por jogador, refletindo:
+     *   - signature picks competitivos (ex: Robo → Aatrox, Tinowns → Azir)
+     *   - meta-picks da role atual
+     *   - mains históricos do jogador
+     */
+    val championPool: List<String> = emptyList()
 ) {
     fun overallRating(): Int {
         return with(atributos_derivados) {

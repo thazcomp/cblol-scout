@@ -7,6 +7,7 @@ import com.cblol.scout.data.Match
 import com.cblol.scout.data.Player
 import com.cblol.scout.domain.GameConstants
 import com.cblol.scout.game.GameRepository
+import com.cblol.scout.util.ChampionPoolRepository
 import com.cblol.scout.util.CompositionRepository
 
 /**
@@ -32,6 +33,8 @@ object PreSimulationDialog {
         val awayName: String,
         val homeRoster: List<Player>,
         val awayRoster: List<Player>,
+        val homePicks: List<String>,
+        val awayPicks: List<String>,
         val homeComp: CompositionRepository.TaggedAnalysisResult,
         val awayComp: CompositionRepository.TaggedAnalysisResult,
         val mapNumber: Int
@@ -91,6 +94,8 @@ object PreSimulationDialog {
             awayName   = awayName,
             homeRoster = homeRoster,
             awayRoster = awayRoster,
+            homePicks  = homePicks,
+            awayPicks  = awayPicks,
             homeComp   = CompositionRepository.analyzeWithTags(homePicks, awayPicks, homeBansFor),
             awayComp   = CompositionRepository.analyzeWithTags(awayPicks, homePicks, awayBansFor),
             mapNumber  = gameNumber
@@ -109,6 +114,11 @@ object PreSimulationDialog {
             append(formatMatchupsSection(context, ctx))
             append("\n\n")
             append(formatStrengthSection(context, ctx))
+        }
+        val mains = formatMainsSection(context, ctx)
+        if (mains.isNotEmpty()) {
+            append("\n\n")
+            append(mains)
         }
         val insights = formatInsightsSection(context, ctx)
         if (insights.isNotEmpty()) {
@@ -202,6 +212,43 @@ object PreSimulationDialog {
         return buildString {
             append(context.getString(R.string.presim_header_observations))
             all.take(MAX_INSIGHTS).forEach { append("\n"); append(it) }
+        }
+    }
+
+    /**
+     * Lista os jogadores de ambos os times que estão pickando um dos seus mains.
+     * Só é incluída na mensagem se ao menos um lado tem pelo menos um main.
+     *
+     * Mostra também o total de bônus de força que cada time recebe por isso.
+     */
+    private fun formatMainsSection(context: Context, ctx: MatchContext): String {
+        val homeMains = ChampionPoolRepository.playersOnTheirMains(ctx.homeRoster, ctx.homePicks)
+        val awayMains = ChampionPoolRepository.playersOnTheirMains(ctx.awayRoster, ctx.awayPicks)
+        if (homeMains.isEmpty() && awayMains.isEmpty()) return ""
+
+        val bonus = GameConstants.Player.CHAMP_POOL_MAIN_BONUS
+        return buildString {
+            append(context.getString(R.string.presim_header_mains))
+            if (homeMains.isNotEmpty()) {
+                append("\n")
+                append(context.getString(R.string.presim_mains_bonus,
+                    ctx.homeName, homeMains.size * bonus))
+                homeMains.forEach { (player, champ) ->
+                    append("\n")
+                    append(context.getString(R.string.presim_main_line,
+                        player.nome_jogo, player.role, champ))
+                }
+            }
+            if (awayMains.isNotEmpty()) {
+                append("\n")
+                append(context.getString(R.string.presim_mains_bonus,
+                    ctx.awayName, awayMains.size * bonus))
+                awayMains.forEach { (player, champ) ->
+                    append("\n")
+                    append(context.getString(R.string.presim_main_line,
+                        player.nome_jogo, player.role, champ))
+                }
+            }
         }
     }
 

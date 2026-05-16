@@ -7,6 +7,7 @@ import com.cblol.scout.data.Player
 import com.cblol.scout.data.Side
 import com.cblol.scout.data.PickBanPlan
 import com.cblol.scout.domain.GameConstants
+import com.cblol.scout.util.ChampionPoolRepository
 import com.cblol.scout.util.CompositionRepository
 import kotlin.math.absoluteValue
 import kotlin.random.Random
@@ -45,8 +46,18 @@ object LiveMatchEngine {
         val homeComp   = CompositionRepository.analyzeWithTags(homePicks, awayPicks, awayBans)
         val awayComp   = CompositionRepository.analyzeWithTags(awayPicks, homePicks, homeBans)
 
-        val homeStr = teamStrength(homeRoster) + GameConstants.Series.HOME_SIDE_BONUS + homeComp.totalBonus
-        val awayStr = teamStrength(awayRoster)                                          + awayComp.totalBonus
+        // Bônus de "champion pool": cada jogador que picka um dos seus mains
+        // dá +CHAMP_POOL_MAIN_BONUS à força do time. Reflete a vantagem real de
+        // jogar em campeões nos quais o atleta tem mais experiência.
+        val homeMainsCount = ChampionPoolRepository.countMainsPicked(homeRoster, homePicks)
+        val awayMainsCount = ChampionPoolRepository.countMainsPicked(awayRoster, awayPicks)
+        val homeMainBonus  = homeMainsCount * GameConstants.Player.CHAMP_POOL_MAIN_BONUS
+        val awayMainBonus  = awayMainsCount * GameConstants.Player.CHAMP_POOL_MAIN_BONUS
+
+        val homeStr = teamStrength(homeRoster) + GameConstants.Series.HOME_SIDE_BONUS +
+                      homeComp.totalBonus + homeMainBonus
+        val awayStr = teamStrength(awayRoster) +
+                      awayComp.totalBonus + awayMainBonus
 
         val (gameEvents, homeWon, finalKills, duration) =
             generateGame(gameNumber, homeRoster, awayRoster, homeStr, awayStr, plan)
@@ -67,6 +78,18 @@ object LiveMatchEngine {
                 if (awayComp.insights.isNotEmpty()) append(" | ${awayComp.insights.first()}")
             }
             events.add(0, MatchEvent.PhaseAnnouncement(label))
+        }
+
+        // Anuncia jogadores no main
+        if (homeMainsCount > 0) {
+            events.add(0, MatchEvent.PhaseAnnouncement(
+                "🎯 [HOME] $homeMainsCount jogador(es) no main (+$homeMainBonus força)"
+            ))
+        }
+        if (awayMainsCount > 0) {
+            events.add(0, MatchEvent.PhaseAnnouncement(
+                "🎯 [AWAY] $awayMainsCount jogador(es) no main (+$awayMainBonus força)"
+            ))
         }
 
         events.add(MatchEvent.GameEnd(
@@ -338,8 +361,12 @@ object LiveMatchEngine {
                 used += planPick
                 planPick
             } else {
-                val pool = Champions.forRole(nextPlayer.role).filter { it !in used }
-                val c = pool.randomOrNull() ?: Champions.ALL_FLAT.first { it !in used }
+                // IA prefere campeões do pool do próprio jogador (mains).
+                // Fallback: pool por role; último recurso: qualquer campeão.
+                val mainsAvailable = nextPlayer.championPool.filter { it !in used }
+                val c = mainsAvailable.randomOrNull()
+                    ?: Champions.forRole(nextPlayer.role).filter { it !in used }.randomOrNull()
+                    ?: Champions.ALL_FLAT.first { it !in used }
                 used += c
                 c
             }
