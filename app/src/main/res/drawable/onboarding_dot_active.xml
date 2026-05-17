@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Indicador de página ativo (página atual do ViewPager2 no onboarding).
+    Círculo dourado preenchido, 10×10 dp.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <size
+        android:width="10dp"
+        android:height="10dp" />
+    <solid android:color="@color/champion_gold" />
+</shape>

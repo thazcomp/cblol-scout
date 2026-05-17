@@ -18,6 +18,9 @@
     android:layout_width="120dp"
     android:layout_height="wrap_content"
     android:layout_marginEnd="6dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?attr/selectableItemBackground"
     app:cardCornerRadius="6dp"
     app:cardElevation="3dp"
     app:cardBackgroundColor="@color/pick_ban_suggestion_bg">

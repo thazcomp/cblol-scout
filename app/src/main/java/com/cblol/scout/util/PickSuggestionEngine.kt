@@ -75,14 +75,51 @@ object PickSuggestionEngine {
         val myChamps = myPicks.mapNotNull { ChampionRepository.getById(it) }
         val opChamps = opponentPicks.mapNotNull { ChampionRepository.getById(it) }
 
-        return pool
+        // 1º passo: avalia TODOS os candidatos, mantendo os com score mínimo
+        val evaluated = pool
             .asSequence()
             .filter { it.id.lowercase() !in used && it.name.lowercase() !in used }
             .map { evaluate(it, myChamps, opChamps, currentPlayer, myPicks, opponentPicks, bans) }
             .filter { it.score >= MIN_SCORE }
             .sortedByDescending { it.score }
-            .take(maxResults)
             .toList()
+
+        if (evaluated.isEmpty()) return emptyList()
+
+        // 2º passo: DIVERSIFICA por motivo primário. Em vez de pegar os top 3 (que
+        // tendem a ser três MAINs ou três COMPs), pegamos o melhor candidato de cada
+        // categoria, na ordem de prioridade abaixo. Isso garante que o treinador veja
+        // sempre uma mistura de motivos (ex: 1 MAIN + 1 COUNTER + 1 SYNERGY).
+        val byReason = evaluated.groupBy { it.primaryReason }
+        val priorityOrder = listOf(
+            Reason.MAIN, Reason.COMPOSITION, Reason.COUNTER, Reason.SYNERGY, Reason.META
+        )
+
+        val diversified = mutableListOf<Suggestion>()
+        val pickedIds   = mutableSetOf<String>()
+
+        // Passa 1: 1 melhor de cada categoria que tem candidatos
+        for (reason in priorityOrder) {
+            if (diversified.size >= maxResults) break
+            val best = byReason[reason]?.firstOrNull { it.champion.id !in pickedIds } ?: continue
+            diversified += best
+            pickedIds   += best.champion.id
+        }
+
+        // Passa 2: se ainda faltam slots, completa com os próximos melhores globais
+        if (diversified.size < maxResults) {
+            evaluated
+                .asSequence()
+                .filter { it.champion.id !in pickedIds }
+                .take(maxResults - diversified.size)
+                .forEach {
+                    diversified += it
+                    pickedIds   += it.champion.id
+                }
+        }
+
+        // Reordena pelo score (mantém a melhor sempre à esquerda)
+        return diversified.sortedByDescending { it.score }.take(maxResults)
     }
 
     /** Avalia UM campeão somando todas as heurísticas. */
@@ -125,8 +162,12 @@ object PickSuggestionEngine {
      */
     private fun scoreMain(candidate: Champion, player: Player?): ReasonItem? {
         if (player == null) return null
-        val isMain = player.championPool.any { it.equals(candidate.id, ignoreCase = true) ||
-                                                it.equals(candidate.name, ignoreCase = true) }
+        // Defensivo: Gson pode entregar championPool como null (sem campo no JSON).
+        @Suppress("SENSELESS_COMPARISON")
+        val rawPool: List<String>? = player.championPool
+        val pool = rawPool ?: return null
+        val isMain = pool.any { it.equals(candidate.id, ignoreCase = true) ||
+                                 it.equals(candidate.name, ignoreCase = true) }
         return if (isMain) ReasonItem(Reason.MAIN, WEIGHT_MAIN, "Main de ${player.nome_jogo}")
                else null
     }

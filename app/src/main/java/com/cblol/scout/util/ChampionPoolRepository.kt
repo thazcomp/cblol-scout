@@ -93,7 +93,12 @@ object ChampionPoolRepository {
      * o mesmo jogador sempre tenha o mesmo pool em saves diferentes.
      */
     fun attach(player: Player): Player {
-        if (player.championPool.isNotEmpty()) return player
+        // Gson não respeita default values do Kotlin — quando o JSON não tem o
+        // campo, championPool chega como null em vez de emptyList(). Tratamos
+        // ambos os casos como "sem pool atribuído ainda".
+        @Suppress("SENSELESS_COMPARISON")
+        val currentPool: List<String>? = player.championPool
+        if (currentPool != null && currentPool.isNotEmpty()) return player
 
         val signature = SIGNATURE_POOLS[player.id.lowercase()]
                      ?: SIGNATURE_POOLS[player.nome_jogo.lowercase()]
@@ -132,7 +137,7 @@ object ChampionPoolRepository {
     fun countMainsPicked(roster: List<Player>, picks: List<String>): Int {
         val picksLower = picks.map { it.lowercase() }.toSet()
         return roster.count { player ->
-            player.championPool.any { main -> main.lowercase() in picksLower }
+            poolOf(player).any { main -> main.lowercase() in picksLower }
         }
     }
 
@@ -143,8 +148,18 @@ object ChampionPoolRepository {
     fun playersOnTheirMains(roster: List<Player>, picks: List<String>): List<Pair<Player, String>> {
         val picksLower = picks.associateBy { it.lowercase() }
         return roster.mapNotNull { player ->
-            val mainPicked = player.championPool.firstOrNull { it.lowercase() in picksLower.keys }
+            val mainPicked = poolOf(player).firstOrNull { it.lowercase() in picksLower.keys }
             if (mainPicked != null) player to picksLower[mainPicked.lowercase()]!! else null
         }
+    }
+
+    /**
+     * Devolve o champion pool do jogador, tratando `null` (Gson) e vazio como "nenhum".
+     * Toda leitura externa deve usar este helper para evitar NPE.
+     */
+    private fun poolOf(player: Player): List<String> {
+        @Suppress("SENSELESS_COMPARISON")
+        val raw: List<String>? = player.championPool
+        return raw ?: emptyList()
     }
 }

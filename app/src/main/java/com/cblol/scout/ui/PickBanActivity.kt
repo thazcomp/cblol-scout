@@ -79,6 +79,8 @@ class PickBanActivity : AppCompatActivity() {
     private lateinit var tvRedName: TextView
     private lateinit var btnConfirm: MaterialButton
     private lateinit var btnSkip: MaterialButton
+    private lateinit var btnClear: MaterialButton
+    private lateinit var btnToggleSuggestions: MaterialButton
     private lateinit var viewBlueTurn: View
     private lateinit var viewRedTurn: View
 
@@ -186,6 +188,8 @@ class PickBanActivity : AppCompatActivity() {
         tvRedName          = findViewById(R.id.tv_red_team_name)
         btnConfirm         = findViewById(R.id.btn_confirm_pick)
         btnSkip            = findViewById(R.id.btn_skip)
+        btnClear           = findViewById(R.id.btn_clear_selection)
+        btnToggleSuggestions = findViewById(R.id.btn_toggle_suggestions)
         viewBlueTurn       = findViewById(R.id.view_blue_turn_indicator)
         viewRedTurn        = findViewById(R.id.view_red_turn_indicator)
         viewLoadingOverlay = findViewById(R.id.view_loading_overlay)
@@ -294,15 +298,102 @@ class PickBanActivity : AppCompatActivity() {
 
     /**
      * Configura a faixa horizontal de sugestões contextuais.
-     * Tocar num card de sugestão seleciona e confirma o pick imediatamente.
+     *
+     * **Comportamento**: tocar num card apenas SELECIONA o pick (não confirma).
+     * O treinador precisa explicitamente clicar em CONFIRMAR depois.
      */
     private fun setupSuggestions() {
         suggestionsAdapter = PickSuggestionAdapter { champ ->
-            onChampionSelected(champ)
-            confirmAction(champ)
+            android.util.Log.d("PickBan", "Card de sugestão tocado: ${champ.name}")
+            handleSuggestionTap(champ)
         }
         rvSuggestions.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         rvSuggestions.adapter = suggestionsAdapter
+    }
+
+    /**
+     * Lida com o toque num card de sugestão.
+     *
+     * Faz APENAS:
+     *  1. Limpa filtros (para o campeão aparecer na grade)
+     *  2. Marca como selecionado (borda dourada + scaleX/Y 1.08)
+     *  3. Habilita CONFIRMAR e mostra LIMPAR
+     *  4. Rola a grade até o campeão para visibilidade
+     *
+     * **Não** chama [confirmAction]. O confirm só acontece no botão CONFIRMAR.
+     */
+    private fun handleSuggestionTap(champ: com.cblol.scout.data.Champion) {
+        // Sanity check: só processa se for turno do jogador em fase de PICK
+        if (state.currentTurnIndex >= turnOrder.size) {
+            android.util.Log.w("PickBan", "handleSuggestionTap: turno fora do range")
+            return
+        }
+        val (isBlue, phase) = turnOrder[state.currentTurnIndex]
+        if (isBlue != state.playerIsBlue || phase != PickBanPhase.PICK) {
+            android.util.Log.w("PickBan", "handleSuggestionTap IGNORADO: turno=${isBlue} fase=${phase} playerIsBlue=${state.playerIsBlue}")
+            return
+        }
+        if (champ.id in state.usedChampions) {
+            android.util.Log.w("PickBan", "handleSuggestionTap IGNORADO: ${champ.name} já foi usado")
+            return
+        }
+
+        android.util.Log.d("PickBan", "handleSuggestionTap: SELECIONANDO ${champ.name} (sem confirmar)")
+
+        // 1) Limpa filtros para garantir que o campeão apareça na grade
+        resetFiltersForSuggestion()
+
+        // 2) Atualiza estado de seleção (idêntico a tocar na grade)
+        selectedChampion = champ
+        championAdapter.setSelected(champ.id)
+
+        // 3) UI: habilita CONFIRMAR e mostra LIMPAR
+        btnConfirm.isEnabled = true
+        btnClear.visibility  = View.VISIBLE
+
+        // 4) Pulse no CONFIRMAR para chamar atenção
+        AnimatorSet().apply {
+            playTogether(
+                ObjectAnimator.ofFloat(btnConfirm, "scaleX", 1f, BTN_PULSE_SCALE, 1f),
+                ObjectAnimator.ofFloat(btnConfirm, "scaleY", 1f, BTN_PULSE_SCALE, 1f)
+            )
+            duration     = BTN_PULSE_DURATION_MS
+            interpolator = DecelerateInterpolator()
+            start()
+        }
+
+        // 5) Rola a grade até o campeão (após o layout reaplicar os filtros)
+        rvChampions.post { scrollGridToChampion(champ) }
+    }
+
+    /**
+     * Limpa os filtros de role/tag/busca para garantir que o campeão sugerido
+     * apareça na grade. Reseta os chips visuais correspondentes para o estado
+     * "TODOS" sem nenhuma tag ativa.
+     */
+    private fun resetFiltersForSuggestion() {
+        // Marca o chip "ALL" como ativo. Como o listener só dispara em chips
+        // marcados como `checked = true`, mudar os outros para false aqui não
+        // dispara nada (ver setupRoleFilters: `if (checked) championAdapter...`).
+        for (i in 0 until cgRoleFilter.childCount) {
+            val chip = cgRoleFilter.getChildAt(i) as? Chip ?: continue
+            chip.isChecked = chip.text == getString(R.string.filter_all)
+        }
+        for (i in 0 until cgTagFilter.childCount) {
+            (cgTagFilter.getChildAt(i) as? Chip)?.isChecked = false
+        }
+        if (etSearch.text?.isNotEmpty() == true) etSearch.setText("")
+
+        // Força a aplicação dos filtros zerados no adapter
+        championAdapter.filterByRole(null)
+        championAdapter.filterByTag(null)
+        championAdapter.filter("")
+    }
+
+    /** Faz scroll suave da grade até a posição do campeão selecionado, para visibilidade. */
+    private fun scrollGridToChampion(champ: Champion) {
+        val pos = championAdapter.indexOf(champ.id)
+        if (pos >= 0) rvChampions.smoothScrollToPosition(pos)
     }
 
     /** Ordem canônica de roles (TOP→SUP). */
@@ -368,6 +459,35 @@ class PickBanActivity : AppCompatActivity() {
         btnSkip.setOnClickListener {
             pickRandomAvailableChampion()?.let { confirmAction(it) }
         }
+        btnClear.setOnClickListener {
+            // Descarta a seleção atual; o treinador volta a procurar livremente.
+            selectedChampion = null
+            championAdapter.clearSelection()
+            btnConfirm.isEnabled = false
+            btnClear.visibility  = View.GONE
+        }
+        btnToggleSuggestions.setOnClickListener {
+            toggleSuggestionsVisibility()
+        }
+    }
+
+    /**
+     * Alterna entre mostrar/esconder a faixa de sugestões contextuais.
+     *
+     * Quando o treinador prefere ver toda a lista padrão de campeões sem
+     * distração das sugestões, basta tocar OUTROS para esconder a faixa.
+     * O texto do botão muda para SUGESTÕES, indicando que outro toque a traz
+     * de volta.
+     */
+    private fun toggleSuggestionsVisibility() {
+        val nowVisible = llSuggestionsContainer.visibility == View.VISIBLE
+        if (nowVisible) {
+            llSuggestionsContainer.visibility = View.GONE
+            btnToggleSuggestions.setText(R.string.btn_back_to_suggestions)
+        } else {
+            llSuggestionsContainer.visibility = View.VISIBLE
+            btnToggleSuggestions.setText(R.string.btn_others)
+        }
     }
 
     private fun pickRandomAvailableChampion(): Champion? =
@@ -393,6 +513,7 @@ class PickBanActivity : AppCompatActivity() {
         highlightActivePickSlot(isBlue, phase)
         selectedChampion = null
         championAdapter.clearSelection()
+        btnClear.visibility = View.GONE
         refreshSuggestions(isPlayerTurn, phase)
 
         cancelAiRunnable()
@@ -427,6 +548,7 @@ class PickBanActivity : AppCompatActivity() {
     private fun refreshSuggestions(isPlayerTurn: Boolean, phase: PickBanPhase) {
         if (!isPlayerTurn || phase != PickBanPhase.PICK) {
             llSuggestionsContainer.visibility = View.GONE
+            btnToggleSuggestions.visibility   = View.GONE
             return
         }
 
@@ -444,8 +566,11 @@ class PickBanActivity : AppCompatActivity() {
 
         if (suggestions.isEmpty()) {
             llSuggestionsContainer.visibility = View.GONE
+            btnToggleSuggestions.visibility   = View.GONE
         } else {
             llSuggestionsContainer.visibility = View.VISIBLE
+            btnToggleSuggestions.visibility   = View.VISIBLE
+            btnToggleSuggestions.setText(R.string.btn_others)
             suggestionsAdapter.submit(suggestions)
         }
     }
@@ -463,6 +588,9 @@ class PickBanActivity : AppCompatActivity() {
         selectedChampion = champ
         championAdapter.setSelected(champ.id)
         btnConfirm.isEnabled = true
+        // Mostra o LIMPAR sempre que há uma seleção ativa, dando ao treinador
+        // a opção explícita de descartar e voltar a procurar livremente.
+        btnClear.visibility = View.VISIBLE
 
         AnimatorSet().apply {
             playTogether(

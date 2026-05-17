@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    OnboardingActivity — tela de boas-vindas com ViewPager2 que apresenta:
+
+      1. Dados públicos (origem das informações)
+      2. Como os valores são gerados (IA balanceia atributos)
+      3. Lógica do pick & ban (mains + comps + counters)
+      4. Lógica da simulação (força do time + sinergia)
+      5. Carreira e gerenciamento (calendário, mercado, finanças)
+      6. Boas-vindas final (vamos começar!)
+
+    UI:
+      - "PULAR" no topo direito (vai direto para a última página ou login)
+      - ViewPager2 ocupa o miolo
+      - Indicador de páginas (dots) abaixo
+      - Botão "PRÓXIMO" / "COMEÇAR" no rodapé
+-->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/pick_ban_bg">
+
+    <!-- Botão PULAR (topo direito) -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_onboarding_skip"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:layout_marginEnd="12dp"
+        android:text="@string/onboarding_skip"
+        android:textSize="13sp"
+        android:textColor="@color/champion_gold"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- ViewPager2 com as páginas do onboarding -->
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/vp_onboarding"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="48dp"
+        app:layout_constraintTop_toBottomOf="@+id/btn_onboarding_skip"
+        app:layout_constraintBottom_toTopOf="@+id/ll_page_indicator" />
+
+    <!-- Indicador de páginas (dots dinâmicos, populados em código) -->
+    <LinearLayout
+        android:id="@+id/ll_page_indicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="24dp"
+        app:layout_constraintBottom_toTopOf="@+id/btn_onboarding_next"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Botão PRÓXIMO / COMEÇAR -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_onboarding_next"
+        android:layout_width="0dp"
+        android:layout_height="52dp"
+        android:layout_marginStart="32dp"
+        android:layout_marginEnd="32dp"
+        android:layout_marginBottom="32dp"
+        android:text="@string/onboarding_next"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        app:backgroundTint="@color/champion_gold"
+        android:textColor="@color/pick_ban_bg"
+        app:cornerRadius="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

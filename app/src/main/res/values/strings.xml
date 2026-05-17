@@ -47,6 +47,9 @@
     <string name="champ_banned">Campeão banido</string>
     <string name="search_champion">Buscar campeão…</string>
     <string name="confirm_selection">CONFIRMAR</string>
+    <string name="btn_clear">LIMPAR</string>
+    <string name="btn_others">OUTROS</string>
+    <string name="btn_back_to_suggestions">SUGESTÕES</string>
     <string name="skip_ia">IA ESCOLHE</string>
     <string name="champ_icon_desc">Ícone do campeão</string>
     <string name="pick_slot_desc">Slot de pick</string>
@@ -362,5 +365,45 @@
     <string name="badge_counter">COUNTER</string>
     <string name="badge_synergy">SINERGIA</string>
     <string name="badge_meta">META</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         ONBOARDING (tela de boas-vindas pré-login)
+         ═══════════════════════════════════════════════════════════════ -->
+    <string name="onboarding_skip">PULAR</string>
+    <string name="onboarding_next">PRÓXIMO</string>
+    <string name="onboarding_start">COMEÇAR</string>
+
+    <!-- Títulos de cada página (ordem importa, casa 1:1 com messages/icons) -->
+    <string-array name="onboarding_titles">
+        <item>Bem-vindo ao CBLOL Scout</item>
+        <item>Dados Públicos</item>
+        <item>Atributos Gerados por IA</item>
+        <item>Pick &amp; Ban Estratégico</item>
+        <item>Simulação Realista</item>
+        <item>Carreira de Técnico</item>
+        <item>Pronto para Começar?</item>
+    </string-array>
+
+    <!-- Mensagem de cada página (multilinha, casa 1:1 com titles/icons) -->
+    <string-array name="onboarding_messages">
+        <item>Você é o novo técnico de uma organização do CBLOL. Monte seu elenco, treine, faça transferências e leve seu time ao topo do campeonato brasileiro.</item>
+        <item>Todas as informações sobre times, jogadores e estatísticas vêm de fontes públicas: Liquipedia, Lolesports, Riot DataDragon e portais de e-sports. Nenhum dado privado ou proprietário é utilizado.</item>
+        <item>Como não existe um índice oficial público de “overall” dos jogadores, todos os valores (Lane, Teamfight, Criatividade, Consistência, Clutch) e estimativas de salário são gerados e balanceados por inteligência artificial a partir de estatísticas reais (KDA, CS/min, KP, GD15, etc).</item>
+        <item>No pick &amp; ban manual, sugestões contextuais aparecem com base em 4 motivos:\n• MAIN — campeão do pool do jogador\n• COMP — encaixa numa composição do time\n• COUNTER — responde aos picks inimigos\n• SINERGIA — preenche lacunas (CC, AP/AD, sustain)</item>
+        <item>A simulação combina: overall dos jogadores, sinergia da composição detectada, bônus por jogadores nos mains, vantagem do lado azul e fator aleatório. Cada mapa narra eventos em tempo real e pode ser visto ao vivo.</item>
+        <item>Gerencie orçamento semanal, salários mensais, contrato dos atletas, mercado de transferências e calendário do split. Cada decisão impacta o desempenho no campeonato.</item>
+        <item>Escolha um nome, selecione uma organização e comece sua carreira. Boa sorte, técnico!</item>
+    </string-array>
+
+    <!-- Ícones de cada página (emoji único, casa 1:1 com titles/messages) -->
+    <string-array name="onboarding_icons">
+        <item>🏆</item>
+        <item>📊</item>
+        <item>🤖</item>
+        <item>✨</item>
+        <item>⚡</item>
+        <item>💼</item>
+        <item>🚀</item>
+    </string-array>
 
 </resources>

@@ -21,6 +21,13 @@ import com.cblol.scout.util.PickSuggestionEngine
  * Cada item é um card com imagem, nome e um badge colorido indicando o
  * motivo principal da sugestão (MAIN/COMP/COUNTER/SYNERGY/META).
  *
+ * **Comportamento de toque**: tocar num card APENAS seleciona o campeão na
+ * grade — não confirma automaticamente. Isso permite que o treinador veja
+ * a seleção destacada e tenha a opção de:
+ *  - Clicar em CONFIRMAR para concluir o pick sugerido
+ *  - Escolher outro campeão da lista padrão (a seleção muda)
+ *  - Usar o botão LIMPAR para voltar à escolha livre
+ *
  * SOLID:
  * - **SRP**: cada ViewHolder só binda dados — decisões de cor/label moram em
  *   [badgeColorRes] e [badgeLabelRes] (mapeamentos declarativos).

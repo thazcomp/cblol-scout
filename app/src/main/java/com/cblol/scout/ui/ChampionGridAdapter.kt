@@ -150,6 +150,9 @@ class ChampionGridAdapter(
         notifyItemChanged(displayed.indexOfFirst { c -> c.id == id })
     }
 
+    /** Retorna a posição do campeão na lista filtrada (ou -1 se não visível). */
+    fun indexOf(id: String): Int = displayed.indexOfFirst { it.id == id }
+
     companion object {
         private const val SELECTED_ELEVATION = 12f
         private const val DEFAULT_ELEVATION  = 2f
