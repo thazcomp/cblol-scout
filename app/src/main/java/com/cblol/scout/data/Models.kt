@@ -81,8 +81,16 @@ data class AtributosDeriv(
 
 /**
  * Representa um campeão de LoL na tela de pick & ban.
- * imageUrl e splashUrl usam a Riot Data Dragon (versão 14.10.1).
- * Substitua a versão conforme o patch atual.
+ *
+ * `id` é o identificador interno usado nas referências do app (comps, champion
+ * pools, JSON de save). Não pode mudar sem migração de dados.
+ *
+ * `ddragonId` é o nome exato esperado pela API da Riot Data Dragon para
+ * compor a URL da imagem. Default = `id`, mas alguns campeões exigem grafia
+ * específica (ex: id=`Jarvaniv` → ddragonId=`JarvanIV`, id=`KhaZix` → `Khazix`,
+ * id=`Xinzhao` → `XinZhao`, id=`LeBlanc` → `Leblanc`, id=`Wukong` → `MonkeyKing`).
+ *
+ * `imageUrl` e `splashUrl` usam a Data Dragon (versão 14.10.1).
  */
 data class Champion(
     val id: String,
@@ -91,8 +99,9 @@ data class Champion(
     val roles: List<String>,
     val primaryRole: String,
     val tags: List<ChampionTag> = emptyList(),
-    val imageUrl: String = "https://ddragon.leagueoflegends.com/cdn/14.10.1/img/champion/$id.png",
-    val splashUrl: String = "https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${id}_0.jpg"
+    val ddragonId: String = id,
+    val imageUrl: String = "https://ddragon.leagueoflegends.com/cdn/14.10.1/img/champion/$ddragonId.png",
+    val splashUrl: String = "https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${ddragonId}_0.jpg"
 ) {
     /** Tags mais importantes para exibir no card (máx 3) */
     val primaryTags: List<ChampionTag> get() = tags.take(3)

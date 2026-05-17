@@ -23,7 +23,8 @@ object ChampionRepository {
     private fun champ(
         id: String,
         vararg roles: String,
-        tags: List<ChampionTag>
+        tags: List<ChampionTag>,
+        ddragonId: String = id
     ): Champion {
         val short = if (id.length > 8) id.take(7) + "…" else id
         return Champion(
@@ -32,7 +33,8 @@ object ChampionRepository {
             shortName   = short,
             roles       = roles.toList(),
             primaryRole = roles.first(),
-            tags        = tags
+            tags        = tags,
+            ddragonId   = ddragonId
         )
     }
 
@@ -139,13 +141,13 @@ object ChampionRepository {
         )),
         champ("Jarvaniv", "JNG", tags = listOf(
             FIGHTER, PHYSICAL_DAMAGE, ENGAGE, CROWD_CONTROL, ZONE_CONTROL, TEAMFIGHT, KNOCK_UP
-        )),
+        ), ddragonId = "JarvanIV"),
         champ("Kayn", "JNG", tags = listOf(
             ASSASSIN, FIGHTER, PHYSICAL_DAMAGE, MOBILITY, BURST, SUSTAINED_DPS, UNTARGETABLE, DIVE
         )),
         champ("KhaZix", "JNG", tags = listOf(
             ASSASSIN, PHYSICAL_DAMAGE, BURST, EXECUTE, INVISIBLE, MOBILITY, EARLY_GAME
-        )),
+        ), ddragonId = "Khazix"),
         champ("LeeSin", "JNG", tags = listOf(
             FIGHTER, PHYSICAL_DAMAGE, MOBILITY, CROWD_CONTROL, EARLY_GAME, DIVE, GAME_CHANGING_ULT
         )),
@@ -175,10 +177,10 @@ object ChampionRepository {
         )),
         champ("Wukong", "JNG", "TOP", tags = listOf(
             FIGHTER, PHYSICAL_DAMAGE, ENGAGE, CROWD_CONTROL, KNOCK_UP, TEAMFIGHT, INVISIBLE
-        )),
+        ), ddragonId = "MonkeyKing"),
         champ("Xinzhao", "JNG", tags = listOf(
             FIGHTER, PHYSICAL_DAMAGE, CROWD_CONTROL, EARLY_GAME, DIVE, ENGAGE, SUSTAINED_DPS
-        )),
+        ), ddragonId = "XinZhao"),
         champ("Zac", "JNG", tags = listOf(
             TANK, MAGIC_DAMAGE, ENGAGE, CROWD_CONTROL, TEAMFIGHT, KNOCK_UP, SUSTAIN
         )),
@@ -219,7 +221,7 @@ object ChampionRepository {
         )),
         champ("LeBlanc", "MID", tags = listOf(
             ASSASSIN, MAGE, MAGIC_DAMAGE, BURST, MOBILITY, CROWD_CONTROL, EARLY_GAME
-        )),
+        ), ddragonId = "Leblanc"),
         champ("Lissandra", "MID", "SUP", tags = listOf(
             MAGE, MAGIC_DAMAGE, CROWD_CONTROL, ENGAGE, TEAMFIGHT, REVIVE, ZONE_CONTROL
         )),
