@@ -29,7 +29,7 @@
     <LinearLayout
         android:id="@+id/ll_top_bar"
         android:layout_width="0dp"
-        android:layout_height="56dp"
+        android:layout_height="42dp"
         android:orientation="horizontal"
         android:background="@color/pick_ban_topbar"
         app:layout_constraintTop_toTopOf="parent"
@@ -44,8 +44,8 @@
             android:layout_weight="2"
             android:orientation="horizontal"
             android:gravity="start|center_vertical"
-            android:paddingStart="8dp"
-            android:paddingEnd="4dp">
+            android:paddingStart="6dp"
+            android:paddingEnd="2dp">
 
             <ImageView android:id="@+id/iv_blue_ban_1"
                 style="@style/BanSlot.Blue" />
@@ -78,7 +78,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textColor="@color/blue_side_accent"
-                    android:textSize="11sp"
+                    android:textSize="10sp"
                     android:textStyle="bold"
                     android:text="AZUL" />
 
@@ -87,14 +87,14 @@
                     android:layout_height="wrap_content"
                     android:text=" vs "
                     android:textColor="#99FFFFFF"
-                    android:textSize="10sp" />
+                    android:textSize="9sp" />
 
                 <TextView
                     android:id="@+id/tv_red_team_name"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textColor="@color/red_side_accent"
-                    android:textSize="11sp"
+                    android:textSize="10sp"
                     android:textStyle="bold"
                     android:text="VERM." />
             </LinearLayout>
@@ -111,7 +111,7 @@
                     android:layout_height="wrap_content"
                     android:text="Mapa 1"
                     android:textColor="#C9AA71"
-                    android:textSize="13sp"
+                    android:textSize="11sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.08" />
             </LinearLayout>
@@ -132,8 +132,8 @@
             android:layout_weight="2"
             android:orientation="horizontal"
             android:gravity="end|center_vertical"
-            android:paddingStart="4dp"
-            android:paddingEnd="8dp">
+            android:paddingStart="2dp"
+            android:paddingEnd="6dp">
 
             <ImageView android:id="@+id/iv_red_ban_1"
                 style="@style/BanSlot.Red" />
@@ -154,11 +154,11 @@
     <TextView
         android:id="@+id/tv_phase_label"
         android:layout_width="0dp"
-        android:layout_height="36dp"
+        android:layout_height="26dp"
         android:gravity="center"
         android:text="🔵 BANINDO"
         android:textColor="@android:color/white"
-        android:textSize="14sp"
+        android:textSize="12sp"
         android:textStyle="bold"
         android:letterSpacing="0.1"
         android:background="@color/pick_ban_phase_bg"
@@ -172,7 +172,7 @@
     <View
         android:id="@+id/view_blue_turn_indicator"
         android:layout_width="0dp"
-        android:layout_height="3dp"
+        android:layout_height="2dp"
         android:background="@color/blue_side_accent"
         android:visibility="visible"
         app:layout_constraintTop_toBottomOf="@id/tv_phase_label"
@@ -182,7 +182,7 @@
     <View
         android:id="@+id/view_red_turn_indicator"
         android:layout_width="0dp"
-        android:layout_height="3dp"
+        android:layout_height="2dp"
         android:background="@color/red_side_accent"
         android:visibility="invisible"
         app:layout_constraintTop_toBottomOf="@id/tv_phase_label"
@@ -197,12 +197,12 @@
     <LinearLayout
         android:id="@+id/ll_synergy_bars"
         android:layout_width="0dp"
-        android:layout_height="40dp"
+        android:layout_height="30dp"
         android:orientation="horizontal"
         android:background="#1A1A28"
         android:gravity="center_vertical"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp"
+        android:paddingStart="6dp"
+        android:paddingEnd="6dp"
         app:layout_constraintTop_toBottomOf="@id/view_red_turn_indicator"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -246,8 +246,8 @@
                 android:id="@+id/pb_blue_synergy"
                 style="@style/Widget.AppCompat.ProgressBar.Horizontal"
                 android:layout_width="match_parent"
-                android:layout_height="6dp"
-                android:layout_marginTop="3dp"
+                android:layout_height="4dp"
+                android:layout_marginTop="2dp"
                 android:progressTint="#3CBEFF"
                 android:progressBackgroundTint="#223CBEFF"
                 android:max="100"
@@ -295,8 +295,8 @@
                 android:id="@+id/pb_red_synergy"
                 style="@style/Widget.AppCompat.ProgressBar.Horizontal"
                 android:layout_width="match_parent"
-                android:layout_height="6dp"
-                android:layout_marginTop="3dp"
+                android:layout_height="4dp"
+                android:layout_marginTop="2dp"
                 android:progressTint="#E84057"
                 android:progressBackgroundTint="#22E84057"
                 android:max="100"
@@ -321,42 +321,42 @@
         <!-- ── PICKS LADO AZUL (5 slots verticais) ── -->
         <LinearLayout
             android:id="@+id/ll_blue_picks"
-            android:layout_width="80dp"
+            android:layout_width="66dp"
             android:layout_height="match_parent"
             android:orientation="vertical"
             android:background="@color/pick_ban_blue_side_bg"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp"
-            android:paddingStart="4dp"
-            android:paddingEnd="2dp">
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp"
+            android:paddingStart="3dp"
+            android:paddingEnd="1dp">
 
             <com.cblol.scout.ui.PickSlotView
                 android:id="@+id/psv_blue_1"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1"
-                android:layout_marginBottom="2dp" />
+                android:layout_marginBottom="1dp" />
 
             <com.cblol.scout.ui.PickSlotView
                 android:id="@+id/psv_blue_2"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1"
-                android:layout_marginBottom="2dp" />
+                android:layout_marginBottom="1dp" />
 
             <com.cblol.scout.ui.PickSlotView
                 android:id="@+id/psv_blue_3"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1"
-                android:layout_marginBottom="2dp" />
+                android:layout_marginBottom="1dp" />
 
             <com.cblol.scout.ui.PickSlotView
                 android:id="@+id/psv_blue_4"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1"
-                android:layout_marginBottom="2dp" />
+                android:layout_marginBottom="1dp" />
 
             <com.cblol.scout.ui.PickSlotView
                 android:id="@+id/psv_blue_5"
@@ -372,14 +372,14 @@
             android:layout_weight="1"
             android:orientation="vertical"
             android:background="@color/pick_ban_center_bg"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            android:paddingTop="6dp">
+            android:paddingStart="6dp"
+            android:paddingEnd="6dp"
+            android:paddingTop="4dp">
 
             <!-- Search -->
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
-                android:layout_height="44dp"
+                android:layout_height="38dp"
                 android:hint="@string/search_champion"
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense">
 
@@ -387,7 +387,7 @@
                     android:id="@+id/et_search_champion"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:textSize="13sp"
+                    android:textSize="12sp"
                     android:inputType="text"
                     android:imeOptions="actionSearch" />
             </com.google.android.material.textfield.TextInputLayout>
@@ -407,14 +407,14 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:visibility="gone"
-                android:layout_marginTop="4dp">
+                android:layout_marginTop="3dp">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/pb_suggestions_header"
                     android:textColor="@color/champion_gold"
-                    android:textSize="10sp"
+                    android:textSize="9sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.1"
                     android:layout_marginStart="2dp" />
@@ -431,9 +431,9 @@
             <!-- Filtros de Role -->
             <HorizontalScrollView
                 android:layout_width="match_parent"
-                android:layout_height="32dp"
+                android:layout_height="28dp"
                 android:scrollbars="none"
-                android:layout_marginTop="3dp">
+                android:layout_marginTop="2dp">
 
                 <com.google.android.material.chip.ChipGroup
                     android:id="@+id/cg_role_filter"
@@ -446,9 +446,9 @@
             <!-- Filtros de Tag -->
             <HorizontalScrollView
                 android:layout_width="match_parent"
-                android:layout_height="32dp"
+                android:layout_height="28dp"
                 android:scrollbars="none"
-                android:layout_marginTop="2dp">
+                android:layout_marginTop="1dp">
 
                 <com.google.android.material.chip.ChipGroup
                     android:id="@+id/cg_tag_filter"
@@ -465,49 +465,49 @@
                 android:layout_height="0dp"
                 android:layout_weight="1"
                 android:clipToPadding="false"
-                android:paddingTop="4dp"
-                android:paddingBottom="4dp" />
+                android:paddingTop="3dp"
+                android:paddingBottom="3dp" />
         </LinearLayout>
 
         <!-- ── PICKS LADO VERMELHO (5 slots verticais) ── -->
         <LinearLayout
             android:id="@+id/ll_red_picks"
-            android:layout_width="80dp"
+            android:layout_width="66dp"
             android:layout_height="match_parent"
             android:orientation="vertical"
             android:background="@color/pick_ban_red_side_bg"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp"
-            android:paddingStart="2dp"
-            android:paddingEnd="4dp">
+            android:paddingTop="3dp"
+            android:paddingBottom="3dp"
+            android:paddingStart="1dp"
+            android:paddingEnd="3dp">
 
             <com.cblol.scout.ui.PickSlotView
                 android:id="@+id/psv_red_1"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1"
-                android:layout_marginBottom="2dp" />
+                android:layout_marginBottom="1dp" />
 
             <com.cblol.scout.ui.PickSlotView
                 android:id="@+id/psv_red_2"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1"
-                android:layout_marginBottom="2dp" />
+                android:layout_marginBottom="1dp" />
 
             <com.cblol.scout.ui.PickSlotView
                 android:id="@+id/psv_red_3"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1"
-                android:layout_marginBottom="2dp" />
+                android:layout_marginBottom="1dp" />
 
             <com.cblol.scout.ui.PickSlotView
                 android:id="@+id/psv_red_4"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1"
-                android:layout_marginBottom="2dp" />
+                android:layout_marginBottom="1dp" />
 
             <com.cblol.scout.ui.PickSlotView
                 android:id="@+id/psv_red_5"
@@ -523,12 +523,12 @@
     <LinearLayout
         android:id="@+id/ll_bottom_actions"
         android:layout_width="0dp"
-        android:layout_height="56dp"
+        android:layout_height="44dp"
         android:orientation="horizontal"
         android:gravity="center"
         android:background="@color/pick_ban_topbar"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
+        android:paddingStart="10dp"
+        android:paddingEnd="10dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -536,29 +536,35 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_confirm_pick"
             android:layout_width="0dp"
-            android:layout_height="40dp"
+            android:layout_height="34dp"
             android:layout_weight="1"
-            android:layout_marginEnd="8dp"
+            android:layout_marginEnd="6dp"
             android:text="@string/confirm_selection"
-            android:textSize="13sp"
+            android:textSize="12sp"
             android:enabled="false"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
             app:backgroundTint="@color/champion_gold"
             android:textColor="@color/pick_ban_bg"
-            app:cornerRadius="6dp" />
+            app:cornerRadius="5dp" />
 
         <!-- Botão LIMPAR: descarta a seleção atual. -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_clear_selection"
             android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:layout_marginEnd="8dp"
+            android:layout_height="34dp"
+            android:layout_marginEnd="6dp"
             android:text="@string/btn_clear"
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:visibility="gone"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             app:strokeColor="@color/champion_gold"
             android:textColor="@color/champion_gold"
-            app:cornerRadius="6dp" />
+            app:cornerRadius="5dp" />
 
         <!-- Botão OUTROS: alterna entre mostrar a faixa de sugestões e
              esconder ela para o treinador ver a lista padrão sem distração.
@@ -566,27 +572,35 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_toggle_suggestions"
             android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:layout_marginEnd="8dp"
+            android:layout_height="34dp"
+            android:layout_marginEnd="6dp"
             android:text="@string/btn_others"
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:visibility="gone"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             app:strokeColor="@color/champion_gold"
             android:textColor="@color/champion_gold"
-            app:cornerRadius="6dp" />
+            app:cornerRadius="5dp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_skip"
             android:layout_width="wrap_content"
-            android:layout_height="40dp"
+            android:layout_height="34dp"
             android:text="@string/skip_ia"
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:visibility="gone"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             app:strokeColor="@color/champion_gold"
             android:textColor="@color/champion_gold"
-            app:cornerRadius="6dp" />
+            app:cornerRadius="5dp" />
     </LinearLayout>
 
     <!-- ═══ OVERLAY DE LOADING ════════════════════════════════════════ -->

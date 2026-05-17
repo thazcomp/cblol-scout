@@ -138,8 +138,8 @@
     </style>
 
     <style name="BanSlot">
-        <item name="android:layout_width">36dp</item>
-        <item name="android:layout_height">36dp</item>
+        <item name="android:layout_width">28dp</item>
+        <item name="android:layout_height">28dp</item>
         <item name="android:layout_marginEnd">2dp</item>
         <item name="android:scaleType">centerCrop</item>
         <item name="android:background">@color/champion_slot_bg</item>

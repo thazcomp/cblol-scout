@@ -4,22 +4,22 @@
     <!-- ═══════════════════════════════════════════════════════════════════
          PICK & BAN — dimensions
          ═══════════════════════════════════════════════════════════════════ -->
-    <dimen name="pickban_synergy_bars_height">40dp</dimen>
-    <dimen name="pickban_synergy_bar_height">6dp</dimen>
-    <dimen name="pickban_synergy_bar_margin_top">3dp</dimen>
-    <dimen name="pickban_synergy_padding">8dp</dimen>
-    <dimen name="pickban_synergy_inner_padding">6dp</dimen>
-    <dimen name="pickban_role_filter_height">32dp</dimen>
-    <dimen name="pickban_role_filter_margin_top">3dp</dimen>
-    <dimen name="pickban_tag_filter_height">32dp</dimen>
-    <dimen name="pickban_tag_filter_margin_top">2dp</dimen>
+    <dimen name="pickban_synergy_bars_height">30dp</dimen>
+    <dimen name="pickban_synergy_bar_height">4dp</dimen>
+    <dimen name="pickban_synergy_bar_margin_top">2dp</dimen>
+    <dimen name="pickban_synergy_padding">6dp</dimen>
+    <dimen name="pickban_synergy_inner_padding">4dp</dimen>
+    <dimen name="pickban_role_filter_height">28dp</dimen>
+    <dimen name="pickban_role_filter_margin_top">2dp</dimen>
+    <dimen name="pickban_tag_filter_height">28dp</dimen>
+    <dimen name="pickban_tag_filter_margin_top">1dp</dimen>
     <dimen name="pickban_grid_columns">7dp</dimen> <!-- usado como contagem, valor lido em código -->
 
     <!-- Pick & ban — texto -->
     <dimen name="pickban_label_text_size">10sp</dimen>
     <dimen name="pickban_value_text_size">10sp</dimen>
-    <dimen name="pickban_role_chip_text_size">11sp</dimen>
-    <dimen name="pickban_tag_chip_text_size">10sp</dimen>
+    <dimen name="pickban_role_chip_text_size">10sp</dimen>
+    <dimen name="pickban_tag_chip_text_size">9sp</dimen>
 
     <!-- ═══════════════════════════════════════════════════════════════════
          SIMULAÇÃO — feed
