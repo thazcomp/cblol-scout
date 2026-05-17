@@ -1,5 +1,6 @@
 package com.cblol.scout.ui
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
@@ -8,6 +9,8 @@ import androidx.appcompat.app.AppCompatActivity
 import com.cblol.scout.R
 import com.cblol.scout.databinding.ActivityLoginBinding
 import com.cblol.scout.game.GameRepository
+import com.cblol.scout.ui.OnboardingActivity.Companion.KEY_ONBOARDED
+import com.cblol.scout.ui.OnboardingActivity.Companion.PREFS_NAME
 
 /**
  * Tela de login simples (sem backend real).

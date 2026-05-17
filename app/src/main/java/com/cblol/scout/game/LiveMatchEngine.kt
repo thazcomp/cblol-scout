@@ -184,7 +184,13 @@ object LiveMatchEngine {
 
         events.add(MatchEvent.GameStart(gameNumber))
         events.add(MatchEvent.PhaseAnnouncement("Mapa $gameNumber · Pick & Ban"))
-        events.addAll(generatePickBan(gameNumber, homeRoster, awayRoster, plan))
+
+        // Gera os picks e bans e CAPTURA o mapa playerName → campeão pickado.
+        // Esse mapa é usado em todos os eventos subsequentes (kills, anuncios)
+        // para que o campeão de cada jogador combine com o que foi pickado.
+        val pickBanResult = generatePickBanWithMap(gameNumber, homeRoster, awayRoster, plan)
+        events.addAll(pickBanResult.events)
+        val playerChampions = pickBanResult.playerChampions
 
         events.add(MatchEvent.PhaseAnnouncement("Início do mapa $gameNumber"))
 
@@ -204,13 +210,14 @@ object LiveMatchEngine {
 
         val timed = mutableListOf<TimedEvent>()
 
-        // Distribui kills no tempo
+        // Distribui kills no tempo, usando o campeão REAL pickado por cada jogador
         repeat(homeKills) {
             timed += kill(
                 t = (3..(duration - 1)).random(),
                 killerSide = Side.HOME,
                 roster = homeRoster,
-                victimRoster = awayRoster
+                victimRoster = awayRoster,
+                playerChampions = playerChampions
             )
         }
         repeat(awayKills) {
@@ -218,7 +225,8 @@ object LiveMatchEngine {
                 t = (3..(duration - 1)).random(),
                 killerSide = Side.AWAY,
                 roster = awayRoster,
-                victimRoster = homeRoster
+                victimRoster = homeRoster,
+                playerChampions = playerChampions
             )
         }
 
@@ -305,15 +313,44 @@ object LiveMatchEngine {
         return GameOutcome(events, homeWonGame, homeKills to awayKills, duration)
     }
 
-    /** Pick & Ban: 5 bans por lado intercalados, depois 5 picks por lado intercalados (snake). */
+    /**
+     * Mantida por compatibilidade com testes/código legado.
+     * Para uso interno prefira [generatePickBanWithMap] que também
+     * devolve o mapa de campeões pickados por jogador.
+     */
     internal fun generatePickBan(
         gameNumber: Int,
         homeRoster: List<Player>,
         awayRoster: List<Player>,
         plan: PickBanPlan? = null
-    ): List<MatchEvent> {
+    ): List<MatchEvent> =
+        generatePickBanWithMap(gameNumber, homeRoster, awayRoster, plan).events
+
+    /**
+     * Resultado interno do pick & ban: eventos para o feed + mapa de
+     * `playerName → campeão pickado` para uso nos eventos do jogo (kills, etc).
+     */
+    private data class PickBanResult(
+        val events: List<MatchEvent>,
+        val playerChampions: Map<String, String>
+    )
+
+    /**
+     * Pick & Ban: 5 bans por lado intercalados, depois 5 picks alternados (snake).
+     * Devolve também o mapa de campeão pickado por cada jogador para que eventos
+     * subsequentes (kills, mortes) usem os campeões corretos do draft, e não
+     * sorteios aleatórios baseados em role.
+     */
+    private fun generatePickBanWithMap(
+        gameNumber: Int,
+        homeRoster: List<Player>,
+        awayRoster: List<Player>,
+        plan: PickBanPlan? = null
+    ): PickBanResult {
         val out = mutableListOf<MatchEvent>()
         val used = mutableSetOf<String>()
+        // playerName → campeão pickado (construído a cada pick)
+        val playerChampions = mutableMapOf<String, String>()
 
         // Bans: usa os do plano se disponíveis (blueBans = home, redBans = away), senão random
         fun banFromPlanOrRandom(side: Side, index: Int): MatchEvent.Ban {
@@ -371,6 +408,7 @@ object LiveMatchEngine {
                 c
             }
             pickedList += nextPlayer
+            playerChampions[nextPlayer.nome_jogo] = champ
             out += MatchEvent.Pick(
                 gameNumber = gameNumber,
                 side = side,
@@ -379,7 +417,7 @@ object LiveMatchEngine {
                 champion = champ
             )
         }
-        return out
+        return PickBanResult(out, playerChampions)
     }
 
     private fun sideByOdds(homeProb: Double): Side =
@@ -392,17 +430,26 @@ object LiveMatchEngine {
     private fun fmt(t: Int): String = "%02d:%02d".format(t, Random.nextInt(0, 60))
 
     private fun kill(
-        t: Int, killerSide: Side, roster: List<Player>, victimRoster: List<Player>
+        t: Int,
+        killerSide: Side,
+        roster: List<Player>,
+        victimRoster: List<Player>,
+        playerChampions: Map<String, String>
     ): TimedEvent {
         val killer = roster.random()
         val victim = victimRoster.random()
+        // Usa o campeão REAL pickado por cada jogador no draft;
+        // fallback para sorteio por role apenas se o mapa não tem entrada
+        // (não deveria acontecer, mas blinda contra inconsistências).
+        val killerChamp = playerChampions[killer.nome_jogo] ?: pickChampForRole(killer.role)
+        val victimChamp = playerChampions[victim.nome_jogo] ?: pickChampForRole(victim.role)
         return TimedEvent(t, 0, MatchEvent.Kill(
             time = fmt(t),
             killerSide = killerSide,
             killerName = killer.nome_jogo,
-            killerChamp = pickChampForRole(killer.role),
+            killerChamp = killerChamp,
             victimName = victim.nome_jogo,
-            victimChamp = pickChampForRole(victim.role)
+            victimChamp = victimChamp
         ))
     }
 

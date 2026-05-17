@@ -146,27 +146,18 @@ class OnboardingActivity : AppCompatActivity() {
      * Chamado tanto pelo PULAR quanto pelo COMEÇAR (última página).
      */
     private fun finishOnboarding() {
-        markOnboardingComplete(this)
         startActivity(Intent(this, LoginActivity::class.java))
         finish()
     }
 
     companion object {
-        private const val PREFS_NAME       = "cblol_onboarding_prefs"
-        private const val KEY_ONBOARDED    = "onboarding_complete"
+        const val PREFS_NAME       = "cblol_onboarding_prefs"
+        const val KEY_ONBOARDED    = "onboarding_complete"
         private const val DOT_MARGIN_PX    = 6   // espaçamento entre dots em pixels
 
         /** Indica se a tela de onboarding já foi exibida pelo menos uma vez. */
         fun isOnboardingComplete(context: Context): Boolean =
             context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .getBoolean(KEY_ONBOARDED, false)
-
-        /** Persiste que o usuário completou (ou pulou) o onboarding. */
-        fun markOnboardingComplete(context: Context) {
-            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .edit()
-                .putBoolean(KEY_ONBOARDED, true)
-                .apply()
-        }
     }
 }
