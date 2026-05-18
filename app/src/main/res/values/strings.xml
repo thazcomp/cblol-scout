@@ -367,6 +367,40 @@
     <string name="badge_meta">META</string>
 
     <!-- ════════════════════════════════════════════════════════════════
+         PERFIL DO TÉCNICO
+         ═══════════════════════════════════════════════════════════════ -->
+    <string name="coach_default_avatar">👔</string>
+    <string name="coach_dialog_title">Perfil do Técnico</string>
+    <string name="coach_subtitle">%1$s · Lv %2$d</string>
+    <string name="coach_xp_label">EXPERIÊNCIA</string>
+    <string name="coach_xp_format">%1$d / %2$d XP</string>
+    <string name="coach_xp_max_level">Lv MAX (%1$d XP)</string>
+    <string name="coach_section_attributes">✨ ATRIBUTOS</string>
+    <string name="coach_section_stats">📊 ESTATÍSTICAS</string>
+    <string name="coach_attr_leadership">Liderança</string>
+    <string name="coach_attr_drafting">Drafting</string>
+    <string name="coach_attr_financial">Gestão Financeira</string>
+    <string name="coach_attr_talent">Olho para Talentos</string>
+    <string name="coach_attr_reputation">Reputação</string>
+    <string name="coach_stat_maps">Mapas: %1$dV / %2$dD (%3$d%%)</string>
+    <string name="coach_stat_series">Séries: %1$dV / %2$dD</string>
+    <string name="coach_stat_drafts">Drafts manuais: %1$d</string>
+    <string name="coach_stat_hires">Contratações: %1$d</string>
+    <string name="coach_stat_sells">Vendas: %1$d</string>
+    <string name="hub_coach_profile_button">👔 Meu Perfil</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         ATRIBUIÇÃO DE ROTAS (RoleAssignmentActivity)
+         ═══════════════════════════════════════════════════════════════ -->
+    <string name="role_assign_title">ESTRATÉGIA DE ROTAS</string>
+    <string name="role_assign_subtitle">DEFINA AS ROTAS DE CADA CAMPEÃO</string>
+    <string name="role_assign_confirm">CONFIRMAR E ENTRAR NO RIFT</string>
+    <string name="role_wrong_warning">⚠ ROTA ERRADA — −5 lane phase, −1 outros stats</string>
+    <string name="role_vs">vs</string>
+    <string name="role_opponent_in_lane">Campeão inimigo na rota</string>
+    <string name="role_assign_duplicate">Você atribuiu o mesmo jogador a mais de uma rota. Cada campeão deve ter um jogador diferente.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
          ONBOARDING (tela de boas-vindas pré-login)
          ═══════════════════════════════════════════════════════════════ -->
     <string name="onboarding_skip">PULAR</string>

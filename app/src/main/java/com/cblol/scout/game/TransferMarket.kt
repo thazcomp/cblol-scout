@@ -2,6 +2,7 @@ package com.cblol.scout.game
 
 import android.content.Context
 import com.cblol.scout.data.Player
+import com.cblol.scout.domain.usecase.CoachProgressionService
 
 /**
  * Lógica do mercado de transferências.
@@ -56,6 +57,7 @@ object TransferMarket {
             ov.copy(newTeamId = newTeam.id, transferredOn = gs.currentDate, titular = false)
         }
         gs.budget += price
+        CoachProgressionService.recordSell(gs.coachProfile, price)
         GameRepository.log(
             "TRANSFER",
             "${player.nome_jogo} vendido para ${newTeam.nome} por R$ ${"%,d".format(price)}"
@@ -83,6 +85,7 @@ object TransferMarket {
             ov.copy(newTeamId = gs.managerTeamId, transferredOn = gs.currentDate, titular = false)
         }
         gs.budget -= price
+        CoachProgressionService.recordHire(gs.coachProfile, price)
         GameRepository.log(
             "TRANSFER",
             "${player.nome_jogo} contratado por R$ ${"%,d".format(price)}"
@@ -117,6 +120,7 @@ object TransferMarket {
         GameRepository.updateOverride(playerId) { ov ->
             ov.copy(newSalary = newMonthlySalary, newContractEnd = newEndDate)
         }
+        CoachProgressionService.recordRenew(gs.coachProfile)
         GameRepository.log(
             "CONTRACT",
             "${player.nome_jogo} renovou até $newEndDate por R$ ${"%,d".format(newMonthlySalary)}/mês"

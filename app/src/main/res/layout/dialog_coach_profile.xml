@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Layout do dialog de perfil do técnico (CoachProfileDialog).
+
+    Estrutura:
+      ┌─────────────────────────────────────┐
+      │  👔  Nome do Técnico                │
+      │      Título · Lv 5                  │
+      │  ──────────────────────────────     │
+      │  XP: 1.230 / 1.600 ████████░░       │
+      │  ──────────────────────────────     │
+      │  ATRIBUTOS                          │
+      │   Liderança         ███████░░  72   │
+      │   Drafting          █████░░░░  55   │
+      │   Gestão Financ.    ████████░  78   │
+      │   Olho p/ Talentos  ██████░░░  62   │
+      │   Reputação         ███████░░  70   │
+      │  ──────────────────────────────     │
+      │  ESTATÍSTICAS                       │
+      │  Mapas:  12V / 5D  (70%)            │
+      │  Séries: 4V / 2D                    │
+      │  Drafts manuais:  6                 │
+      │  Contratações:  3                   │
+      │  Vendas:  2                         │
+      └─────────────────────────────────────┘
+-->
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="8dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- ═══ HEADER: avatar emoji + nome + título + level ═══ -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="8dp">
+
+            <TextView
+                android:id="@+id/tv_coach_avatar"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:text="@string/coach_default_avatar"
+                android:textSize="40sp"
+                android:gravity="center"
+                android:background="@color/champion_slot_bg" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:layout_marginStart="12dp">
+
+                <TextView
+                    android:id="@+id/tv_coach_name"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/champion_gold"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/tv_coach_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/color_on_surface_variant"
+                    android:textSize="13sp"
+                    android:layout_marginTop="2dp"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ═══ XP / PROGRESSO PARA O PRÓXIMO LEVEL ═══ -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="8dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/coach_xp_label"
+                    android:textColor="@color/color_on_surface_variant"
+                    android:textSize="11sp"
+                    android:letterSpacing="0.08" />
+
+                <TextView
+                    android:id="@+id/tv_coach_xp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/champion_gold"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <ProgressBar
+                android:id="@+id/pb_coach_xp"
+                style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+                android:layout_width="match_parent"
+                android:layout_height="8dp"
+                android:layout_marginTop="4dp"
+                android:max="100"
+                android:progress="0"
+                android:progressTint="@color/champion_gold"
+                android:progressBackgroundTint="#33C9AA71" />
+        </LinearLayout>
+
+        <!-- ═══ ATRIBUTOS (5 barras) ═══ -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/coach_section_attributes"
+            android:textColor="@color/champion_gold"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.1"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="4dp" />
+
+        <include
+            android:id="@+id/attr_leadership"
+            layout="@layout/item_coach_attribute" />
+        <include
+            android:id="@+id/attr_drafting"
+            layout="@layout/item_coach_attribute" />
+        <include
+            android:id="@+id/attr_financial"
+            layout="@layout/item_coach_attribute" />
+        <include
+            android:id="@+id/attr_talent"
+            layout="@layout/item_coach_attribute" />
+        <include
+            android:id="@+id/attr_reputation"
+            layout="@layout/item_coach_attribute" />
+
+        <!-- ═══ ESTATÍSTICAS CRUAS ═══ -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/coach_section_stats"
+            android:textColor="@color/champion_gold"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.1"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="4dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="8dp">
+
+            <TextView
+                android:id="@+id/tv_coach_stat_maps"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/color_on_surface"
+                android:textSize="13sp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp" />
+
+            <TextView
+                android:id="@+id/tv_coach_stat_series"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/color_on_surface"
+                android:textSize="13sp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp" />
+
+            <TextView
+                android:id="@+id/tv_coach_stat_drafts"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/color_on_surface"
+                android:textSize="13sp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp" />
+
+            <TextView
+                android:id="@+id/tv_coach_stat_hires"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/color_on_surface"
+                android:textSize="13sp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp" />
+
+            <TextView
+                android:id="@+id/tv_coach_stat_sells"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/color_on_surface"
+                android:textSize="13sp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

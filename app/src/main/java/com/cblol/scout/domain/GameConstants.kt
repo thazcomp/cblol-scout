@@ -115,6 +115,47 @@ object GameConstants {
          * pontos de força, equivalente a quase um Wombo Combo (Tier S).
          */
         const val CHAMP_POOL_MAIN_BONUS = 3
+
+        /**
+         * Penalidade de força aplicada quando um jogador joga fora da sua
+         * role nativa. Aplicada uma vez por jogador desalinhado, reduzindo
+         * o overall efetivo do time na simulação.
+         */
+        const val WRONG_ROLE_PENALTY = 5
+    }
+
+    /**
+     * Pontos de XP concedidos ao perfil do técnico por cada evento.
+     * O level cresce com curva quadrática via [Coach.LEVEL_XP_FACTOR].
+     */
+    object CoachXp {
+        const val WIN_MAP            = 50    // ganhar 1 mapa
+        const val LOSE_MAP            = 10    // mesmo perdendo, ganha um pouco
+        const val WIN_SERIES         = 150   // ganhar a série BO3
+        const val LOSE_SERIES        = 30
+        const val MANUAL_PICK_BAN    = 25    // por conduzir um draft manual
+        const val HIRE_PLAYER        = 40
+        const val SELL_PLAYER        = 20
+        const val RENEW_CONTRACT     = 30
+        const val PICK_PERFECT_DRAFT = 75    // bonus quando todos pegam main
+    }
+
+    /** Curva de progressão do técnico. */
+    object Coach {
+        /**
+         * Fator usado na fórmula `xpForLevel = (level^2) * LEVEL_XP_FACTOR`.
+         * Com fator 100: level 2 = 400 XP, level 3 = 900 XP, level 10 = 10.000 XP.
+         */
+        const val LEVEL_XP_FACTOR = 100
+
+        /** Level máximo alcançável pelo técnico. */
+        const val MAX_LEVEL = 30
+
+        /** Atributo mínimo e máximo (0-99 estilo Football Manager). */
+        const val ATTR_MIN = 1
+        const val ATTR_MAX = 99
+        /** Atributo base (level 0, sem histórico). */
+        const val ATTR_BASE = 35
     }
 
     /** Configuração do calendário. */

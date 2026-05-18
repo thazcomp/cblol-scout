@@ -118,9 +118,24 @@ class ManagerHubActivity : AppCompatActivity() {
         binding.tvSquadInfo.text = getString(R.string.hub_squad_info, state.rosterSize, state.starterCount)
 
         renderNextMatch(state)
+        renderCoachSummary(state.managerName)
 
         binding.recyclerLog.layoutManager = LinearLayoutManager(this)
         binding.recyclerLog.adapter = LogAdapter(state.log)
+    }
+
+    /**
+     * Atualiza o card resumo do técnico no Hub (nome + título · Lv N).
+     * O card abre o [CoachProfileDialog] completo ao ser tocado.
+     */
+    private fun renderCoachSummary(managerName: String) {
+        val tvName     = findViewById<android.widget.TextView>(R.id.tv_hub_coach_name)
+        val tvSubtitle = findViewById<android.widget.TextView>(R.id.tv_hub_coach_subtitle)
+        val gs         = GameRepository.current()
+        val stats      = com.cblol.scout.domain.usecase.CoachProgressionService
+                            .compute(gs.coachProfile, managerName)
+        tvName.text     = managerName
+        tvSubtitle.text = getString(R.string.coach_subtitle, stats.title, stats.level)
     }
 
     private fun renderNextMatch(state: HubState) {
@@ -145,6 +160,10 @@ class ManagerHubActivity : AppCompatActivity() {
         binding.cardMarket.setOnClickListener     { startActivity(Intent(this, TransferMarketActivity::class.java)) }
         binding.cardSchedule.setOnClickListener   { startActivity(Intent(this, ScheduleActivity::class.java)) }
         binding.cardStandings.setOnClickListener  { startActivity(Intent(this, StandingsActivity::class.java)) }
+        findViewById<View>(R.id.card_coach_profile).setOnClickListener {
+            val gs = GameRepository.current()
+            CoachProfileDialog.show(this, gs.coachProfile, gs.managerName)
+        }
         binding.btnQuit.setOnClickListener        { confirmQuit() }
     }
 

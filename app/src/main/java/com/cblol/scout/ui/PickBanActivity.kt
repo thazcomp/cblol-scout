@@ -35,6 +35,7 @@ import com.cblol.scout.data.PickBanPhase
 import com.cblol.scout.data.PickBanState
 import com.cblol.scout.data.Player
 import com.cblol.scout.domain.GameConstants
+import com.cblol.scout.domain.usecase.CoachProgressionService
 import com.cblol.scout.game.GameRepository
 import com.cblol.scout.util.ChampionRepository
 import com.cblol.scout.util.CompositionRepository
@@ -789,6 +790,7 @@ class PickBanActivity : AppCompatActivity() {
 
     private fun finishPickBan() {
         cancelAiRunnable()
+        registerPickBanXp()
         setResult(RESULT_OK, Intent().apply {
             putStringArrayListExtra(RESULT_BLUE_PICKS, ArrayList(state.bluePicks.map { it.id }))
             putStringArrayListExtra(RESULT_RED_PICKS,  ArrayList(state.redPicks.map  { it.id }))
@@ -798,6 +800,24 @@ class PickBanActivity : AppCompatActivity() {
             putExtra(EXTRA_MAP_NUMBER, mapNumber)
         })
         finish()
+    }
+
+    /**
+     * Concede XP ao técnico por conduzir o pick & ban manual.
+     * Bônus extra (PICK_PERFECT_DRAFT) quando TODOS os 5 jogadores titulares
+     * pickaram um dos seus mains — reconhecendo um draft "perfeito".
+     */
+    private fun registerPickBanXp() {
+        val gs = GameRepository.current()
+        val myPickIds = (if (state.playerIsBlue) state.bluePicks else state.redPicks).map { it.id }
+        val allOnMains = playerStarters.size in 1..myPickIds.size && playerStarters.all { player ->
+            // Defensivo: championPool pode estar nulo (Gson). Helper interno trataria,
+            // mas como aqui o roster vem do GameRepository após attachAll, sempre tem pool.
+            val pool = runCatching { player.championPool }.getOrNull().orEmpty()
+            myPickIds.any { picked -> pool.any { it.equals(picked, ignoreCase = true) } }
+        }
+        CoachProgressionService.recordManualPickBan(gs.coachProfile, allOnMains)
+        GameRepository.save(applicationContext)
     }
 
     companion object {

@@ -19,6 +19,8 @@ import androidx.core.content.ContextCompat
 import com.cblol.scout.R
 import com.cblol.scout.databinding.ActivityMatchResultBinding
 import com.cblol.scout.domain.GameConstants
+import com.cblol.scout.domain.usecase.CoachProgressionService
+import com.cblol.scout.game.GameRepository
 import com.cblol.scout.util.TeamColors
 
 /**
@@ -45,11 +47,36 @@ class MatchResultActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         val data = MatchResultData.fromIntent(intent)
+        awardCoachXp(data)
         renderHeader(data)
         renderStats(data)
         renderPrize(data)
         setupContinueButton(data)
         runEntranceAnimations(data)
+    }
+
+    /**
+     * Registra XP no perfil do técnico quando a partida é do time do jogador.
+     *
+     * - Sempre concede XP de mapa (vitória ou derrota).
+     * - Se a série terminou, concede XP de série também.
+     * - Salva o estado para o XP persistir entre sessões.
+     *
+     * Como essa Activity é reaberta a cada mapa, a chamada por mapa
+     * acontece exatamente uma vez por partida.
+     */
+    private fun awardCoachXp(data: MatchResultData) {
+        if (!data.isMyMatch) return
+        val gs = GameRepository.current()
+        CoachProgressionService.recordMapResult(gs.coachProfile, data.playerWon)
+        if (data.seriesFinished) {
+            // Para série, considera vitória se o jogador tem mais mapas no placar
+            val playerWonSeries =
+                (gs.managerTeamId == data.homeId && data.homeScore > data.awayScore) ||
+                (gs.managerTeamId == data.awayId && data.awayScore > data.homeScore)
+            CoachProgressionService.recordSeriesResult(gs.coachProfile, playerWonSeries)
+        }
+        GameRepository.save(applicationContext)
     }
 
     @Suppress("OVERRIDE_DEPRECATION")

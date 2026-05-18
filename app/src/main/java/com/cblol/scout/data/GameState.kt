@@ -22,7 +22,13 @@ data class GameState(
      * Não precisa ser persistido entre sessões (série sempre recomeça do mapa 1
      * se o app for fechado), mas fica aqui para consistência com o Gson.
      */
-    var seriesState: MutableMap<String, SeriesState> = mutableMapOf()
+    var seriesState: MutableMap<String, SeriesState> = mutableMapOf(),
+
+    /**
+     * Perfil acumulativo do técnico — level, XP, estatísticas de carreira.
+     * Mantém o progresso do treinador ao longo do split.
+     */
+    var coachProfile: CoachProfile = CoachProfile()
 )
 
 /**
@@ -80,8 +86,40 @@ data class PickBanPlan(
     val bluePicks: List<String>,
     val redPicks: List<String>,
     val blueBans: List<String>,
-    val redBans: List<String>
+    val redBans: List<String>,
+    /**
+     * Atribuição de campeões a jogadores e roles do lado do jogador.
+     * Permite que o treinador remaneje quem joga em qual rota após o draft.
+     *
+     * Se vazio, o engine assume que cada jogador joga seu próprio campeão na
+     * sua role natural (fluxo clássico). Se preenchido, o engine usa
+     * estas atribuições para gerar eventos e calcular penalidades de
+     * "rota errada" na simulação.
+     */
+    val roleAssignments: List<RoleAssignment> = emptyList()
 )
+
+/**
+ * Atribuição de um campeão pickado a um jogador e uma role específica.
+ *
+ * Exemplo: jogador "Robo" (TOP nato) pode ser atribuído a "Akshan" jogando MID.
+ * Como Robo é TOP de origem, isso conta como rota errada — a simulação aplica
+ * penalidade em lane phase, dano e outros stats.
+ *
+ * @property championId id do campeão pickado (case do app, ex: "KhaZix")
+ * @property playerName nome do jogador que vai jogar esse campeão
+ * @property assignedRole role onde ele vai jogar (TOP/JNG/MID/ADC/SUP)
+ * @property naturalRole role nativa do jogador no roster
+ */
+data class RoleAssignment(
+    val championId: String,
+    val playerName: String,
+    val assignedRole: String,
+    val naturalRole: String
+) {
+    /** Verdadeiro quando o jogador está jogando fora da sua role nativa. */
+    val isWrongRole: Boolean get() = assignedRole != naturalRole
+}
 
 /**
  * Linha da classificação.
@@ -97,6 +135,50 @@ data class Standing(
     val mapDiff: Int get() = mapsWon - mapsLost
     val games: Int  get() = wins + losses
 }
+
+/**
+ * Perfil do técnico com progressão ao longo da carreira.
+ *
+ * **Level e XP**: o técnico ganha XP por várias ações (ver `domain.CoachXp`).
+ * O level é derivado do XP via curva quadrática simples — cada level pede
+ * `(level^2) * 100` XP total para alcançar.
+ *
+ * **Atributos**: refletem o estilo de jogo do treinador, calculados a partir
+ * das estatísticas acumuladas. Cada atributo é normalizado para 0-99.
+ *
+ * **Título**: derivado do level, dando um nome em PT-BR ao estágio do técnico
+ * ("Iniciante" → "Veterano" → "Lendário").
+ *
+ * O perfil é persistido junto com o `GameState` no save.
+ */
+data class CoachProfile(
+    /** XP acumulado em toda a carreira. */
+    var xp: Int = 0,
+
+    // ── Estatísticas brutas (incrementadas pelos eventos) ──
+    /** Mapas vencidos no split atual. */
+    var mapsWon: Int = 0,
+    /** Mapas perdidos no split atual. */
+    var mapsLost: Int = 0,
+    /** Séries BO3 vencidas. */
+    var seriesWon: Int = 0,
+    /** Séries BO3 perdidas. */
+    var seriesLost: Int = 0,
+    /** Pick & bans manuais conduzidos pelo treinador (não auto-simulados). */
+    var manualPickBansDone: Int = 0,
+    /** Jogadores contratados via mercado. */
+    var playersHired: Int = 0,
+    /** Jogadores vendidos via mercado. */
+    var playersSold: Int = 0,
+    /** Contratos renegociados com sucesso. */
+    var contractsRenewed: Int = 0,
+    /** Soma de R$ gasto em transferências durante a carreira. */
+    var totalSpent: Long = 0L,
+    /** Soma de R$ recebido em transferências durante a carreira. */
+    var totalEarned: Long = 0L,
+    /** Reputação (0-100) — sobe com vitórias e desce com derrotas pesadas. */
+    var reputation: Int = 50
+)
 
 /**
  * Eventos do log do jogo.

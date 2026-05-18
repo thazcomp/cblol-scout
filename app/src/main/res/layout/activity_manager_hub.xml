@@ -223,6 +223,44 @@
                             android:textColor="@color/color_on_surface"/>
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
+
+                <!-- Card MEU PERFIL: ocupa o GridLayout inteiro (colSpan=2) para virar uma
+                     linha própria abaixo dos 4 cards quadrados. Layout horizontal com avatar
+                     à esquerda, nome+título+level no centro, chevron à direita. -->
+                <androidx.cardview.widget.CardView android:id="@+id/card_coach_profile"
+                    android:layout_width="0dp"
+                    android:layout_columnSpan="2"
+                    android:layout_columnWeight="1"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="4dp"
+                    android:foreground="?attr/selectableItemBackground" android:clickable="true"
+                    android:focusable="true" app:cardCornerRadius="2dp" app:cardElevation="0dp"
+                    app:strokeColor="@color/color_outline_gold" app:strokeWidth="1dp"
+                    app:cardBackgroundColor="@color/color_surface">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:gravity="center_vertical" android:padding="12dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/coach_default_avatar" android:textSize="28sp"
+                            android:layout_marginEnd="12dp"/>
+                        <LinearLayout android:layout_width="0dp" android:layout_weight="1"
+                            android:layout_height="wrap_content" android:orientation="vertical">
+                            <TextView android:id="@+id/tv_hub_coach_name"
+                                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:textSize="15sp" android:fontFamily="sans-serif-medium"
+                                android:textColor="@color/color_on_surface"
+                                android:maxLines="1" android:ellipsize="end"/>
+                            <TextView android:id="@+id/tv_hub_coach_subtitle"
+                                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:textSize="12sp"
+                                android:textColor="@color/champion_gold"
+                                android:layout_marginTop="2dp"/>
+                        </LinearLayout>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="›" android:textSize="24sp"
+                            android:textColor="@color/color_on_surface_variant"
+                            android:layout_marginStart="8dp"/>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
             </GridLayout>
 
             <!-- Log -->
