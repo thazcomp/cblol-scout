@@ -34,8 +34,25 @@ object GameRepository {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val json = prefs.getString(KEY_STATE, null) ?: return null
         return runCatching { gson.fromJson(json, GameState::class.java) }
+            .map { migrateLoaded(it) }
             .onSuccess { state = it }
             .getOrNull()
+    }
+
+    /**
+     * Aplica migrações defensivas em carreiras salvas antes de campos novos
+     * existirem. O Gson não respeita default values do Kotlin quando o JSON tem
+     * o campo como `null` (ou não tem o campo, dependendo da versão), então
+     * precisamos blindar campos opcionais aqui.
+     */
+    private fun migrateLoaded(gs: GameState): GameState {
+        // coachProfile foi adicionado em uma versão posterior — saves antigos
+        // não têm esse campo no JSON; Gson o deixa null mesmo com default value.
+        @Suppress("SENSELESS_COMPARISON")
+        if (gs.coachProfile == null) {
+            gs.coachProfile = CoachProfile()
+        }
+        return gs
     }
 
     fun save(context: Context, gs: GameState? = null) {

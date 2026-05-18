@@ -77,7 +77,13 @@
         <activity
             android:name=".ui.PickBanRouterActivity"
             android:exported="false"
-            android:theme="@style/Theme.CBLOLScout.Translucent" />
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden" />
+
+        <activity
+            android:name=".ui.RoleAssignmentActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden" />
 
         <activity
             android:name=".ui.MatchResultActivity"

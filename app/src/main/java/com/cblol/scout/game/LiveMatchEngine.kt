@@ -36,12 +36,37 @@ object LiveMatchEngine {
         val awayRoster = startersOrTopFive(GameRepository.rosterOf(context, match.awayTeamId))
         val plan       = if (match.pickBanPlan?.mapNumber == gameNumber) match.pickBanPlan else null
 
-        // Calcula bônus de sinergia de composição para cada lado
-        val homePicks  = plan?.bluePicks ?: emptyList()
-        val awayPicks  = plan?.redPicks  ?: emptyList()
-        val homeBans   = plan?.blueBans  ?: emptyList()
-        val awayBans   = plan?.redBans   ?: emptyList()
+        // ══ NORMALIZAÇÃO DE LADO ══
+        //
+        // O `PickBanPlan` armazena os picks em `bluePicks`/`redPicks` (lados azul
+        // e vermelho da UI), enquanto o `match` usa `homeTeamId`/`awayTeamId`
+        // (calendário). Não são sinônimos: o time do jogador alterna de lado a cada
+        // mapa (azul nos mapas ímpares, vermelho nos pares).
+        //
+        // Aqui descobrimos qual lado (azul/vermelho) cada time (home/away) jogou
+        // neste mapa, e então reordenamos os picks para que `homePicks` realmente
+        // corresponda ao `homeRoster`.
+        val gs = GameRepository.current()
+        val playerTeamId = gs.managerTeamId
+        val playerIsHome = (match.homeTeamId == playerTeamId)
+        // Jogador foi azul neste mapa? Mapa 1 ímpar = sim; mapa 2 par = não.
+        val playerWasBlue = (gameNumber % 2 == 1)
+        // Logo, o HOME foi azul se (jogador é home AND jogador foi azul) ou
+        // (jogador é away AND jogador foi vermelho).
+        val homeWasBlue   = (playerIsHome == playerWasBlue)
+
+        val homePicks  = if (homeWasBlue) plan?.bluePicks.orEmpty() else plan?.redPicks.orEmpty()
+        val awayPicks  = if (homeWasBlue) plan?.redPicks.orEmpty()  else plan?.bluePicks.orEmpty()
+        val homeBans   = if (homeWasBlue) plan?.blueBans.orEmpty()  else plan?.redBans.orEmpty()
+        val awayBans   = if (homeWasBlue) plan?.redBans.orEmpty()   else plan?.blueBans.orEmpty()
         val allBans    = homeBans + awayBans
+
+        // Os roleAssignments referem-se SEMPRE ao time do jogador (independente
+        // do lado/calendário). Se o jogador é HOME, os assignments se aplicam ao
+        // homeRoster; se é AWAY, se aplicam ao awayRoster.
+        val playerSideAssignments = plan?.roleAssignments.orEmpty()
+        val homeAssignments = if (playerIsHome) playerSideAssignments else emptyList()
+        val awayAssignments = if (!playerIsHome) playerSideAssignments else emptyList()
 
         val homeComp   = CompositionRepository.analyzeWithTags(homePicks, awayPicks, awayBans)
         val awayComp   = CompositionRepository.analyzeWithTags(awayPicks, homePicks, homeBans)
@@ -54,13 +79,26 @@ object LiveMatchEngine {
         val homeMainBonus  = homeMainsCount * GameConstants.Player.CHAMP_POOL_MAIN_BONUS
         val awayMainBonus  = awayMainsCount * GameConstants.Player.CHAMP_POOL_MAIN_BONUS
 
+        // Penalidade por jogadores em rota errada (de [PickBanPlan.roleAssignments]).
+        // Aplicada apenas ao lado do jogador (HOME se ele é home, AWAY se é away).
+        val wrongRolePenalty = (playerSideAssignments.count { it.isWrongRole }) *
+                               GameConstants.Player.WRONG_ROLE_PENALTY
+
         val homeStr = teamStrength(homeRoster) + GameConstants.Series.HOME_SIDE_BONUS +
-                      homeComp.totalBonus + homeMainBonus
+                      homeComp.totalBonus + homeMainBonus -
+                      (if (playerIsHome) wrongRolePenalty else 0)
         val awayStr = teamStrength(awayRoster) +
-                      awayComp.totalBonus + awayMainBonus
+                      awayComp.totalBonus + awayMainBonus -
+                      (if (!playerIsHome) wrongRolePenalty else 0)
 
         val (gameEvents, homeWon, finalKills, duration) =
-            generateGame(gameNumber, homeRoster, awayRoster, homeStr, awayStr, plan)
+            generateGame(
+                gameNumber, homeRoster, awayRoster,
+                homeStr, awayStr,
+                homePicks, awayPicks, homeBans, redBans = awayBans,
+                homeAssignments = homeAssignments,
+                awayAssignments = awayAssignments
+            )
 
         val events = gameEvents.toMutableList()
 
@@ -89,6 +127,15 @@ object LiveMatchEngine {
         if (awayMainsCount > 0) {
             events.add(0, MatchEvent.PhaseAnnouncement(
                 "🎯 [AWAY] $awayMainsCount jogador(es) no main (+$awayMainBonus força)"
+            ))
+        }
+
+        // Anuncia jogadores em rota errada (lado correto do jogador)
+        val wrongRoleCount = playerSideAssignments.count { it.isWrongRole }
+        if (wrongRoleCount > 0) {
+            val sideLabel = if (playerIsHome) "HOME" else "AWAY"
+            events.add(0, MatchEvent.PhaseAnnouncement(
+                "⚠️ [$sideLabel] $wrongRoleCount jogador(es) em rota errada (−$wrongRolePenalty força)"
             ))
         }
 
@@ -126,9 +173,21 @@ object LiveMatchEngine {
             val awayStr = teamStrength(awayRoster)
             // O plano salvo no match refere-se ao último mapa com pick & ban feito pelo jogador.
             // Para os demais mapas o motor gera picks automaticamente.
+            //
+            // Este caminho é usado em simulações automáticas (jogos sem o time do jogador),
+            // então não precisamos da normalização sofisticada de lado azul/vermelho:
+            // tratamos `bluePicks` como `homePicks` por simplicidade.
             val plan = if (match.pickBanPlan?.mapNumber == gameNumber) match.pickBanPlan else null
             val (gameEvents, homeWonGame, finalKills, duration) =
-                generateGame(gameNumber, homeRoster, awayRoster, homeStr, awayStr, plan)
+                generateGame(
+                    gameNumber, homeRoster, awayRoster, homeStr, awayStr,
+                    homePicks       = plan?.bluePicks.orEmpty(),
+                    awayPicks       = plan?.redPicks.orEmpty(),
+                    homeBans        = plan?.blueBans.orEmpty(),
+                    redBans         = plan?.redBans.orEmpty(),
+                    homeAssignments = plan?.roleAssignments.orEmpty(),
+                    awayAssignments = emptyList()
+                )
             events.addAll(gameEvents)
             events.add(
                 MatchEvent.GameEnd(
@@ -170,6 +229,11 @@ object LiveMatchEngine {
 
     /**
      * Gera todos os eventos de um único mapa.
+     *
+     * Recebe picks, bans e assignments JÁ NORMALIZADOS (alinhados com
+     * `homeRoster`/`awayRoster` no calendário), não o `PickBanPlan` cru.
+     * A normalização azul/vermelho → home/away foi feita em [generateSingleMap].
+     *
      * Retorna: (eventos, lado vencedor, placar de kills final, duração em min)
      */
     private fun generateGame(
@@ -178,7 +242,12 @@ object LiveMatchEngine {
         awayRoster: List<Player>,
         homeStr: Int,
         awayStr: Int,
-        plan: PickBanPlan? = null
+        homePicks: List<String>,
+        awayPicks: List<String>,
+        homeBans: List<String>,
+        redBans: List<String>,
+        homeAssignments: List<com.cblol.scout.data.RoleAssignment>,
+        awayAssignments: List<com.cblol.scout.data.RoleAssignment>
     ): GameOutcome {
         val events = mutableListOf<MatchEvent>()
 
@@ -188,7 +257,11 @@ object LiveMatchEngine {
         // Gera os picks e bans e CAPTURA o mapa playerName → campeão pickado.
         // Esse mapa é usado em todos os eventos subsequentes (kills, anuncios)
         // para que o campeão de cada jogador combine com o que foi pickado.
-        val pickBanResult = generatePickBanWithMap(gameNumber, homeRoster, awayRoster, plan)
+        val pickBanResult = generatePickBanWithMap(
+            gameNumber, homeRoster, awayRoster,
+            homePicks, awayPicks, homeBans, redBans,
+            homeAssignments, awayAssignments
+        )
         events.addAll(pickBanResult.events)
         val playerChampions = pickBanResult.playerChampions
 
@@ -323,8 +396,19 @@ object LiveMatchEngine {
         homeRoster: List<Player>,
         awayRoster: List<Player>,
         plan: PickBanPlan? = null
-    ): List<MatchEvent> =
-        generatePickBanWithMap(gameNumber, homeRoster, awayRoster, plan).events
+    ): List<MatchEvent> {
+        // Para o caminho legado, assume mapa 1 (home = blue)
+        val homeAssignments = plan?.roleAssignments.orEmpty()
+        return generatePickBanWithMap(
+            gameNumber, homeRoster, awayRoster,
+            homePicks       = plan?.bluePicks.orEmpty(),
+            awayPicks       = plan?.redPicks.orEmpty(),
+            homeBans        = plan?.blueBans.orEmpty(),
+            awayBans        = plan?.redBans.orEmpty(),
+            homeAssignments = homeAssignments,
+            awayAssignments = emptyList()
+        ).events
+    }
 
     /**
      * Resultado interno do pick & ban: eventos para o feed + mapa de
@@ -340,23 +424,33 @@ object LiveMatchEngine {
      * Devolve também o mapa de campeão pickado por cada jogador para que eventos
      * subsequentes (kills, mortes) usem os campeões corretos do draft, e não
      * sorteios aleatórios baseados em role.
+     *
+     * **Picks/bans/assignments já chegam normalizados por lado HOME/AWAY**
+     * (alinhados com `homeRoster`/`awayRoster`). A conversão azul→home foi
+     * feita em [generateSingleMap]. Então aqui basta casar `homePicks[i]`
+     * com a role primaria do campeão ou com o assignment explícito.
      */
     private fun generatePickBanWithMap(
         gameNumber: Int,
         homeRoster: List<Player>,
         awayRoster: List<Player>,
-        plan: PickBanPlan? = null
+        homePicks: List<String>,
+        awayPicks: List<String>,
+        homeBans: List<String>,
+        awayBans: List<String>,
+        homeAssignments: List<com.cblol.scout.data.RoleAssignment>,
+        awayAssignments: List<com.cblol.scout.data.RoleAssignment>
     ): PickBanResult {
         val out = mutableListOf<MatchEvent>()
         val used = mutableSetOf<String>()
-        // playerName → campeão pickado (construído a cada pick)
+        // playerName → campeão pickado
         val playerChampions = mutableMapOf<String, String>()
 
-        // Bans: usa os do plano se disponíveis (blueBans = home, redBans = away), senão random
+        // Bans: usa os do plano se disponíveis, senão random
         fun banFromPlanOrRandom(side: Side, index: Int): MatchEvent.Ban {
             val candidate = when (side) {
-                Side.HOME -> plan?.blueBans?.getOrNull(index)
-                Side.AWAY -> plan?.redBans?.getOrNull(index)
+                Side.HOME -> homeBans.getOrNull(index)
+                Side.AWAY -> awayBans.getOrNull(index)
             }
             if (candidate != null && candidate !in used) {
                 used += candidate
@@ -375,48 +469,86 @@ object LiveMatchEngine {
             out += banFromPlanOrRandom(Side.AWAY, idx)
         }
 
-        // Picks: ordem snake CBLOL: B1 R1 R2 B2 B3 R3 R4 B4 B5 R5
-        val pickOrder = listOf(
-            Side.HOME, Side.AWAY, Side.AWAY, Side.HOME, Side.HOME,
-            Side.AWAY, Side.AWAY, Side.HOME, Side.HOME, Side.AWAY
-        )
-        val homePicked = mutableListOf<Player>()
-        val awayPicked = mutableListOf<Player>()
+        // Helper unificado: gera picks de um lado, respeitando assignments quando
+        // disponíveis e caindo no fallback por role primaria do campeão quando não.
+        fun processPicks(
+            side: Side,
+            picks: List<String>,
+            roster: List<Player>,
+            assignments: List<com.cblol.scout.data.RoleAssignment>
+        ) {
+            picks.forEach { championId ->
+                if (championId in used) return@forEach
+                used += championId
 
-        pickOrder.forEachIndexed { _, side ->
-            val pickedList = if (side == Side.HOME) homePicked else awayPicked
-            val rosterSide = if (side == Side.HOME) homeRoster else awayRoster
-            val nextPlayer = rosterSide.firstOrNull { p -> pickedList.none { it.id == p.id } }
-                ?: return@forEachIndexed
-
-            // Usa pick do plano se disponível (bluePicks = home, redPicks = away)
-            val planPick = when (side) {
-                Side.HOME -> plan?.bluePicks?.getOrNull(pickedList.size)
-                Side.AWAY -> plan?.redPicks?.getOrNull(pickedList.size)
+                val assignment = assignments.firstOrNull {
+                    it.championId.equals(championId, ignoreCase = true)
+                }
+                val playerName: String
+                val playerRole: String
+                if (assignment != null) {
+                    playerName = assignment.playerName
+                    playerRole = assignment.assignedRole
+                } else {
+                    // Sem assignment: casa o pick com o titular da role natural do campeão.
+                    // Se essa role já foi consumida, usa o próximo livre.
+                    val champion = com.cblol.scout.util.ChampionRepository.getById(championId)
+                    val targetRole = champion?.primaryRole
+                    val candidate = roster.firstOrNull {
+                        it.role == targetRole && it.nome_jogo !in playerChampions.keys
+                    } ?: roster.firstOrNull { it.nome_jogo !in playerChampions.keys }
+                      ?: roster.first()
+                    playerName = candidate.nome_jogo
+                    playerRole = candidate.role
+                }
+                playerChampions[playerName] = championId
+                out += MatchEvent.Pick(
+                    gameNumber = gameNumber,
+                    side = side,
+                    playerName = playerName,
+                    role = playerRole,
+                    champion = championId
+                )
             }
-            val champ = if (planPick != null && planPick !in used) {
-                used += planPick
-                planPick
-            } else {
-                // IA prefere campeões do pool do próprio jogador (mains).
-                // Fallback: pool por role; último recurso: qualquer campeão.
-                val mainsAvailable = nextPlayer.championPool.filter { it !in used }
-                val c = mainsAvailable.randomOrNull()
-                    ?: Champions.forRole(nextPlayer.role).filter { it !in used }.randomOrNull()
-                    ?: Champions.ALL_FLAT.first { it !in used }
-                used += c
-                c
-            }
-            pickedList += nextPlayer
-            playerChampions[nextPlayer.nome_jogo] = champ
-            out += MatchEvent.Pick(
-                gameNumber = gameNumber,
-                side = side,
-                playerName = nextPlayer.nome_jogo,
-                role = nextPlayer.role,
-                champion = champ
-            )
         }
+
+        // ── PICKS DO LADO HOME ──
+        if (homePicks.isNotEmpty()) {
+            processPicks(Side.HOME, homePicks, homeRoster, homeAssignments)
+        } else {
+            // Sem plano: IA gera picks por mains/role
+            homeRoster.forEach { player ->
+                val mainsAvailable = player.championPool.filter { it !in used }
+                val champ = mainsAvailable.randomOrNull()
+                    ?: Champions.forRole(player.role).filter { it !in used }.randomOrNull()
+                    ?: Champions.ALL_FLAT.first { it !in used }
+                used += champ
+                playerChampions[player.nome_jogo] = champ
+                out += MatchEvent.Pick(
+                    gameNumber = gameNumber, side = Side.HOME,
+                    playerName = player.nome_jogo, role = player.role, champion = champ
+                )
+            }
+        }
+
+        // ── PICKS DO LADO AWAY ──
+        if (awayPicks.isNotEmpty()) {
+            processPicks(Side.AWAY, awayPicks, awayRoster, awayAssignments)
+        } else {
+            awayRoster.forEach { player ->
+                val mainsAvailable = player.championPool.filter { it !in used }
+                val champ = mainsAvailable.randomOrNull()
+                    ?: Champions.forRole(player.role).filter { it !in used }.randomOrNull()
+                    ?: Champions.ALL_FLAT.first { it !in used }
+                used += champ
+                playerChampions[player.nome_jogo] = champ
+                out += MatchEvent.Pick(
+                    gameNumber = gameNumber, side = Side.AWAY,
+                    playerName = player.nome_jogo, role = player.role, champion = champ
+                )
+            }
+        }
+
         return PickBanResult(out, playerChampions)
     }
 

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    RoleAssignmentActivity — tela de "Estratégia de Rotas".
+
+    Aparece após o pick & ban manual e antes da simulação ao vivo.
+    Permite ao treinador reatribuir cada um dos 5 picks a uma role
+    diferente da role natural do jogador (ex: jungler jogando mid),
+    aplicando penalidade na simulação quando há mismatch.
+
+    Estrutura:
+      ┌──── TÍTULO ────┐
+      ┌─ Lista (5 picks com spinner de role + warning de rota errada) ─┐
+      └──────────────────────────────────────────────────────────────┘
+      [ CONFIRMAR E ENTRAR NO RIFT ]
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/pick_ban_bg"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/role_assign_title"
+        android:textColor="@color/champion_gold"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:letterSpacing="0.1" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/role_assign_subtitle"
+        android:textColor="@color/color_on_surface_variant"
+        android:textSize="12sp"
+        android:gravity="center"
+        android:letterSpacing="0.08"
+        android:layout_marginTop="2dp" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="14dp"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:id="@+id/ll_assignments"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </ScrollView>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_confirm_assignments"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="12dp"
+        android:text="@string/role_assign_confirm"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        app:backgroundTint="@color/champion_gold"
+        android:textColor="@color/pick_ban_bg"
+        app:cornerRadius="8dp" />
+</LinearLayout>

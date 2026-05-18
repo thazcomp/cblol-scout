@@ -177,13 +177,19 @@ class ManagerHubActivity : AppCompatActivity() {
             .setTitle(next.label)
             .setMessage(R.string.dialog_pickban_question)
             .setPositiveButton(R.string.btn_do_pickban) { _, _ ->
-                pendingMatchId        = next.matchId
-                pendingMapNumber      = 1
-                pendingPlayerTeamId   = playerTeamId
-                pendingOpponentTeamId = next.opponentId
-                @Suppress("DEPRECATION")
-                startActivityForResult(buildPickBanIntent(next.matchId, playerTeamId, next.opponentId, 1),
-                    PickBanActivity.REQUEST_PICK_BAN)
+                clearPendingState()
+                // Delega para o PickBanRouterActivity, que faz toda a sequência:
+                //   PickBan → RoleAssignment → salvar plano → MatchSimulation.
+                // Antes o Hub abria o PickBanActivity direto, mas isso pulava a
+                // tela de estratégia de rotas no mapa 1.
+                startActivity(
+                    Intent(this, PickBanRouterActivity::class.java).apply {
+                        putExtra(PickBanRouterActivity.EXTRA_MATCH_ID,       next.matchId)
+                        putExtra(PickBanRouterActivity.EXTRA_MAP_NUMBER,     1)
+                        putExtra(PickBanRouterActivity.EXTRA_PLAYER_TEAM_ID, playerTeamId)
+                        putExtra(PickBanRouterActivity.EXTRA_OPPONENT_ID,    next.opponentId)
+                    }
+                )
             }
             .setNegativeButton(R.string.btn_skip_simulation) { _, _ ->
                 clearPendingState()

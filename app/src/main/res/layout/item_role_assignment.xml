@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Item da lista de atribuição de rotas (RoleAssignmentActivity).
+
+    Estrutura (uma linha por pick):
+
+      ┌────────────────────────────────────────────────────────┐
+      │ [img]  Akshan        vs  [opp]   [ TOP ▼ ]              │
+      └────────────────────────────────────────────────────────┘
+      ⚠ ROTA ERRADA — −5 lane phase, −1 outros stats
+
+    Visível apenas quando o jogador atribuiu o pick a uma role
+    diferente da role natural do atleta selecionado.
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:layout_marginTop="6dp"
+    android:layout_marginBottom="6dp">
+
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardCornerRadius="4dp"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/color_outline_variant"
+        app:strokeWidth="1dp"
+        app:cardBackgroundColor="@color/color_surface">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="10dp">
+
+            <!-- Avatar do campeão pickado -->
+            <ImageView
+                android:id="@+id/iv_champ_avatar"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:scaleType="centerCrop"
+                android:background="@color/champion_slot_bg"
+                android:contentDescription="@string/champ_icon_desc" />
+
+            <!-- Nome do campeão + "vs" + ícone do campeão inimigo na mesma lane -->
+            <TextView
+                android:id="@+id/tv_champ_name"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="10dp"
+                android:textColor="@color/color_on_surface"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/role_vs"
+                android:textColor="@color/color_on_surface_variant"
+                android:textSize="11sp"
+                android:layout_marginEnd="6dp" />
+
+            <ImageView
+                android:id="@+id/iv_opponent_avatar"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:scaleType="centerCrop"
+                android:background="@color/champion_slot_bg"
+                android:contentDescription="@string/role_opponent_in_lane"
+                android:layout_marginEnd="10dp" />
+
+            <!-- Spinner de role atribuída -->
+            <Spinner
+                android:id="@+id/sp_role"
+                android:layout_width="100dp"
+                android:layout_height="40dp"
+                android:background="@color/champion_slot_bg"
+                android:popupBackground="@color/color_surface" />
+        </LinearLayout>
+    </androidx.cardview.widget.CardView>
+
+    <!-- Aviso de rota errada (só visível quando há mismatch) -->
+    <TextView
+        android:id="@+id/tv_wrong_role_warning"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/role_wrong_warning"
+        android:textColor="@color/state_danger"
+        android:textSize="11sp"
+        android:textStyle="bold"
+        android:layout_marginTop="4dp"
+        android:layout_marginStart="4dp"
+        android:visibility="gone" />
+</LinearLayout>
