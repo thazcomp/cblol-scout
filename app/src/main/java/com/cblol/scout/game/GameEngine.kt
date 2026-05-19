@@ -5,6 +5,7 @@ import com.cblol.scout.data.GameState
 import com.cblol.scout.data.Player
 import com.cblol.scout.domain.GameConstants
 import com.cblol.scout.domain.usecase.MoraleService
+import com.cblol.scout.domain.usecase.SponsorService
 import java.time.LocalDate
 
 /**
@@ -51,11 +52,28 @@ object GameEngine {
 
             // 1. Pagamento de patrocínio (domingo = day_of_week 7)
             if (date.dayOfWeek.value == 7) {
+                // Patrocínio fixo do tier do time
                 gs.budget += gs.sponsorshipPerWeek
                 report.income += gs.sponsorshipPerWeek
                 GameRepository.log("ECONOMY",
                     "Patrocínio semanal recebido: R$ ${"%,d".format(gs.sponsorshipPerWeek)}")
+
+                // Patrocínios ATIVOS (cada um paga seu próprio valor) +
+                // remove contratos expirados
+                val sponsorResult = SponsorService.paySponsorsWeekly(gs)
+                if (sponsorResult.totalPaid > 0) {
+                    report.income += sponsorResult.totalPaid
+                    GameRepository.log("ECONOMY",
+                        "Patrocínios: R$ ${"%,d".format(sponsorResult.totalPaid)} recebidos (${gs.activeSponsors?.size ?: 0} ativos)")
+                }
+                sponsorResult.expiredContracts.forEach { contract ->
+                    GameRepository.log("ECONOMY",
+                        "Patrocínio com ${contract.sponsor.name} expirou. Total recebido: R$ ${"%,d".format(contract.totalReceived)}")
+                }
             }
+
+            // 1.5. Gera novas ofertas de patrocínio se passou o intervalo
+            SponsorService.generateOffersIfDue(gs)
 
             // 2. Pagamento de salários (dia 1 de cada mês)
             if (date.dayOfMonth == 1) {

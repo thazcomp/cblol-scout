@@ -22,6 +22,8 @@
     <string name="btn_continue_watching">Continuar assistindo</string>
     <string name="btn_skip_simulation">Simular direto</string>
     <string name="btn_start_simulation">Iniciar simulação</string>
+    <string name="btn_yes">Sim</string>
+    <string name="btn_no">Não</string>
 
     <!-- ═══════════════════════════════════════════════════════════════════
          SCOUT / CATÁLOGO DE JOGADORES
@@ -415,6 +417,39 @@
     <string name="off_match_effect_mood_negative">😞 Moral: %1$d</string>
     <string name="off_match_effect_overall_positive">⚡ Overall: +%1$d (por %2$d dias)</string>
     <string name="off_match_effect_overall_negative">🩹 Overall: %1$d (por %2$d dias)</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
+         PATROCÍNIOS (SponsorsActivity)
+         ═══════════════════════════════════════════════════════════════ -->
+    <string name="sponsors_title">💼 Patrocínios</string>
+    <string name="hub_sponsors_button">💼 Patrocínios</string>
+    <string name="sponsors_total_weekly_label">RECEITA SEMANAL</string>
+    <string name="sponsors_active_count_label">ATIVOS</string>
+    <string name="sponsors_active_count_format">%1$d / %2$d</string>
+    <string name="sponsors_tab_active">ATIVOS</string>
+    <string name="sponsors_tab_market">MERCADO</string>
+    <string name="sponsors_subtitle_active">%1$s · %2$d semanas restantes</string>
+    <string name="sponsors_subtitle_offer">%1$s · Oferta válida até %2$s</string>
+    <string name="sponsors_weekly_format">R$ %1$s / semana</string>
+    <string name="sponsors_bonus_chip">+R$ %1$s / vitória</string>
+    <string name="sponsors_penalty_chip">−R$ %1$s / derrota</string>
+    <string name="sponsors_action_accept">ACEITAR</string>
+    <string name="sponsors_action_reject">RECUSAR</string>
+    <string name="sponsors_action_cancel">CANCELAR</string>
+    <string name="sponsors_action_details">DETALHES</string>
+    <string name="sponsors_empty_active">Nenhum patrocínio ativo no momento. Veja o mercado para encontrar ofertas disponíveis.</string>
+    <string name="sponsors_empty_market">Nenhuma oferta disponível no momento. Patrocinadores avaliam novos times a cada 2 semanas — melhore sua reputação vencendo partidas.</string>
+    <string name="sponsors_limit_reached_title">Limite atingido</string>
+    <string name="sponsors_limit_reached_msg">Você já tem %1$d patrocínios ativos (máximo). Cancele algum para abrir espaço.</string>
+    <string name="sponsors_accepted_title">Patrocínio firmado!</string>
+    <string name="sponsors_accepted_msg">%1$s vai pagar R$ %2$s por semana durante %3$d semanas.</string>
+    <string name="sponsors_cancel_confirm_title">Cancelar contrato?</string>
+    <string name="sponsors_cancel_confirm_msg">Cancelar o contrato com %1$s ANTES do término tem multa de R$ %2$s (4 semanas de pagamento). Deseja continuar?</string>
+    <string name="sponsors_cancelled_msg">Contrato cancelado. Multa de R$ %1$s descontada do orçamento.</string>
+    <string name="sponsors_details_dialog_title">%1$s</string>
+    <string name="sponsors_details_body">Categoria: %1$s\nTier: %2$s\nDuração: %3$d semanas\nValor: R$ %4$s / semana\n\n%5$s</string>
+    <string name="hub_sponsors_subtitle_empty">Toque para procurar ofertas</string>
+    <string name="hub_sponsors_subtitle_active">%1$d/%2$d ativos · R$ %3$s/sem</string>
 
     <!-- ════════════════════════════════════════════════════════════════
          ATRIBUIÇÃO DE ROTAS (RoleAssignmentActivity)

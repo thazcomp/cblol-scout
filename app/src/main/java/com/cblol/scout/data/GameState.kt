@@ -40,7 +40,32 @@ data class GameState(
      * Limpo quando a Activity de evento chama `consume()` após o usuário
      * tocar em CONTINUAR.
      */
-    var pendingOffMatchEvent: OffMatchEvent? = null
+    var pendingOffMatchEvent: OffMatchEvent? = null,
+
+    /**
+     * Patrocínios atualmente ativos do time do jogador. Pagam o
+     * [SponsorContract.weeklyAmount] toda semana enquanto ativos.
+     * Cada contrato tem uma data de início, duração e condições.
+     *
+     * Nullable porque Gson pode deixar null ao desserializar saves antigos que não têm este field.
+     */
+    var activeSponsors: MutableList<SponsorContract>? = null,
+
+    /**
+     * Ofertas de patrocínio disponíveis no "mercado". Geradas periodicamente
+     * pelo [com.cblol.scout.domain.usecase.SponsorService]. O jogador pode
+     * aceitar quantas couberem no limite do time.
+     *
+     * Nullable porque Gson pode deixar null ao desserializar saves antigos que não têm este field.
+     */
+    var availableSponsorOffers: MutableList<SponsorOffer>? = null,
+
+    /**
+     * Data (ISO) da última vez que o motor sorteou novas ofertas de
+     * patrocínio. Usado para gerar ofertas a cada [SponsorService.OFFERS_INTERVAL_DAYS]
+     * dias.
+     */
+    var lastSponsorOffersDate: String? = null
 )
 
 /**
@@ -364,3 +389,92 @@ enum class OffMatchEventCategory(val emoji: String, val label: String) {
 
 /** Sentimento geral do evento, usado pela UI para escolher cores. */
 enum class OffMatchEventSentiment { POSITIVE, NEUTRAL, NEGATIVE }
+
+/**
+ * ╔═════════════════════════════════════════════════════╗
+ * ║ SISTEMA DE PATROCÍNIOS                                       ║
+ * ╚══════════════════════════════════════════════════════╝
+ *
+ * Catalog de patrocínios disponíveis. Cada [Sponsor] é um template imutável
+ * com nome, valor semanal, duração e requisitos. Ao ser aceito, vira um
+ * [SponsorContract] ativo no [GameState.activeSponsors].
+ */
+
+/** Tier do patrocínio (afeta valor pago e dificuldade de conseguir). */
+enum class SponsorTier(val emoji: String, val label: String) {
+    BRONZE("🥉", "Bronze"),
+    SILVER("🥈", "Prata"),
+    GOLD("🥇", "Ouro"),
+    DIAMOND("💎", "Diamante")
+}
+
+/** Categoria do patrocínio (afeta temática visual + bonus narrativos). */
+enum class SponsorCategory(val emoji: String, val label: String) {
+    ENERGY_DRINK("⚡", "Energético"),
+    PERIPHERAL("⌨️", "Periféricos"),
+    HARDWARE("🖥️", "Hardware"),
+    APPAREL("👕", "Vestuário"),
+    FOOD_DELIVERY("🍔", "Delivery"),
+    BANK("🏦", "Banco"),
+    TELECOM("📶", "Telecom"),
+    AUTOMOTIVE("🚗", "Automotivo"),
+    BETTING("🎰", "Apostas"),
+    STREAMING("📺", "Streaming")
+}
+
+/**
+ * Modelo imutável de um patrocínio disponível.
+ *
+ * @property id identificador único (não muda entre saves)
+ * @property name nome comercial visto pelo jogador (ex: "VoltKick Energy")
+ * @property tier prestígio do patrocínio (BRONZE..DIAMOND)
+ * @property category temática (energético, banco, etc)
+ * @property weeklyAmount R$ pago toda semana enquanto ativo
+ * @property durationWeeks duração em semanas do contrato
+ * @property minReputation reputação mínima do técnico para receber a oferta
+ * @property minWinsThisSplit mapas vencidos mínimos no split atual
+ * @property bonusPerWin R$ adicional pago a cada vitória de mapa enquanto ativo
+ * @property penaltyPerLoss R$ deduzido do próximo pagamento a cada derrota
+ */
+data class Sponsor(
+    val id: String,
+    val name: String,
+    val tier: SponsorTier,
+    val category: SponsorCategory,
+    val weeklyAmount: Long,
+    val durationWeeks: Int,
+    val minReputation: Int = 0,
+    val minWinsThisSplit: Int = 0,
+    val bonusPerWin: Long = 0,
+    val penaltyPerLoss: Long = 0,
+    /** Texto curto descrevendo o tipo de empresa (mostrado no card). */
+    val description: String = ""
+)
+
+/**
+ * Oferta de patrocínio disponível no mercado. Contém o [sponsor] + uma
+ * `expiresOn` para que a oferta não fique para sempre.
+ */
+data class SponsorOffer(
+    val sponsor: Sponsor,
+    val offeredOn: String,
+    val expiresOn: String
+)
+
+/**
+ * Contrato ATIVO de patrocínio. Instância mutável para acumular
+ * estatísticas (semanas pagas, bônus recebidos) durante a vida útil.
+ *
+ * @property sponsor o template original
+ * @property startDate quando foi aceito
+ * @property endDate quando expira (start + durationWeeks * 7 dias)
+ * @property weeksPaid quantos pagamentos semanais já foram processados
+ * @property totalReceived R$ acumulado recebido (para mostrar na UI)
+ */
+data class SponsorContract(
+    val sponsor: Sponsor,
+    val startDate: String,
+    val endDate: String,
+    var weeksPaid: Int = 0,
+    var totalReceived: Long = 0L
+)

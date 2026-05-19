@@ -261,6 +261,43 @@
                             android:layout_marginStart="8dp"/>
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
+
+                <!-- Card PATROCÍNIOS: ocupa o GridLayout inteiro (colSpan=2).
+                     Layout horizontal estilo "linha" com ícone à esquerda, título + sub
+                     com receita atual no centro, chevron à direita. -->
+                <androidx.cardview.widget.CardView android:id="@+id/card_sponsors"
+                    android:layout_width="0dp"
+                    android:layout_columnSpan="2"
+                    android:layout_columnWeight="1"
+                    android:layout_height="wrap_content"
+                    android:layout_margin="4dp"
+                    android:foreground="?attr/selectableItemBackground" android:clickable="true"
+                    android:focusable="true" app:cardCornerRadius="2dp" app:cardElevation="0dp"
+                    app:strokeColor="@color/color_outline_gold" app:strokeWidth="1dp"
+                    app:cardBackgroundColor="@color/color_surface">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:gravity="center_vertical" android:padding="12dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="💼" android:textSize="28sp"
+                            android:layout_marginEnd="12dp"/>
+                        <LinearLayout android:layout_width="0dp" android:layout_weight="1"
+                            android:layout_height="wrap_content" android:orientation="vertical">
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:text="@string/hub_sponsors_button"
+                                android:textSize="15sp" android:fontFamily="sans-serif-medium"
+                                android:textColor="@color/color_on_surface"/>
+                            <TextView android:id="@+id/tv_hub_sponsors_subtitle"
+                                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:textSize="12sp"
+                                android:textColor="@color/champion_gold"
+                                android:layout_marginTop="2dp"/>
+                        </LinearLayout>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="›" android:textSize="24sp"
+                            android:textColor="@color/color_on_surface_variant"
+                            android:layout_marginStart="8dp"/>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
             </GridLayout>
 
             <!-- Log -->

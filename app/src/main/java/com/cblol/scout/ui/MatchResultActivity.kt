@@ -22,6 +22,7 @@ import com.cblol.scout.domain.GameConstants
 import com.cblol.scout.domain.usecase.CoachProgressionService
 import com.cblol.scout.domain.usecase.MoraleService
 import com.cblol.scout.domain.usecase.OffMatchEventService
+import com.cblol.scout.domain.usecase.SponsorService
 import com.cblol.scout.game.GameRepository
 import com.cblol.scout.util.TeamColors
 
@@ -80,6 +81,19 @@ class MatchResultActivity : AppCompatActivity() {
             .filter { it.titular }
         val opponentName = if (gs.managerTeamId == data.homeId) data.awayName else data.homeName
         MoraleService.recordMapResult(gs, roster, data.playerWon, opponentName)
+
+        // Aplica bônus de patrocínio por vitória ou penalidade por derrota.
+        // Contratos com `bonusPerWin` adicionam ao orçamento; contratos com
+        // `penaltyPerLoss` (ex: Apostas) descontam.
+        val sponsorDelta = SponsorService.applyMatchPerformance(gs, data.playerWon)
+        if (sponsorDelta != 0L) {
+            val verb = if (sponsorDelta > 0) "pagaram bônus" else "cobraram multa"
+            val abs = kotlin.math.abs(sponsorDelta)
+            GameRepository.log(
+                "ECONOMY",
+                "Patrocinadores $verb: R$ ${"%,d".format(abs)}"
+            )
+        }
 
         if (data.seriesFinished) {
             // Para série, considera vitória se o jogador tem mais mapas no placar

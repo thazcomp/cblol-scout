@@ -141,9 +141,31 @@ class ManagerHubActivity : AppCompatActivity() {
 
         renderNextMatch(state)
         renderCoachSummary(state.managerName)
+        renderSponsorsSummary()
 
         binding.recyclerLog.layoutManager = LinearLayoutManager(this)
         binding.recyclerLog.adapter = LogAdapter(state.log)
+    }
+
+    /**
+     * Atualiza o card de Patrocínios no Hub mostrando contagem + receita semanal
+     * atual. Caso não haja patrocínios ativos, mostra texto de chamada
+     * ("Toque para procurar ofertas").
+     */
+    private fun renderSponsorsSummary() {
+        val tv = findViewById<android.widget.TextView>(R.id.tv_hub_sponsors_subtitle)
+        val gs = runCatching { GameRepository.current() }.getOrNull() ?: return
+        val activeCount = gs.activeSponsors?.size ?: 0
+        val weekly = com.cblol.scout.domain.usecase.SponsorService
+            .totalWeeklyIncomeFromSponsors(gs)
+        tv.text = if (activeCount == 0) {
+            getString(R.string.hub_sponsors_subtitle_empty)
+        } else {
+            getString(R.string.hub_sponsors_subtitle_active,
+                activeCount,
+                com.cblol.scout.domain.usecase.SponsorService.MAX_ACTIVE_SPONSORS,
+                "%,d".format(weekly))
+        }
     }
 
     /**
@@ -185,6 +207,9 @@ class ManagerHubActivity : AppCompatActivity() {
         findViewById<View>(R.id.card_coach_profile).setOnClickListener {
             val gs = GameRepository.current()
             CoachProfileDialog.show(this, gs.coachProfile, gs.managerName)
+        }
+        findViewById<View>(R.id.card_sponsors).setOnClickListener {
+            startActivity(Intent(this, SponsorsActivity::class.java))
         }
         binding.btnQuit.setOnClickListener        { confirmQuit() }
     }
