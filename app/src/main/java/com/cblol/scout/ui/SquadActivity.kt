@@ -17,6 +17,7 @@ import com.cblol.scout.R
 import com.cblol.scout.data.Player
 import com.cblol.scout.databinding.ActivitySquadBinding
 import com.cblol.scout.domain.GameConstants
+import com.cblol.scout.domain.usecase.MoraleService
 import com.cblol.scout.game.GameRepository
 import com.cblol.scout.game.PromoteResult
 import com.cblol.scout.game.SquadManager
@@ -133,7 +134,10 @@ class SquadActivity : AppCompatActivity() {
             onActionClick = { p ->
                 if (isStarter) openSwapDialog(p) else vm.promote(p.id)
             },
-            onItemClick = { p -> PlayerDetailDialog.show(this, p) { vm.load() } }
+            onItemClick = { p -> PlayerDetailDialog.show(this, p) { vm.load() } },
+            onMoodClick = { p ->
+                MoodHistoryDialog.show(this, GameRepository.current(), p)
+            }
         )
         binding.tvEmpty.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
         binding.tvEmpty.setText(
@@ -169,13 +173,15 @@ class SquadActivity : AppCompatActivity() {
         private val players: List<Player>,
         private val isStarter: Boolean,
         private val onActionClick: (Player) -> Unit,
-        private val onItemClick: (Player) -> Unit
+        private val onItemClick: (Player) -> Unit,
+        private val onMoodClick: (Player) -> Unit
     ) : RecyclerView.Adapter<SquadAdapter.VH>() {
 
         class VH(v: View) : RecyclerView.ViewHolder(v) {
             val viewBar: View       = v.findViewById(R.id.view_sq_bar)
             val tvRole: TextView    = v.findViewById(R.id.tv_sq_role)
             val tvName: TextView    = v.findViewById(R.id.tv_sq_name)
+            val tvMood: TextView    = v.findViewById(R.id.tv_sq_mood)
             val tvInfo: TextView    = v.findViewById(R.id.tv_sq_info)
             val tvOvr: TextView     = v.findViewById(R.id.tv_sq_overall)
             val btnAction: TextView = v.findViewById(R.id.btn_sq_action)
@@ -197,6 +203,15 @@ class SquadActivity : AppCompatActivity() {
             }
             h.tvRole.text = p.role
             h.tvName.text = p.nome_jogo
+
+            // Moral: emoji + indicador de pedido de transferência (⚠).
+            // Toque abre o dialog detalhado do histórico.
+            val gs = GameRepository.current()
+            val mood = MoraleService.moodStateOf(gs, p.id)
+            val transferReq = MoraleService.hasRequestedTransfer(gs, p.id)
+            h.tvMood.text = if (transferReq) "${mood.emoji}⚠" else mood.emoji
+            h.tvMood.setOnClickListener { onMoodClick(p) }
+
             val salary = p.contrato.salario_mensal_estimado_brl ?: 0L
             h.tvInfo.text = ctx.getString(R.string.squad_player_info,
                 p.stats_brutas.kda.toString(), p.stats_brutas.cs_min.toString(), "%,d".format(salary))

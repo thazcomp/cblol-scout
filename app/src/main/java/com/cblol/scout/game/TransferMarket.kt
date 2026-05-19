@@ -3,6 +3,7 @@ package com.cblol.scout.game
 import android.content.Context
 import com.cblol.scout.data.Player
 import com.cblol.scout.domain.usecase.CoachProgressionService
+import com.cblol.scout.domain.usecase.MoraleService
 
 /**
  * Lógica do mercado de transferências.
@@ -58,6 +59,9 @@ object TransferMarket {
         }
         gs.budget += price
         CoachProgressionService.recordSell(gs.coachProfile, price)
+        MoraleService.recordPlayerSold(gs, playerId)
+        // Se ele havia pedido transferência, limpa o flag (resolveu o problema)
+        MoraleService.clearTransferRequest(gs, playerId)
         GameRepository.log(
             "TRANSFER",
             "${player.nome_jogo} vendido para ${newTeam.nome} por R$ ${"%,d".format(price)}"
@@ -86,6 +90,7 @@ object TransferMarket {
         }
         gs.budget -= price
         CoachProgressionService.recordHire(gs.coachProfile, price)
+        MoraleService.recordPlayerHired(gs, playerId)
         GameRepository.log(
             "TRANSFER",
             "${player.nome_jogo} contratado por R$ ${"%,d".format(price)}"
@@ -121,6 +126,9 @@ object TransferMarket {
             ov.copy(newSalary = newMonthlySalary, newContractEnd = newEndDate)
         }
         CoachProgressionService.recordRenew(gs.coachProfile)
+        MoraleService.recordContractRenewed(gs, playerId)
+        // Renovação salarial soluciona insatisfação: limpa flag de pedido de transferência
+        MoraleService.clearTransferRequest(gs, playerId)
         GameRepository.log(
             "CONTRACT",
             "${player.nome_jogo} renovou até $newEndDate por R$ ${"%,d".format(newMonthlySalary)}/mês"
@@ -138,6 +146,9 @@ object TransferMarket {
             ov.copy(titular = !player.titular)
         }
         val newStatus = if (!player.titular) "titular" else "reserva"
+        // Moral: subir como titular motiva; descer pra reserva desmotiva
+        if (!player.titular) MoraleService.recordBecameStarter(gs, playerId)
+        else                 MoraleService.recordBecameReserve(gs, playerId)
         GameRepository.log(
             "SQUAD",
             "${player.nome_jogo} agora é $newStatus"

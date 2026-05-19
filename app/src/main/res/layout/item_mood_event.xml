@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Item de uma entrada do histórico de moral no MoodHistoryDialog.
+
+    Estrutura:
+      [+5] [Vitória contra LOUD     ] [18/05/2026]
+
+    O número à esquerda colore-se de verde para deltas positivos, vermelho para
+    negativos. Eventos sem delta (ex: pedido de transferência) mostram um ícone ⚠.
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:padding="6dp">
+
+    <TextView
+        android:id="@+id/tv_event_delta"
+        android:layout_width="44dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:textSize="13sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/tv_event_reason"
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_height="wrap_content"
+        android:textColor="@color/color_on_surface"
+        android:textSize="13sp"
+        android:layout_marginStart="8dp"
+        android:maxLines="1"
+        android:ellipsize="end" />
+
+    <TextView
+        android:id="@+id/tv_event_date"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@color/color_on_surface_variant"
+        android:textSize="11sp"
+        android:layout_marginStart="8dp" />
+</LinearLayout>

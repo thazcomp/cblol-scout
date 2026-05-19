@@ -1,12 +1,14 @@
 package com.cblol.scout.game
 
 import android.content.Context
+import com.cblol.scout.data.GameState
 import com.cblol.scout.data.Match
 import com.cblol.scout.data.MatchEvent
 import com.cblol.scout.data.Player
 import com.cblol.scout.data.Side
 import com.cblol.scout.data.PickBanPlan
 import com.cblol.scout.domain.GameConstants
+import com.cblol.scout.domain.usecase.MoraleService
 import com.cblol.scout.util.ChampionPoolRepository
 import com.cblol.scout.util.CompositionRepository
 import kotlin.math.absoluteValue
@@ -84,10 +86,10 @@ object LiveMatchEngine {
         val wrongRolePenalty = (playerSideAssignments.count { it.isWrongRole }) *
                                GameConstants.Player.WRONG_ROLE_PENALTY
 
-        val homeStr = teamStrength(homeRoster) + GameConstants.Series.HOME_SIDE_BONUS +
+        val homeStr = teamStrengthWithMood(homeRoster, gs) + GameConstants.Series.HOME_SIDE_BONUS +
                       homeComp.totalBonus + homeMainBonus -
                       (if (playerIsHome) wrongRolePenalty else 0)
-        val awayStr = teamStrength(awayRoster) +
+        val awayStr = teamStrengthWithMood(awayRoster, gs) +
                       awayComp.totalBonus + awayMainBonus -
                       (if (!playerIsHome) wrongRolePenalty else 0)
 
@@ -101,6 +103,20 @@ object LiveMatchEngine {
             )
 
         val events = gameEvents.toMutableList()
+
+        // Anuncia jogadores em êxtase (moral 95+) com bônus extra de overall.
+        // O `add(0, ...)` empurra o anuncio para o topo da timeline para o jogador
+        // ver antes de ver os picks/bans.
+        val ecstaticPlayers = (homeRoster + awayRoster).filter { p ->
+            (MoraleService.moodOf(gs, p.id) >= MoraleService.ECSTASY_THRESHOLD)
+        }
+        ecstaticPlayers.forEach { player ->
+            val isHome = player in homeRoster
+            val sideLabel = if (isHome) "HOME" else "AWAY"
+            events.add(0, MatchEvent.PhaseAnnouncement(
+                "⚡ [$sideLabel] ${player.nome_jogo} está em êxtase! (+5 overall)"
+            ))
+        }
 
         // Anuncia sinergia e insights no feed
         if (homeComp.base.detected != null || homeComp.insights.isNotEmpty()) {
@@ -223,6 +239,30 @@ object LiveMatchEngine {
         return roster.sumOf { it.overallRating() } / roster.size
     }
 
+    /**
+     * Variante de [teamStrength] que considera a moral atual dos jogadores.
+     *
+     * Cada jogador tem seu overall efetivo ajustado por
+     * [MoraleService.moodOverallModifier] antes de calcular a média:
+     *  - Moral SAD (0-33): -3 no overall
+     *  - Moral NEUTRAL (34-66): 0
+     *  - Moral HAPPY (67-94): +2
+     *  - Moral em ÊXTASE (95+): +5 (HAPPY +2 + bônus de êxtase +3)
+     *
+     * Resultado: um time com 5 jogadores tristes perde ~3 pontos de média,
+     * um time com 5 em êxtase ganha ~5 pontos — diferença relevante na
+     * fórmula de probabilidade (que usa diferença/60).
+     */
+    private fun teamStrengthWithMood(roster: List<Player>, gs: GameState): Int {
+        if (roster.isEmpty()) return 50
+        val total = roster.sumOf { player ->
+            val baseOvr  = player.overallRating()
+            val modifier = MoraleService.moodOverallModifier(gs, player.id)
+            (baseOvr + modifier).coerceIn(1, 99)
+        }
+        return total / roster.size
+    }
+
     private fun roleOrder(role: String) = when (role) {
         "TOP" -> 1; "JNG" -> 2; "MID" -> 3; "ADC" -> 4; "SUP" -> 5; else -> 6
     }
@@ -323,11 +363,23 @@ object LiveMatchEngine {
             dragonTime += (4..6).random()
         }
 
-        // Torres (6-9 total no mapa)
-        val totalTowers = (5..9).random()
-        val homeTowers = (totalTowers * (if (homeWonGame) 0.65 else 0.35)).toInt()
-        val awayTowers = totalTowers - homeTowers
-        val towerLanes = listOf("top", "mid", "bot")
+        // ══ TORRES ══
+        //
+        // No League of Legends, para destruir o Nexus o time vencedor precisa
+        // derrubar pelo menos uma lane inteira: 3 torres + 2 torres do Nexus = 5
+        // torres no mínimo. É impossível vencer um mapa com menos que isso.
+        //
+        // O perdedor normalmente derruba algumas torres ao longo do jogo
+        // (especialmente em jogos longos), mas não chega na inibidora.
+        //
+        // Distribuição realista:
+        //  - Vencedor: 5–9 torres (mínimo 5 — lane completa + Nexus)
+        //  - Perdedor: 0–3 torres em jogos curtos, 1–4 em jogos longos
+        val winnerTowers = (TOWER_WIN_MIN..TOWER_WIN_MAX).random()
+        val loserTowers  = if (duration > 30) (1..4).random() else (0..3).random()
+        val homeTowers   = if (homeWonGame) winnerTowers else loserTowers
+        val awayTowers   = if (homeWonGame) loserTowers  else winnerTowers
+        val towerLanes   = listOf("top", "mid", "bot")
         repeat(homeTowers) {
             timed += tower(
                 time = (8..(duration - 2)).random(),
@@ -604,6 +656,23 @@ object LiveMatchEngine {
         TimedEvent(time, 0, MatchEvent.Buff(fmt(time), side, player, type))
 
     private fun pickChampForRole(role: String): String = Champions.forRole(role).random()
+
+    // ───── constantes ─────
+
+    /**
+     * Faixa de torres derrubadas pelo time vencedor de um mapa.
+     *
+     * O mínimo é 5 porque no League of Legends o caminho para o Nexus passa
+     * obrigatoriamente por 3 torres de uma lane + a torre inibidora + a torre
+     * do Nexus (no mínimo). Vencer com menos de 5 torres é impossível pelas
+     * regras do jogo, então garantimos esse piso na simulação.
+     *
+     * O máximo de 11 reflete jogos onde o vencedor quase zera o mapa
+     * (todas as 11 torres + as 2 do Nexus = até 11 estruturas, dependendo de
+     * como o código conta).
+     */
+    private const val TOWER_WIN_MIN = 5
+    private const val TOWER_WIN_MAX = 9
 
     // ───── tipos auxiliares ─────
 

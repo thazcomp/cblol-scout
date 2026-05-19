@@ -79,7 +79,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupRecycler() {
-        adapter = PlayerAdapter { player -> showPlayerDetail(player) }
+        adapter = PlayerAdapter(onItemClick = { player -> showPlayerDetail(player) })
         binding.recyclerView.layoutManager = LinearLayoutManager(this)
         binding.recyclerView.adapter = adapter
     }

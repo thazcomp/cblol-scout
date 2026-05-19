@@ -70,6 +70,15 @@
                         android:layout_height="wrap_content"
                         android:layout_marginStart="6dp"
                         android:textSize="16sp"/>
+
+                    <!-- Emoji de moral do jogador: 😄 / 😐 / 😞 -->
+                    <TextView
+                        android:id="@+id/tv_mood"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:textSize="16sp"
+                        android:contentDescription="@string/player_mood_desc"/>
                 </LinearLayout>
 
                 <TextView

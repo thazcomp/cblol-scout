@@ -389,6 +389,20 @@
     <string name="coach_stat_sells">Vendas: %1$d</string>
     <string name="hub_coach_profile_button">👔 Meu Perfil</string>
 
+    <!-- Moral do jogador (emoji exibido nos cards do elenco) -->
+    <string name="player_mood_desc">Nível de moral do jogador</string>
+    <string name="mood_label_happy">Feliz</string>
+    <string name="mood_label_neutral">Neutro</string>
+    <string name="mood_label_sad">Triste</string>
+
+    <!-- Dialog de histórico de moral -->
+    <string name="mood_dialog_title">Moral do Jogador</string>
+    <string name="mood_dialog_summary">Moral: %1$d / 100 (%2$s)</string>
+    <string name="mood_dialog_history_header">📜 HISTÓRICO RECENTE</string>
+    <string name="mood_dialog_history_empty">Sem mudanças recentes — jogador está em um momento estável.</string>
+    <string name="mood_dialog_transfer_request">⚠ ESTE JOGADOR PEDIU TRANSFERÊNCIA</string>
+    <string name="mood_delta_warning">⚠</string>
+
     <!-- ════════════════════════════════════════════════════════════════
          ATRIBUIÇÃO DE ROTAS (RoleAssignmentActivity)
          ═══════════════════════════════════════════════════════════════ -->

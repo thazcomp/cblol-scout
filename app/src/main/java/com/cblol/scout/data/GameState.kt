@@ -47,6 +47,8 @@ data class SeriesState(
 
 /**
  * Mudanças aplicadas a um jogador durante a carreira.
+ *
+ * Tudo aqui é opcional — fields null significam "sem mudança em relação ao snapshot público".
  */
 data class PlayerOverride(
     val playerId: String,
@@ -54,8 +56,80 @@ data class PlayerOverride(
     val newSalary: Long? = null,
     val newContractEnd: String? = null,
     val titular: Boolean? = null,
-    val transferredOn: String? = null
+    val transferredOn: String? = null,
+    /**
+     * Nível de moral do jogador (0-100). Default null = ainda não inicializado.
+     * Valores típicos:
+     *  - 0..33  → 😞 triste
+     *  - 34..66 → 😐 neutro
+     *  - 67..100 → 😄 feliz
+     *
+     * Modificado por eventos do jogo (vitória/derrota, transferências, banca).
+     * Ver `domain.usecase.MoraleService` para a lógica de transição.
+     */
+    val mood: Int? = null,
+
+    /**
+     * Histórico das últimas mudanças de moral (mais recente primeiro).
+     * Limitado em [com.cblol.scout.domain.usecase.MoraleService.HISTORY_MAX_ENTRIES]
+     * para não inflar o save. Cada entrada descreve o evento e o delta aplicado.
+     *
+     * Nullable porque Gson pode deixar null ao desserializar saves antigos que não têm este field.
+     */
+    val moodHistory: List<MoodEvent>? = null,
+
+    /**
+     * Data (ISO yyyy-MM-dd) da última partida em que esse jogador foi titular.
+     * Usada pelo decay temporal: se o jogador fica muitas semanas sem jogar,
+     * a moral converge para o valor neutro (50).
+     *
+     * Null = nunca jogou nesta carreira ainda.
+     */
+    val lastPlayedDate: String? = null,
+
+    /**
+     * Data em que o jogador pediu transferência (ou null se não pediu).
+     * Disparado quando moral atinge valor extremamente baixo — ver
+     * [com.cblol.scout.domain.usecase.MoraleService.TRANSFER_REQUEST_THRESHOLD].
+     */
+    val transferRequestedOn: String? = null
 )
+
+/**
+ * Uma entrada no histórico de moral de um jogador.
+ *
+ * @property date data (ISO) em que o evento ocorreu
+ * @property reason descrição curta em PT-BR (ex: "Vitória contra LOUD", "Renovação")
+ * @property delta variação aplicada (positiva ou negativa)
+ * @property valueAfter valor de moral após o delta, já com clamping
+ */
+data class MoodEvent(
+    val date: String,
+    val reason: String,
+    val delta: Int,
+    val valueAfter: Int
+)
+
+/**
+ * Estados de moral derivados do valor numérico do [PlayerOverride.mood].
+ *
+ * Cada estado tem um emoji associado mostrado nos cards de jogador da SquadActivity.
+ * SOLID/OCP: adicionar um novo estado (ex: "furioso", "motivado") é só estender este enum.
+ */
+enum class Mood(val emoji: String, val label: String) {
+    SAD("😞", "Triste"),
+    NEUTRAL("😐", "Neutro"),
+    HAPPY("😄", "Feliz");
+
+    companion object {
+        /** Converte um valor 0-100 no estado discreto correspondente. */
+        fun from(value: Int): Mood = when {
+            value <= 33  -> SAD
+            value <= 66  -> NEUTRAL
+            else         -> HAPPY
+        }
+    }
+}
 
 /**
  * Partida do split (BO3). homeScore/awayScore = mapas vencidos.

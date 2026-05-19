@@ -4,6 +4,7 @@ import android.content.Context
 import com.cblol.scout.data.GameState
 import com.cblol.scout.data.Player
 import com.cblol.scout.domain.GameConstants
+import com.cblol.scout.domain.usecase.MoraleService
 import java.time.LocalDate
 
 /**
@@ -33,6 +34,20 @@ object GameEngine {
             date = date.plusDays(1)
             val iso = date.toString()
             gs.currentDate = iso
+
+            // 0. Decay temporal de moral: jogadores que ficam dias sem jogar movem
+            //    a moral em direção ao neutro. Também sorteia pedidos de transferência
+            //    para jogadores com moral muito baixa.
+            val roster = GameRepository.rosterOf(context, gs.managerTeamId)
+            val decayResult = MoraleService.applyDailyDecay(gs, roster)
+            decayResult.transferRequests.forEach { playerId ->
+                val player = roster.find { it.id == playerId } ?: return@forEach
+                report.transferRequests += player.nome_jogo
+                GameRepository.log(
+                    "MOOD",
+                    "${player.nome_jogo} pediu transferência por estar desmotivado."
+                )
+            }
 
             // 1. Pagamento de patrocínio (domingo = day_of_week 7)
             if (date.dayOfWeek.value == 7) {
@@ -177,5 +192,10 @@ data class AdvanceReport(
     var myWin: Boolean = false,
     var myLoss: Boolean = false,
     var income: Long = 0,
-    var expense: Long = 0
+    var expense: Long = 0,
+    /**
+     * Jogadores que pediram transferência neste avanço de dias (por insatisfação
+     * persistente). Lista de nomes para o Hub mostrar em uma notificação.
+     */
+    val transferRequests: MutableList<String> = mutableListOf()
 )

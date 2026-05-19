@@ -15,6 +15,8 @@ import androidx.recyclerview.widget.RecyclerView
 import com.cblol.scout.R
 import com.cblol.scout.data.Player
 import com.cblol.scout.domain.GameConstants
+import com.cblol.scout.domain.usecase.MoraleService
+import com.cblol.scout.game.GameRepository
 import com.cblol.scout.util.TeamColors
 
 /**
@@ -28,7 +30,14 @@ import com.cblol.scout.util.TeamColors
  * Strings via `R.string`, cores via `R.color`. Sem `Color.parseColor` inline.
  */
 class PlayerAdapter(
-    private val onItemClick: (Player) -> Unit
+    private val onItemClick: (Player) -> Unit,
+    /**
+     * Callback opcional para quando o usuário toca no emoji de moral do jogador.
+     * Default = nulo (toque no emoji é ignorado). A SquadActivity passa um lambda
+     * que abre o [MoodHistoryDialog]; outras telas (MainActivity sem carreira)
+     * podem deixar em null.
+     */
+    private val onMoodClick: ((Player) -> Unit)? = null
 ) : ListAdapter<Player, PlayerAdapter.ViewHolder>(DiffCallback) {
 
     inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -37,6 +46,7 @@ class PlayerAdapter(
         val tvRole: TextView       = view.findViewById(R.id.tv_role)
         val tvName: TextView       = view.findViewById(R.id.tv_player_name)
         val tvFlag: TextView       = view.findViewById(R.id.tv_flag)
+        val tvMood: TextView       = view.findViewById(R.id.tv_mood)
         val tvTeam: TextView       = view.findViewById(R.id.tv_team_name)
         val tvOverall: TextView    = view.findViewById(R.id.tv_overall)
         val tvGames: TextView      = view.findViewById(R.id.tv_stat_games)
@@ -87,6 +97,38 @@ class PlayerAdapter(
         holder.tvName.text = player.nome_jogo
         holder.tvFlag.text = TeamColors.flagEmoji(player.nacionalidade)
         holder.tvTeam.text = player.time_nome
+        bindMood(holder, player)
+    }
+
+    /**
+     * Popula o emoji de moral do jogador.
+     *
+     * Só funciona dentro de uma carreira ativa (GameState carregado). Se o app
+     * estiver no modo de visualização pura (MainActivity sem carreira), o
+     * GameRepository.current() lança; nesse caso escondemos o emoji.
+     *
+     * Se o jogador pediu transferência, mostra o emoji com um indicador adicional
+     * (⚠ ao lado), chamando atenção para o card.
+     */
+    private fun bindMood(holder: ViewHolder, player: Player) {
+        val gs = runCatching { GameRepository.current() }.getOrNull()
+        if (gs == null) {
+            holder.tvMood.visibility = View.GONE
+            holder.tvMood.setOnClickListener(null)
+            return
+        }
+        val mood = MoraleService.moodStateOf(gs, player.id)
+        val transferReq = MoraleService.hasRequestedTransfer(gs, player.id)
+        holder.tvMood.visibility = View.VISIBLE
+        holder.tvMood.text = if (transferReq) "${mood.emoji}⚠" else mood.emoji
+
+        // Torna o emoji clicável se a tela hospedeira passou um callback
+        if (onMoodClick != null) {
+            holder.tvMood.setOnClickListener { onMoodClick.invoke(player) }
+        } else {
+            holder.tvMood.setOnClickListener(null)
+            holder.tvMood.isClickable = false
+        }
     }
 
     private fun bindOverall(holder: ViewHolder, player: Player, ctx: android.content.Context) {
