@@ -127,7 +127,7 @@ object MoraleService {
 
     /** Histórico de mudanças do jogador (mais recente primeiro). */
     fun historyOf(state: GameState, playerId: String): List<MoodEvent> =
-        state.playerOverrides[playerId]?.moodHistory.orEmpty()
+        state.playerOverrides[playerId]?.moodHistory ?: emptyList()
 
     /**
      * Modificador a aplicar ao overall do jogador na simulação.
@@ -199,9 +199,9 @@ object MoraleService {
         val clamped  = newValue.coerceIn(MIN_MOOD, MAX_MOOD)
         val existing = state.playerOverrides[playerId] ?: PlayerOverride(playerId)
         val newHistory = if (addToHistory != null) {
-            (listOf(addToHistory) + (existing.moodHistory ?: emptyList())).take(HISTORY_MAX_ENTRIES)
+            (listOf(addToHistory) + existing.moodHistory).take(HISTORY_MAX_ENTRIES)
         } else {
-            existing.moodHistory ?: emptyList()
+            existing.moodHistory
         }
         state.playerOverrides[playerId] = existing.copy(
             mood        = clamped,
@@ -373,7 +373,7 @@ object MoraleService {
         )
         state.playerOverrides[playerId] = existing.copy(
             transferRequestedOn = state.currentDate,
-            moodHistory         = (listOf(event) + (existing.moodHistory ?: emptyList())).take(HISTORY_MAX_ENTRIES)
+            moodHistory         = (listOf(event) + existing.moodHistory).take(HISTORY_MAX_ENTRIES)
         )
     }
 

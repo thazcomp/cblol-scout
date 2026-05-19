@@ -67,6 +67,28 @@ class ManagerHubActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         vm.refresh()
+        showPendingOffMatchEventIfAny()
+    }
+
+    /**
+     * Se há um evento fora de jogo pendente que ainda não foi visualizado pelo
+     * jogador (por exemplo, o app foi fechado entre o fim da série e a abertura
+     * do evento), abre a [OffMatchEventActivity] aqui no Hub para mostrar.
+     *
+     * Essa redundância com o [MatchResultActivity.setupContinueButton] garante
+     * que nenhum evento fica esquecido no save.
+     *
+     * IMPORTANTE: `onResume` pode rodar ANTES do `vm.init()` ter carregado o
+     * GameState (ex: primeira abertura do Hub vindo do TeamSelect). Por isso
+     * usamos `runCatching` em vez de chamar `GameRepository.current()` direto
+     * — se não há GameState ainda, simplesmente não fazemos nada agora; o
+     * próximo onResume (depois do load) cuidará disso.
+     */
+    private fun showPendingOffMatchEventIfAny() {
+        val gs = runCatching { GameRepository.current() }.getOrNull() ?: return
+        if (gs.pendingOffMatchEvent != null) {
+            startActivity(OffMatchEventActivity.intent(this))
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

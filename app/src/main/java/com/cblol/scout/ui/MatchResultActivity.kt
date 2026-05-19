@@ -21,6 +21,7 @@ import com.cblol.scout.databinding.ActivityMatchResultBinding
 import com.cblol.scout.domain.GameConstants
 import com.cblol.scout.domain.usecase.CoachProgressionService
 import com.cblol.scout.domain.usecase.MoraleService
+import com.cblol.scout.domain.usecase.OffMatchEventService
 import com.cblol.scout.game.GameRepository
 import com.cblol.scout.util.TeamColors
 
@@ -87,6 +88,15 @@ class MatchResultActivity : AppCompatActivity() {
                 (gs.managerTeamId == data.awayId && data.awayScore > data.homeScore)
             CoachProgressionService.recordSeriesResult(gs.coachProfile, playerWonSeries)
             MoraleService.recordSeriesResult(gs, roster, playerWonSeries, opponentName)
+
+            // Ao FIM DA SÉRIE: sorteia um evento fora de jogo para apresentar antes
+            // do jogador voltar ao Hub. O OffMatchEventService já aplica os efeitos
+            // (moral, modificador temporário); a UI apenas exibe a narrativa.
+            //
+            // Usa o roster COMPLETO (titulares + reservas) porque eventos podem
+            // afetar qualquer jogador do time — lesoes, relacionamentos, etc.
+            val fullRoster = GameRepository.rosterOf(applicationContext, gs.managerTeamId)
+            OffMatchEventService.maybeGenerateEvent(gs, fullRoster)
         }
         GameRepository.save(applicationContext)
     }
@@ -144,6 +154,9 @@ class MatchResultActivity : AppCompatActivity() {
     private fun setupContinueButton(data: MatchResultData) {
         binding.btnContinue.setOnClickListener {
             if (data.seriesFinished || data.matchId.isEmpty()) {
+                // Volta direto para o Hub. Se há um evento fora de jogo pendente,
+                // o próprio Hub detecta no `onResume` e abre a OffMatchEventActivity
+                // automaticamente. Mantém o fluxo simples e único ponto de orquestração.
                 startActivity(Intent(this, ManagerHubActivity::class.java)
                     .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP))
                 finish()

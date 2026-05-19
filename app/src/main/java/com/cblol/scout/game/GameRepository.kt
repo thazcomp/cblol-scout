@@ -52,6 +52,20 @@ object GameRepository {
         if (gs.coachProfile == null) {
             gs.coachProfile = CoachProfile()
         }
+
+        // Defesa contra `moodHistory == null` em saves antigos. O Gson via
+        // reflection põe null em fields List quando o JSON salvo não contém
+        // a key, mesmo que o campo Kotlin tenha default = emptyList(). Como
+        // o tipo declarado é List<MoodEvent> não-nullable, deixar null
+        // crasharia em qualquer leitura. Reconstruímos os overrides afetados.
+        val overridesToFix = gs.playerOverrides.entries.filter { entry ->
+            @Suppress("SENSELESS_COMPARISON")
+            entry.value.moodHistory == null
+        }
+        overridesToFix.forEach { entry ->
+            gs.playerOverrides[entry.key] = entry.value.copy(moodHistory = emptyList())
+        }
+
         return gs
     }
 

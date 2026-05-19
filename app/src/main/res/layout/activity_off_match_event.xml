@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    OffMatchEventActivity — tela cinematográfica de evento fora de jogo.
+
+    Aparece entre BO3s, antes do jogador voltar ao Hub. Mostra:
+      - Emoji gigante representando a categoria do evento
+      - Título dramático
+      - Texto narrativo
+      - Card de efeitos (moral, overall temporário) com cores semânticas
+      - Botão CONTINUAR
+
+    Estrutura visual (vertical):
+      ┌────────────────────────────────────┐
+      │                                    │
+      │              🎤                    │
+      │         (96sp emoji)               │
+      │                                    │
+      │     Entrevista marcante            │
+      │   Categoria · Robo (jogador)       │
+      │                                    │
+      │  ─────────────────────────────     │
+      │  Robo deu uma entrevista...        │
+      │  ...repercussão foi ótima.         │
+      │  ─────────────────────────────     │
+      │                                    │
+      │  ┌────────────────────────────┐    │
+      │  │ EFEITOS                    │    │
+      │  │  😄 Moral: +8              │    │
+      │  │  ⚡ Overall: +3 (3 dias)   │    │
+      │  └────────────────────────────┘    │
+      │                                    │
+      │  [        CONTINUAR        ]       │
+      └────────────────────────────────────┘
+-->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/pick_ban_bg">
+
+    <!-- Faixa colorida no topo (verde/cinza/vermelho conforme sentiment) -->
+    <View
+        android:id="@+id/view_top_bar"
+        android:layout_width="0dp"
+        android:layout_height="6dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <ScrollView
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:padding="20dp"
+        android:fillViewport="true"
+        app:layout_constraintTop_toBottomOf="@id/view_top_bar"
+        app:layout_constraintBottom_toTopOf="@id/btn_continue"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <!-- Emoji gigante do evento -->
+            <TextView
+                android:id="@+id/tv_emoji"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="96sp"
+                android:gravity="center"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Título do evento -->
+            <TextView
+                android:id="@+id/tv_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/champion_gold"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:gravity="center"
+                android:letterSpacing="0.04" />
+
+            <!-- Subtítulo: categoria + nome do alvo -->
+            <TextView
+                android:id="@+id/tv_subtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/color_on_surface_variant"
+                android:textSize="13sp"
+                android:gravity="center"
+                android:layout_marginTop="4dp"
+                android:letterSpacing="0.08" />
+
+            <!-- Separador dourado -->
+            <View
+                android:layout_width="48dp"
+                android:layout_height="2dp"
+                android:background="@color/champion_gold"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="20dp" />
+
+            <!-- Narrativa -->
+            <TextView
+                android:id="@+id/tv_description"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/color_on_surface"
+                android:textSize="15sp"
+                android:lineSpacingExtra="4dp"
+                android:gravity="center" />
+
+            <!-- Card de efeitos -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/card_effects"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28dp"
+                app:cardCornerRadius="4dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/color_outline_gold"
+                app:strokeWidth="1dp"
+                app:cardBackgroundColor="@color/color_surface">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="14dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/off_match_effects_header"
+                        android:textColor="@color/champion_gold"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.12"
+                        android:layout_marginBottom="8dp" />
+
+                    <!-- Linha de efeito: moral -->
+                    <TextView
+                        android:id="@+id/tv_effect_mood"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:layout_marginTop="2dp"
+                        android:layout_marginBottom="2dp"
+                        android:visibility="gone" />
+
+                    <!-- Linha de efeito: overall temporário -->
+                    <TextView
+                        android:id="@+id/tv_effect_overall"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="14sp"
+                        android:layout_marginTop="2dp"
+                        android:layout_marginBottom="2dp"
+                        android:visibility="gone" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Botão fixo no rodapé -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_continue"
+        android:layout_width="0dp"
+        android:layout_height="52dp"
+        android:layout_margin="20dp"
+        android:text="@string/off_match_continue"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        app:backgroundTint="@color/champion_gold"
+        android:textColor="@color/pick_ban_bg"
+        app:cornerRadius="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+</androidx.constraintlayout.widget.ConstraintLayout>

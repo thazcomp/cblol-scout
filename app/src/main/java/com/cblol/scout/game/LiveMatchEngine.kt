@@ -9,6 +9,7 @@ import com.cblol.scout.data.Side
 import com.cblol.scout.data.PickBanPlan
 import com.cblol.scout.domain.GameConstants
 import com.cblol.scout.domain.usecase.MoraleService
+import com.cblol.scout.domain.usecase.OffMatchEventService
 import com.cblol.scout.util.ChampionPoolRepository
 import com.cblol.scout.util.CompositionRepository
 import kotlin.math.absoluteValue
@@ -105,8 +106,6 @@ object LiveMatchEngine {
         val events = gameEvents.toMutableList()
 
         // Anuncia jogadores em êxtase (moral 95+) com bônus extra de overall.
-        // O `add(0, ...)` empurra o anuncio para o topo da timeline para o jogador
-        // ver antes de ver os picks/bans.
         val ecstaticPlayers = (homeRoster + awayRoster).filter { p ->
             (MoraleService.moodOf(gs, p.id) >= MoraleService.ECSTASY_THRESHOLD)
         }
@@ -116,6 +115,22 @@ object LiveMatchEngine {
             events.add(0, MatchEvent.PhaseAnnouncement(
                 "⚡ [$sideLabel] ${player.nome_jogo} está em êxtase! (+5 overall)"
             ))
+        }
+
+        // Anuncia efeitos ativos de eventos fora de jogo (lesão, família, etc).
+        // Só mostra modificadores ativos no momento da partida — expirados são ignorados.
+        (homeRoster + awayRoster).forEach { player ->
+            val offMatchMod = OffMatchEventService.activeOverallModifierFor(gs, player.id)
+            if (offMatchMod != 0) {
+                val reason = gs.playerOverrides[player.id]?.overallModifierReason ?: "Evento"
+                val isHome = player in homeRoster
+                val sideLabel = if (isHome) "HOME" else "AWAY"
+                val sign = if (offMatchMod > 0) "+" else ""
+                val icon = if (offMatchMod > 0) "✨" else "🩹"
+                events.add(0, MatchEvent.PhaseAnnouncement(
+                    "$icon [$sideLabel] ${player.nome_jogo}: $reason ($sign$offMatchMod overall)"
+                ))
+            }
         }
 
         // Anuncia sinergia e insights no feed
@@ -240,25 +255,29 @@ object LiveMatchEngine {
     }
 
     /**
-     * Variante de [teamStrength] que considera a moral atual dos jogadores.
+     * Variante de [teamStrength] que considera a moral atual dos jogadores
+     * E os modificadores temporários de eventos fora de jogo.
      *
-     * Cada jogador tem seu overall efetivo ajustado por
-     * [MoraleService.moodOverallModifier] antes de calcular a média:
-     *  - Moral SAD (0-33): -3 no overall
-     *  - Moral NEUTRAL (34-66): 0
-     *  - Moral HAPPY (67-94): +2
-     *  - Moral em ÊXTASE (95+): +5 (HAPPY +2 + bônus de êxtase +3)
+     * Cada jogador tem seu overall efetivo ajustado por:
+     *  1. [MoraleService.moodOverallModifier]:
+     *     - SAD (0-33): -3, NEUTRAL (34-66): 0, HAPPY (67-94): +2,
+     *     - ÊXTASE (95+): +5 (HAPPY +2 + bônus +3)
+     *  2. [OffMatchEventService.activeOverallModifierFor]:
+     *     - Lesão: -4 por 7 dias
+     *     - Família assistindo: +3 por 3 dias
+     *     - Treino breakthrough: +4 por 5 dias
+     *     - Etc (ver OffMatchEventService)
      *
-     * Resultado: um time com 5 jogadores tristes perde ~3 pontos de média,
-     * um time com 5 em êxtase ganha ~5 pontos — diferença relevante na
-     * fórmula de probabilidade (que usa diferença/60).
+     * Os dois efeitos se SOMAM. Ex: jogador FELIZ (+2) com família (+3) ganha +5 ao
+     * overall efetivo; jogador TRISTE (-3) lesionado (-4) perde -7.
      */
     private fun teamStrengthWithMood(roster: List<Player>, gs: GameState): Int {
         if (roster.isEmpty()) return 50
         val total = roster.sumOf { player ->
-            val baseOvr  = player.overallRating()
-            val modifier = MoraleService.moodOverallModifier(gs, player.id)
-            (baseOvr + modifier).coerceIn(1, 99)
+            val baseOvr        = player.overallRating()
+            val moodMod        = MoraleService.moodOverallModifier(gs, player.id)
+            val offMatchMod    = OffMatchEventService.activeOverallModifierFor(gs, player.id)
+            (baseOvr + moodMod + offMatchMod).coerceIn(1, 99)
         }
         return total / roster.size
     }

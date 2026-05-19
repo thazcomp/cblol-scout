@@ -28,7 +28,19 @@ data class GameState(
      * Perfil acumulativo do técnico — level, XP, estatísticas de carreira.
      * Mantém o progresso do treinador ao longo do split.
      */
-    var coachProfile: CoachProfile = CoachProfile()
+    var coachProfile: CoachProfile = CoachProfile(),
+
+    /**
+     * Último evento fora de jogo gerado mas ainda não visto pelo jogador.
+     * Quando não-nulo, a [com.cblol.scout.ui.ManagerHubActivity] (ou o
+     * [com.cblol.scout.ui.MatchResultActivity] após o fim da série) deve abrir
+     * a [com.cblol.scout.ui.OffMatchEventActivity] antes de qualquer outra ação.
+     *
+     * Setado pelo [com.cblol.scout.domain.usecase.OffMatchEventService.maybeGenerateEvent].
+     * Limpo quando a Activity de evento chama `consume()` após o usuário
+     * tocar em CONTINUAR.
+     */
+    var pendingOffMatchEvent: OffMatchEvent? = null
 )
 
 /**
@@ -73,10 +85,8 @@ data class PlayerOverride(
      * Histórico das últimas mudanças de moral (mais recente primeiro).
      * Limitado em [com.cblol.scout.domain.usecase.MoraleService.HISTORY_MAX_ENTRIES]
      * para não inflar o save. Cada entrada descreve o evento e o delta aplicado.
-     *
-     * Nullable porque Gson pode deixar null ao desserializar saves antigos que não têm este field.
      */
-    val moodHistory: List<MoodEvent>? = null,
+    val moodHistory: List<MoodEvent> = emptyList(),
 
     /**
      * Data (ISO yyyy-MM-dd) da última partida em que esse jogador foi titular.
@@ -92,7 +102,32 @@ data class PlayerOverride(
      * Disparado quando moral atinge valor extremamente baixo — ver
      * [com.cblol.scout.domain.usecase.MoraleService.TRANSFER_REQUEST_THRESHOLD].
      */
-    val transferRequestedOn: String? = null
+    val transferRequestedOn: String? = null,
+
+    /**
+     * Modificador de overall TEMPORÁRIO atribuído por eventos fora de jogo
+     * (lesão, relacionamento, entrevista repercussão, etc).
+     *
+     * Persiste até [overallModifierExpiresOn]. Se a data corrente é > expiresOn,
+     * o modificador é considerado expirado (mas só limpamos no próximo evento
+     * fora de jogo para manter o save consistente sem migration).
+     *
+     * Aplicado em cima do modificador de moral do MoraleService — ver
+     * [com.cblol.scout.domain.usecase.OffMatchEventService.activeOverallModifierFor].
+     */
+    val overallModifier: Int = 0,
+
+    /**
+     * Data (ISO yyyy-MM-dd) em que o [overallModifier] expira. Null quando não
+     * há modificador ativo.
+     */
+    val overallModifierExpiresOn: String? = null,
+
+    /**
+     * Descrição curta do motivo do modificador ativo (ex: "Lesão no dedo",
+     * "Família assistindo"). Mostrada em tooltip/dialog quando relevante.
+     */
+    val overallModifierReason: String? = null
 )
 
 /**
@@ -262,3 +297,70 @@ data class LogEntry(
     val type: String,
     val message: String
 )
+
+/**
+ * Evento fora de jogo (entre BO3s). Apresentado ao jogador em uma tela própria
+ * antes da próxima partida. Tem narrativa, efeitos imediatos em moral e/ou
+ * modificadores temporários de overall, e pode afetar um único jogador ou o
+ * time inteiro.
+ *
+ * **Categorias** (via [OffMatchEventCategory]):
+ *  - INTERVIEW: entrevista — boa ou ruim, afeta moral/reputação
+ *  - INJURY: lesão leve — penaliza overall por X dias
+ *  - RELATIONSHIP_START / RELATIONSHIP_END: relacionamentos pessoais
+ *  - FAMILY_SUPPORT: família assistindo — bônus emocional
+ *  - SCANDAL: polêmica que pega o time todo
+ *  - TRAINING_BREAKTHROUGH: avanço no treino, bônus temporário
+ *  - SPONSOR_VISIT: patrocinador presente, pressão extra
+ *  - FAN_SUPPORT: torcida fazendo evento de apoio
+ *  - PERSONAL_TRAGEDY: tragédia pessoal séria
+ *
+ * **Sinal** ([OffMatchEventSentiment]): POSITIVE, NEUTRAL ou NEGATIVE — para a UI
+ * escolher ícones/cores apropriados.
+ *
+ * **Alvo** (via [targetPlayerId]):
+ *  - null = afeta o time inteiro
+ *  - playerId = afeta só esse jogador
+ *
+ * **Efeitos** (já calculados quando o evento é criado, para a UI poder mostrar):
+ *  - [moodDelta]: variação de moral aplicada (positiva ou negativa)
+ *  - [overallModifierDelta]: modificador de overall que vai durar [durationDays]
+ *  - [durationDays]: por quantos dias o modificador permanece ativo
+ */
+data class OffMatchEvent(
+    val id: String,
+    val date: String,
+    val category: OffMatchEventCategory,
+    val sentiment: OffMatchEventSentiment,
+    /** Título curto do evento (mostrado no topo da tela). */
+    val title: String,
+    /** Texto narrativo do evento (parágrafo curto em PT-BR). */
+    val description: String,
+    /** Player ID se o evento afeta um jogador específico, null se time inteiro. */
+    val targetPlayerId: String? = null,
+    /** Nome do jogador (snapshot, para a UI mostrar sem refazer lookup). */
+    val targetPlayerName: String? = null,
+    /** Variação de moral aplicada ao(s) afetado(s). */
+    val moodDelta: Int = 0,
+    /** Modificador temporário de overall. */
+    val overallModifierDelta: Int = 0,
+    /** Duração em dias do modificador de overall (0 = sem modificador). */
+    val durationDays: Int = 0
+)
+
+/** Categorias de evento. Cada uma vem com um conjunto de templates narrativos. */
+enum class OffMatchEventCategory(val emoji: String, val label: String) {
+    INTERVIEW("🎤", "Entrevista"),
+    INJURY("🩹", "Lesão"),
+    RELATIONSHIP_START("💕", "Relacionamento"),
+    RELATIONSHIP_END("💔", "Término"),
+    FAMILY_SUPPORT("👨‍👩‍👧", "Família"),
+    SCANDAL("📰", "Polêmica"),
+    TRAINING_BREAKTHROUGH("💡", "Treino"),
+    SPONSOR_VISIT("💼", "Patrocinador"),
+    FAN_SUPPORT("🎉", "Torcida"),
+    PERSONAL_TRAGEDY("⚫", "Tragédia")
+}
+
+/** Sentimento geral do evento, usado pela UI para escolher cores. */
+enum class OffMatchEventSentiment { POSITIVE, NEUTRAL, NEGATIVE }
