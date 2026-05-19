@@ -530,7 +530,7 @@ enum class TrainingType(
         label = "Scrim",
         description = "Treina contra outro time profissional. Melhora a coordenação em team fights.",
         durationDays = 1,
-        cooldownDays = 7,
+        cooldownDays = 2,
         cost = 30_000L
     ),
     VOD_REVIEW(
@@ -538,7 +538,7 @@ enum class TrainingType(
         label = "Revisão de VOD",
         description = "Estudar replays das partidas anteriores. Identifica erros e melhora a tomada de decisão.",
         durationDays = 1,
-        cooldownDays = 14,
+        cooldownDays = 3,
         cost = 10_000L
     ),
     SOLO_QUEUE(
@@ -546,7 +546,7 @@ enum class TrainingType(
         label = "Sessão de Solo Queue",
         description = "Cada jogador foca em melhorar sua lane individual em ranked. Risco de tilt.",
         durationDays = 2,
-        cooldownDays = 21,
+        cooldownDays = 4,
         cost = 5_000L
     ),
     GYM(
@@ -554,7 +554,7 @@ enum class TrainingType(
         label = "Academia",
         description = "Treino físico orientado por preparador. Reduz risco de lesões e aumenta o foco.",
         durationDays = 1,
-        cooldownDays = 7,
+        cooldownDays = 3,
         cost = 20_000L
     ),
     TEAM_BUILDING(
@@ -562,7 +562,7 @@ enum class TrainingType(
         label = "Team Building",
         description = "Atividade recreativa fora do jogo. Fortalece o espírito de equipe e levanta a moral.",
         durationDays = 1,
-        cooldownDays = 14,
+        cooldownDays = 7,
         cost = 40_000L
     ),
     BOOT_CAMP(
@@ -570,7 +570,7 @@ enum class TrainingType(
         label = "Boot Camp",
         description = "Imersão intensa de uma semana. Caro e cansativo, mas com ganhos significativos se executado bem.",
         durationDays = 7,
-        cooldownDays = 28,
+        cooldownDays = 30,
         cost = 250_000L
     )
 }
