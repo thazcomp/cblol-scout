@@ -1,120 +1,123 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- ─── Paleta inspirada no client do League of Legends ───
-         Fundo: navy escuro com tom azulado
-         Acento principal: dourado LoL (#C89B3C)
-         Texto: creme (#F0E6D2)                                     -->
+    <!-- ═══ Paleta CBLOL Scout — versão VIVID ═══
+         Mantém DNA esports/LoL mas com saturação alta para parecer um
+         broadcast moderno em vez de um menu sóbrio. Cores anteriores
+         estavam dessaturadas (~40-60%); estas estão em 70-95%.
+         Backgrounds permanecem escuros para destacar os acentos. -->
 
-    <!-- Backgrounds -->
-    <color name="bg_screen">#010A13</color>
-    <color name="color_surface">#0A1428</color>
-    <color name="color_surface_elevated">#0F1F35</color>
+    <!-- ── Backgrounds (azul-noite com um toque ROXO para sair do navy plano) ── -->
+    <color name="bg_screen">#0A0B1A</color>
+    <color name="color_surface">#161830</color>
+    <color name="color_surface_elevated">#1F2240</color>
 
-    <!-- Texto -->
-    <color name="color_on_surface">#F0E6D2</color>
-    <color name="color_on_surface_variant">#A09B8C</color>
+    <!-- ── Texto (creme mais quente, branco puro pra contraste em headers) ── -->
+    <color name="color_on_surface">#F5EDD8</color>
+    <color name="color_on_surface_variant">#A8A2BD</color>
 
-    <!-- Dourado LoL (primary) -->
-    <color name="color_primary">#C89B3C</color>
-    <color name="color_primary_light">#C8AA6E</color>
-    <color name="color_primary_dark">#785A28</color>
-    <color name="color_on_primary">#010A13</color>
+    <!-- ── Dourado CBLOL (primary) — saturação levada de #C89B3C para tom mais quente ── -->
+    <color name="color_primary">#F0B638</color>
+    <color name="color_primary_light">#FFD876</color>
+    <color name="color_primary_dark">#8B6418</color>
+    <color name="color_on_primary">#0A0B1A</color>
 
-    <!-- Containers -->
-    <color name="color_primary_container">#1E2D40</color>
-    <color name="color_on_primary_container">#C8AA6E</color>
-    <color name="color_secondary_container">#0F1F35</color>
-    <color name="color_on_secondary_container">#C8AA6E</color>
+    <!-- ── Containers ── -->
+    <color name="color_primary_container">#2A2D55</color>
+    <color name="color_on_primary_container">#FFD876</color>
+    <color name="color_secondary_container">#1F2240</color>
+    <color name="color_on_secondary_container">#FFD876</color>
 
-    <!-- Bordas -->
-    <color name="color_outline">#3C3C41</color>
-    <color name="color_outline_variant">#1E2D40</color>
-    <color name="color_outline_gold">#785A28</color>
+    <!-- ── Bordas ── -->
+    <color name="color_outline">#4A4970</color>
+    <color name="color_outline_variant">#2A2D55</color>
+    <color name="color_outline_gold">#B88822</color>
 
-    <!-- Acentos por raridade (overall do jogador) -->
-    <color name="rarity_mythic">#C89B3C</color>     <!-- 85+ -->
-    <color name="rarity_legendary">#0AC8B9</color>  <!-- 75-84 -->
-    <color name="rarity_epic">#B19CD9</color>       <!-- 65-74 -->
-    <color name="rarity_rare">#788CA0</color>       <!-- < 65 -->
+    <!-- ── Raridade (overall do jogador) — gradiente vivo: dourado→ciano→lavanda→cinza ── -->
+    <color name="rarity_mythic">#F0B638</color>     <!-- 85+ : dourado vivo -->
+    <color name="rarity_legendary">#1FE0CC</color>  <!-- 75-84 : ciano elétrico -->
+    <color name="rarity_epic">#C994FF</color>       <!-- 65-74 : lavanda néon -->
+    <color name="rarity_rare">#8FA3B8</color>       <!-- < 65 : cinza azulado -->
 
-    <!-- Estados -->
-    <color name="state_success">#00B894</color>     <!-- vitória / dentro do top 6 -->
-    <color name="state_warning">#FFB800</color>     <!-- alerta / hoje -->
-    <color name="state_danger">#E84057</color>      <!-- derrota / vender -->
+    <!-- ── Estados (verde/amarelo/vermelho saturados) ── -->
+    <color name="state_success">#00E0A0</color>     <!-- mint néon -->
+    <color name="state_warning">#FFC832</color>     <!-- âmbar vibrante -->
+    <color name="state_danger">#FF4B6E</color>      <!-- coral rosado -->
 
-    <!-- Atributos derivados (barras) -->
-    <color name="attr_lane">#0AC8B9</color>
-    <color name="attr_tf">#E84057</color>
-    <color name="attr_cria">#B19CD9</color>
-    <color name="attr_cons">#00B894</color>
-    <color name="attr_clutch">#FFB800</color>
-    <color name="attr_track">#1E2D40</color>
-    <color name="pick_ban_bg">#0A0A14</color>
-    <color name="pick_ban_topbar">#12121E</color>
-    <color name="pick_ban_phase_bg">#1A1A2A</color>
-    <color name="pick_ban_center_bg">#0D0D1A</color>
-    <color name="pick_ban_blue_side_bg">#0A0F1F</color>
-    <color name="pick_ban_red_side_bg">#1F0A0A</color>
+    <!-- ── Atributos derivados (5 cores distintas e vibrantes) ── -->
+    <color name="attr_lane">#1FE0CC</color>     <!-- ciano -->
+    <color name="attr_tf">#FF4B6E</color>       <!-- coral -->
+    <color name="attr_cria">#C994FF</color>     <!-- lavanda -->
+    <color name="attr_cons">#00E0A0</color>     <!-- mint -->
+    <color name="attr_clutch">#FFC832</color>   <!-- âmbar -->
+    <color name="attr_track">#2A2D55</color>
 
-    <color name="blue_side_accent">#4A9EFF</color>
-    <color name="red_side_accent">#FF5252</color>
-    <color name="champion_gold">#C9AA71</color>
-    <color name="champion_slot_bg">#1E1E2E</color>
-    <color name="champion_slot_filled">#2A2A3E</color>
-    <color name="pick_slot_empty_bg">#15151F</color>
+    <!-- ── Pick & Ban (escuro pra contraste cinemático) ── -->
+    <color name="pick_ban_bg">#0A0B1A</color>
+    <color name="pick_ban_topbar">#16182C</color>
+    <color name="pick_ban_phase_bg">#1F2240</color>
+    <color name="pick_ban_center_bg">#0D0E22</color>
+    <color name="pick_ban_blue_side_bg">#0A1230</color>
+    <color name="pick_ban_red_side_bg">#2C0A14</color>
+
+    <color name="blue_side_accent">#5BB5FF</color>
+    <color name="red_side_accent">#FF6B8A</color>
+    <color name="champion_gold">#FFD876</color>
+    <color name="champion_slot_bg">#22243A</color>
+    <color name="champion_slot_filled">#33365A</color>
+    <color name="pick_slot_empty_bg">#191B2E</color>
 
     <!-- ═══ Cores usadas dinamicamente em código Kotlin ═══ -->
     <!-- Feed da simulação -->
-    <color name="sim_home_accent">#0AC8B9</color>
-    <color name="sim_away_accent">#E84057</color>
-    <color name="sim_tower_accent">#C8AA6E</color>
-    <color name="sim_inhibitor_accent">#FFB800</color>
-    <color name="sim_dragon_accent">#0AC8B9</color>
-    <color name="sim_baron_accent">#B19CD9</color>
-    <color name="sim_herald_accent">#C89B3C</color>
-    <color name="sim_match_end_accent">#C89B3C</color>
-    <color name="sim_buff_red">#E84057</color>
-    <color name="sim_buff_blue">#0AC8B9</color>
-    <color name="sim_pickban_chip_bg">#1E2D40</color>
-    <color name="sim_pickban_chip_pick">#C89B3C</color>
-    <color name="sim_pickban_chip_ban">#A09B8C</color>
+    <color name="sim_home_accent">#1FE0CC</color>
+    <color name="sim_away_accent">#FF4B6E</color>
+    <color name="sim_tower_accent">#FFD876</color>
+    <color name="sim_inhibitor_accent">#FFC832</color>
+    <color name="sim_dragon_accent">#1FE0CC</color>
+    <color name="sim_baron_accent">#C994FF</color>
+    <color name="sim_herald_accent">#F0B638</color>
+    <color name="sim_match_end_accent">#F0B638</color>
+    <color name="sim_buff_red">#FF4B6E</color>
+    <color name="sim_buff_blue">#1FE0CC</color>
+    <color name="sim_pickban_chip_bg">#2A2D55</color>
+    <color name="sim_pickban_chip_pick">#F0B638</color>
+    <color name="sim_pickban_chip_ban">#A8A2BD</color>
 
-    <!-- Sinergia (barras de comp) -->
-    <color name="synergy_blue">#3CBEFF</color>
-    <color name="synergy_blue_bg">#223CBEFF</color>
-    <color name="synergy_red">#E84057</color>
-    <color name="synergy_red_bg">#22E84057</color>
-    <color name="synergy_bars_bg">#1A1A28</color>
+    <!-- Sinergia (barras de composição) -->
+    <color name="synergy_blue">#5BB5FF</color>
+    <color name="synergy_blue_bg">#225BB5FF</color>
+    <color name="synergy_red">#FF4B6E</color>
+    <color name="synergy_red_bg">#22FF4B6E</color>
+    <color name="synergy_bars_bg">#1F2240</color>
 
     <!-- Tela de resultado -->
-    <color name="result_victory_text">#FFD700</color>
-    <color name="result_victory_bg">#0A1F0A</color>
-    <color name="result_defeat_text">#E84057</color>
-    <color name="result_defeat_bg">#1F0A0A</color>
-    <color name="result_other_text">#C9AA71</color>
-    <color name="result_other_bg">#0A0A14</color>
+    <color name="result_victory_text">#FFD876</color>
+    <color name="result_victory_bg">#0A2814</color>
+    <color name="result_defeat_text">#FF4B6E</color>
+    <color name="result_defeat_bg">#28080F</color>
+    <color name="result_other_text">#FFD876</color>
+    <color name="result_other_bg">#0A0B1A</color>
 
     <!-- Schedule -->
-    <color name="schedule_my_team_bar">#C89B3C</color>
-    <color name="schedule_other_team_bar">#3C3C41</color>
-    <color name="schedule_played_text">#F0E6D2</color>
-    <color name="schedule_today_text">#FFB800</color>
-    <color name="schedule_missed_text">#A09B8C</color>
+    <color name="schedule_my_team_bar">#F0B638</color>
+    <color name="schedule_other_team_bar">#4A4970</color>
+    <color name="schedule_played_text">#F5EDD8</color>
+    <color name="schedule_today_text">#FFC832</color>
+    <color name="schedule_missed_text">#A8A2BD</color>
 
     <!-- Hub -->
-    <color name="hub_budget_negative">#E84057</color>
-    <color name="hub_budget_positive">#C89B3C</color>
+    <color name="hub_budget_negative">#FF4B6E</color>
+    <color name="hub_budget_positive">#FFD876</color>
 
     <!-- Salário: fonte reportada vs estimada -->
-    <color name="salary_reported">#00B894</color>
-    <color name="salary_estimated">#C89B3C</color>
+    <color name="salary_reported">#00E0A0</color>
+    <color name="salary_estimated">#FFD876</color>
 
     <!-- ═══ Sugestões de pick (cards na PickBanActivity) ═══ -->
-    <color name="pick_ban_suggestion_bg">#1A1F2E</color>
-    <color name="suggestion_badge_main">#C89B3C</color>      <!-- Dourado: MAIN -->
-    <color name="suggestion_badge_comp">#0AC8B9</color>             <!-- Ciano: COMPOSITION -->
-    <color name="suggestion_badge_counter">#E84057</color>    <!-- Vermelho: COUNTER -->
-    <color name="suggestion_badge_synergy">#3CBEFF</color>    <!-- Azul: SYNERGY -->
-    <color name="suggestion_badge_meta">#A09B8C</color>       <!-- Cinza: META -->
+    <color name="pick_ban_suggestion_bg">#2E3155</color>
+    <color name="suggestion_badge_main">#F0B638</color>      <!-- Dourado: MAIN -->
+    <color name="suggestion_badge_comp">#1FE0CC</color>      <!-- Ciano: COMPOSITION -->
+    <color name="suggestion_badge_counter">#FF4B6E</color>   <!-- Coral: COUNTER -->
+    <color name="suggestion_badge_synergy">#5BB5FF</color>   <!-- Azul: SYNERGY -->
+    <color name="suggestion_badge_meta">#C994FF</color>      <!-- Lavanda: META -->
 
 </resources>

@@ -3,6 +3,6 @@
     android:shape="rectangle">
     <stroke
         android:width="3dp"
-        android:color="#CCC9AA71" />
+        android:color="#CCFFD876" />
     <!-- Sem fill — apenas contorno luminoso -->
 </shape>

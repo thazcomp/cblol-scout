@@ -2,7 +2,7 @@
 <!-- Fundo de card escuro com borda fina dourada (estilo client LoL) -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
-    <solid android:color="#0A1428"/>
-    <stroke android:width="1dp" android:color="#785A28"/>
+    <solid android:color="#262952"/>
+    <stroke android:width="1dp" android:color="#D4A444"/>
     <corners android:radius="2dp"/>
 </shape>

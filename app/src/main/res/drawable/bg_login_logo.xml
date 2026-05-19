@@ -14,16 +14,16 @@
             android:viewportHeight="100">
 
             <!-- Borda hexagonal dourada -->
-            <path android:fillColor="#C8AA6E"
+            <path android:fillColor="#FFD876"
                 android:pathData="M50,4 L88,26 L88,74 L50,96 L12,74 L12,26 Z"/>
             <!-- Hexágono interno dourado escuro -->
-            <path android:fillColor="#C89B3C"
+            <path android:fillColor="#F0B638"
                 android:pathData="M50,8 L84,28 L84,72 L50,92 L16,72 L16,28 Z"/>
             <!-- Centro escuro -->
-            <path android:fillColor="#010A13"
+            <path android:fillColor="#1A1D38"
                 android:pathData="M50,18 L74,32 L74,68 L50,82 L26,68 L26,32 Z"/>
             <!-- Espada estilizada (vertical) -->
-            <path android:fillColor="#C89B3C"
+            <path android:fillColor="#F0B638"
                 android:pathData="M48,28 L52,28 L52,58 L56,62 L52,66 L52,72 L48,72 L48,66 L44,62 L48,58 Z"/>
         </vector>
     </item>
