@@ -65,7 +65,27 @@ data class GameState(
      * patrocínio. Usado para gerar ofertas a cada [SponsorService.OFFERS_INTERVAL_DAYS]
      * dias.
      */
-    var lastSponsorOffersDate: String? = null
+    var lastSponsorOffersDate: String? = null,
+
+    /**
+     * Histórico dos últimos treinos realizados. Limitado em
+     * [com.cblol.scout.domain.usecase.TrainingService.HISTORY_MAX] para não
+     * inflar o save. Mostrado na [com.cblol.scout.ui.TrainingActivity].
+     *
+     * Nullable porque Gson pode deixar null ao desserializar saves antigos que não têm este field.
+     */
+    var trainingHistory: MutableList<TrainingSession>? = null,
+
+    /**
+     * Data (ISO) do último treino realizado, por tipo. Usado para impor cooldown
+     * (cada tipo de treino tem seu próprio período de descanso — ver
+     * [com.cblol.scout.data.TrainingType.cooldownDays]).
+     *
+     * Chave = nome do enum [TrainingType], valor = data ISO do último uso.
+     *
+     * Nullable porque Gson pode deixar null ao desserializar saves antigos que não têm este field.
+     */
+    var lastTrainingByType: MutableMap<String, String>? = null
 )
 
 /**
@@ -477,4 +497,106 @@ data class SponsorContract(
     val endDate: String,
     var weeksPaid: Int = 0,
     var totalReceived: Long = 0L
+)
+
+/**
+ * ╔═════════════════════════════════════════════════════╗
+ * ║ SISTEMA DE TREINOS                                          ║
+ * ╚══════════════════════════════════════════════════════╝
+ *
+ * Treinos consomem dias do calendário + custo financeiro. Têm chance de
+ * sucesso baseada em diversos fatores (moral da equipe, level do técnico).
+ *
+ * Cada [TrainingType] tem efeitos próprios em sucesso/falha:
+ *  - SCRIM: melhora team_fight de todos
+ *  - VOD_REVIEW: melhora criatividade e consistencia
+ *  - SOLO_QUEUE: melhora lane_phase e clutch individuais
+ *  - GYM: aumenta moral e reduz risco de lesão
+ *  - TEAM_BUILDING: sobe moral do time inteiro
+ *  - BOOT_CAMP: muito caro, mas o mais poderoso (afeta vários atributos)
+ */
+
+/** Tipo de treino. Cada um tem seu próprio cost, duração e efeitos. */
+enum class TrainingType(
+    val emoji: String,
+    val label: String,
+    val description: String,
+    val durationDays: Int,
+    val cooldownDays: Int,
+    val cost: Long
+) {
+    SCRIM(
+        emoji = "⚔️",
+        label = "Scrim",
+        description = "Treina contra outro time profissional. Melhora a coordenação em team fights.",
+        durationDays = 1,
+        cooldownDays = 7,
+        cost = 30_000L
+    ),
+    VOD_REVIEW(
+        emoji = "🎥",
+        label = "Revisão de VOD",
+        description = "Estudar replays das partidas anteriores. Identifica erros e melhora a tomada de decisão.",
+        durationDays = 1,
+        cooldownDays = 14,
+        cost = 10_000L
+    ),
+    SOLO_QUEUE(
+        emoji = "🎮",
+        label = "Sessão de Solo Queue",
+        description = "Cada jogador foca em melhorar sua lane individual em ranked. Risco de tilt.",
+        durationDays = 2,
+        cooldownDays = 21,
+        cost = 5_000L
+    ),
+    GYM(
+        emoji = "💪",
+        label = "Academia",
+        description = "Treino físico orientado por preparador. Reduz risco de lesões e aumenta o foco.",
+        durationDays = 1,
+        cooldownDays = 7,
+        cost = 20_000L
+    ),
+    TEAM_BUILDING(
+        emoji = "🎉",
+        label = "Team Building",
+        description = "Atividade recreativa fora do jogo. Fortalece o espírito de equipe e levanta a moral.",
+        durationDays = 1,
+        cooldownDays = 14,
+        cost = 40_000L
+    ),
+    BOOT_CAMP(
+        emoji = "🔥",
+        label = "Boot Camp",
+        description = "Imersão intensa de uma semana. Caro e cansativo, mas com ganhos significativos se executado bem.",
+        durationDays = 7,
+        cooldownDays = 28,
+        cost = 250_000L
+    )
+}
+
+/** Resultado de uma sessão de treino. */
+enum class TrainingOutcome(val emoji: String, val label: String) {
+    GREAT("✨", "Excelente"),     // efeitos máximos
+    GOOD("✅", "Bom"),             // efeitos normais
+    NEUTRAL("🟡", "Regular"),      // efeitos modestos
+    BAD("⚠️", "Ruim"),             // sem efeito ou pequena perda
+    DISASTER("💥", "Desastre")      // efeito negativo sério
+}
+
+/**
+ * Sessão de treino registrada no histórico.
+ *
+ * @property date data (ISO) em que o treino aconteceu
+ * @property type tipo do treino
+ * @property outcome resultado sorteado
+ * @property cost custo financeiro pago (já descontado do orçamento)
+ * @property summary texto curto narrando o resultado (mostrado na lista)
+ */
+data class TrainingSession(
+    val date: String,
+    val type: TrainingType,
+    val outcome: TrainingOutcome,
+    val cost: Long,
+    val summary: String
 )

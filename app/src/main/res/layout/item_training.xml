@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Card de tipo de treino disponível.
+
+    Estrutura:
+      ┌─────────────────────────────────────────────────────┐
+      │ ⚔️  Scrim                              R$ 30.000   │
+      │     Treina contra outro time...                     │
+      │     ⏱ 1 dia · 🔄 Cooldown 2 dias                    │
+      │                                  [   TREINAR   ]    │
+      └─────────────────────────────────────────────────────┘
+-->
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="6dp"
+    android:layout_marginVertical="4dp"
+    app:cardCornerRadius="4dp"
+    app:cardElevation="0dp"
+    app:strokeColor="@color/color_outline_gold"
+    app:strokeWidth="1dp"
+    app:cardBackgroundColor="@color/color_surface">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="14dp">
+
+        <!-- Linha 1: emoji + nome + custo à direita -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tv_training_icon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="28sp" />
+
+            <TextView
+                android:id="@+id/tv_training_name"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:textColor="@color/color_on_surface"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:layout_marginStart="10dp" />
+
+            <TextView
+                android:id="@+id/tv_training_cost"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/champion_gold"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- Descrição -->
+        <TextView
+            android:id="@+id/tv_training_desc"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/color_on_surface_variant"
+            android:textSize="12sp"
+            android:layout_marginTop="6dp"
+            android:lineSpacingExtra="2dp" />
+
+        <!-- Metadados (duração + cooldown) -->
+        <TextView
+            android:id="@+id/tv_training_meta"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/color_on_surface_variant"
+            android:textSize="11sp"
+            android:layout_marginTop="8dp" />
+
+        <!-- Status do cooldown (visível se em cooldown ou sem orçamento) -->
+        <TextView
+            android:id="@+id/tv_training_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/state_danger"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:layout_marginTop="4dp"
+            android:visibility="gone" />
+
+        <!-- Botão de ação -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_train"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginTop="10dp"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:text="@string/training_action_start"
+            app:backgroundTint="@color/champion_gold"
+            android:textColor="@color/pick_ban_bg"
+            app:cornerRadius="4dp" />
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

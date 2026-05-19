@@ -452,6 +452,26 @@
     <string name="hub_sponsors_subtitle_active">%1$d/%2$d ativos · R$ %3$s/sem</string>
 
     <!-- ════════════════════════════════════════════════════════════════
+         TREINOS (TrainingActivity)
+         ═══════════════════════════════════════════════════════════════ -->
+    <string name="training_title">🏋️ Treinos</string>
+    <string name="hub_training_button">🏋️ Treinos</string>
+    <string name="hub_training_subtitle">Toque para gerenciar treinos do time</string>
+    <string name="training_budget_label">ORÇAMENTO DISPONÍVEL</string>
+    <string name="training_tab_options">TREINAR</string>
+    <string name="training_tab_history">HISTÓRICO</string>
+    <string name="training_cost_format">R$ %1$s</string>
+    <string name="training_meta_format">⏱ %1$d dia(s) · 🔄 Cooldown %2$d dias</string>
+    <string name="training_action_start">TREINAR</string>
+    <string name="training_status_cooldown">⏳ EM COOLDOWN — disponível em %1$d dia(s)</string>
+    <string name="training_status_no_funds">⚠ ORÇAMENTO INSUFICIENTE</string>
+    <string name="training_confirm_title">Iniciar treino?</string>
+    <string name="training_confirm_msg">%1$s vai consumir %2$d dia(s) e custar R$ %3$s. Deseja confirmar?</string>
+    <string name="training_result_title">%1$s %2$s</string>
+    <string name="training_empty_history">Nenhum treino realizado ainda. Vá para a aba TREINAR para escolher uma opção.</string>
+    <string name="training_hist_cost_format">R$ %1$s gastos</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
          ATRIBUIÇÃO DE ROTAS (RoleAssignmentActivity)
          ═══════════════════════════════════════════════════════════════ -->
     <string name="role_assign_title">ESTRATÉGIA DE ROTAS</string>

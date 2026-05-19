@@ -211,6 +211,9 @@ class ManagerHubActivity : AppCompatActivity() {
         findViewById<View>(R.id.card_sponsors).setOnClickListener {
             startActivity(Intent(this, SponsorsActivity::class.java))
         }
+        findViewById<View>(R.id.card_training).setOnClickListener {
+            startActivity(Intent(this, TrainingActivity::class.java))
+        }
         binding.btnQuit.setOnClickListener        { confirmQuit() }
     }
 
