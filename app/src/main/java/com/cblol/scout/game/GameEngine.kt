@@ -5,6 +5,7 @@ import com.cblol.scout.data.GameState
 import com.cblol.scout.data.Player
 import com.cblol.scout.domain.GameConstants
 import com.cblol.scout.domain.usecase.MoraleService
+import com.cblol.scout.domain.usecase.ScoutingService
 import com.cblol.scout.domain.usecase.SponsorService
 import java.time.LocalDate
 
@@ -50,6 +51,21 @@ object GameEngine {
                 )
             }
 
+            // 0.5. Tick de scouting: avança os jogadores em scouting ativo.
+            //      Pode disparar level-ups (logados) ou completar (libera slot).
+            val scoutTick = ScoutingService.tickDaily(gs)
+            scoutTick.levelUps.forEach { up ->
+                val playerName = GameRepository.snapshot(context).jogadores.find { it.id == up.playerId }?.nome_jogo
+                    ?: com.cblol.scout.util.SecondDivisionGenerator.generate().find { it.id == up.playerId }?.nome_jogo
+                    ?: up.playerId
+                val msg = if (up.newLevel >= ScoutingService.MAX_LEVEL) {
+                    "Scouting de $playerName concluído (nível ${up.newLevel})."
+                } else {
+                    "Scouting de $playerName avançou para nível ${up.newLevel}."
+                }
+                GameRepository.log("SCOUT", msg)
+            }
+
             // 1. Pagamento de patrocínio (domingo = day_of_week 7)
             if (date.dayOfWeek.value == 7) {
                 // Patrocínio fixo do tier do time
@@ -69,6 +85,15 @@ object GameEngine {
                 sponsorResult.expiredContracts.forEach { contract ->
                     GameRepository.log("ECONOMY",
                         "Patrocínio com ${contract.sponsor.name} expirou. Total recebido: R$ ${"%,d".format(contract.totalReceived)}")
+                }
+
+                // Manutenção do departamento de olheiros (descontado do orçamento)
+                val scoutingFee = ScoutingService.weeklyMaintenanceCost(gs)
+                if (scoutingFee > 0) {
+                    gs.budget -= scoutingFee
+                    report.expense += scoutingFee
+                    GameRepository.log("ECONOMY",
+                        "Manutenção do departamento de olheiros: R$ ${"%,d".format(scoutingFee)} (${ScoutingService.tier(gs).label})")
                 }
             }
 

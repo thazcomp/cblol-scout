@@ -85,7 +85,16 @@ data class GameState(
      *
      * Nullable porque Gson pode deixar null ao desserializar saves antigos que não têm este field.
      */
-    var lastTrainingByType: MutableMap<String, String>? = null
+    var lastTrainingByType: MutableMap<String, String>? = null,
+
+    /**
+     * Departamento de olheiros do time. Controla quantos jogadores podem ser
+     * scoutados simultaneamente, qualidade do scouting (afeta velocidade) e
+     * custo de manutenção semanal.
+     *
+     * Nullable porque Gson pode deixar null ao desserializar saves antigos.
+     */
+    var scoutingDepartment: ScoutingDepartment? = null
 )
 
 /**
@@ -172,7 +181,32 @@ data class PlayerOverride(
      * Descrição curta do motivo do modificador ativo (ex: "Lesão no dedo",
      * "Família assistindo"). Mostrada em tooltip/dialog quando relevante.
      */
-    val overallModifierReason: String? = null
+    val overallModifierReason: String? = null,
+
+    /**
+     * Nível atual de scouting deste jogador (0-5). Quanto maior, mais
+     * informações ficam visíveis sobre ele na TransferMarketActivity e
+     * PlayerDetailDialog. 0 = jogador desconhecido (apenas nome/role/time/idade);
+     * 5 = totalmente revelado.
+     *
+     * Ver `domain.usecase.ScoutingService` para a tabela de visibilidade.
+     * Default 0 — todo jogador começa desconhecido exceto os do roster do gerente.
+     */
+    val scoutLevel: Int = 0,
+
+    /**
+     * Quando o scouting deste jogador foi iniciado (ISO date). Null = sem
+     * scouting em andamento. Usado para calcular progressão automática ao
+     * avançar dias — cada `ScoutingService.DAYS_PER_LEVEL` dias sobe 1 nível.
+     */
+    val scoutStartedOn: String? = null,
+
+    /**
+     * Quantos dias o jogador foi escotado desde o último upgrade de nível.
+     * Reseta cada vez que o nível sobe. Persistido para sobreviver a fechar
+     * o app no meio de um scouting.
+     */
+    val scoutDaysAccumulated: Int = 0
 )
 
 /**
@@ -599,4 +633,65 @@ data class TrainingSession(
     val outcome: TrainingOutcome,
     val cost: Long,
     val summary: String
+)
+
+/**
+ * ╔══════════════════════════════════════════════════╗
+ * ║ SISTEMA DE OLHEIROS                                          ║
+ * ╚══════════════════════════════════════════════════╝
+ *
+ * Jogadores de outros times (1ª e 2ª divisão) começam com informações
+ * **ocultas** — o jogador só vê nome, role, time, idade e salário. Para
+ * desbloquear atributos, overall e champion pool, precisa investir em
+ * scouting.
+ *
+ * O departamento de olheiros possui:
+ *  - Um TIER (BASIC/PRO/ELITE) que afeta velocidade e capacidade
+ *  - Quantos scoutings simultâneos pode rodar (3/5/8)
+ *  - Custo de manutenção semanal (descontado do orçamento)
+ *
+ * O upgrade do departamento custa R$ proporcional ao tier alvo e exige
+ * reputação mínima do técnico.
+ */
+
+/** Tier do departamento de olheiros. */
+enum class ScoutingDepartmentTier(
+    val label: String,
+    val maxConcurrentScouts: Int,
+    val daysPerLevel: Int,
+    val weeklyMaintenanceCost: Long,
+    val upgradeCost: Long,
+    val minReputation: Int
+) {
+    BASIC(
+        label = "Básico",
+        maxConcurrentScouts = 3,
+        daysPerLevel = 5,
+        weeklyMaintenanceCost = 8_000L,
+        upgradeCost = 0L,
+        minReputation = 0
+    ),
+    PRO(
+        label = "Profissional",
+        maxConcurrentScouts = 5,
+        daysPerLevel = 3,
+        weeklyMaintenanceCost = 25_000L,
+        upgradeCost = 200_000L,
+        minReputation = 55
+    ),
+    ELITE(
+        label = "Elite",
+        maxConcurrentScouts = 8,
+        daysPerLevel = 2,
+        weeklyMaintenanceCost = 80_000L,
+        upgradeCost = 800_000L,
+        minReputation = 75
+    )
+}
+
+/**
+ * Estado do departamento de olheiros. Inicializado no [BASIC] por padrão.
+ */
+data class ScoutingDepartment(
+    var tier: ScoutingDepartmentTier = ScoutingDepartmentTier.BASIC
 )

@@ -166,6 +166,24 @@ class ManagerHubActivity : AppCompatActivity() {
                 com.cblol.scout.domain.usecase.SponsorService.MAX_ACTIVE_SPONSORS,
                 "%,d".format(weekly))
         }
+        renderScoutingSummary()
+    }
+
+    /**
+     * Atualiza o card de Olheiros no Hub mostrando X/Y slots ativos + tier.
+     * Quando ninguém está sendo escotado, mostra texto-padrão de chamada.
+     */
+    private fun renderScoutingSummary() {
+        val tv = findViewById<android.widget.TextView>(R.id.tv_hub_scouting_subtitle)
+        val gs = runCatching { GameRepository.current() }.getOrNull() ?: return
+        val active = com.cblol.scout.domain.usecase.ScoutingService.activeScouts(gs).size
+        val tier   = com.cblol.scout.domain.usecase.ScoutingService.tier(gs)
+        tv.text = if (active == 0) {
+            getString(R.string.hub_scouting_subtitle)
+        } else {
+            getString(R.string.hub_scouting_subtitle_active,
+                active, tier.maxConcurrentScouts, tier.label)
+        }
     }
 
     /**
@@ -213,6 +231,9 @@ class ManagerHubActivity : AppCompatActivity() {
         }
         findViewById<View>(R.id.card_training).setOnClickListener {
             startActivity(Intent(this, TrainingActivity::class.java))
+        }
+        findViewById<View>(R.id.card_scouting).setOnClickListener {
+            startActivity(Intent(this, ScoutingActivity::class.java))
         }
         binding.btnQuit.setOnClickListener        { confirmQuit() }
     }

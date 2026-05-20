@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Card de um tier do departamento de olheiros (BASIC/PRO/ELITE).
+    Mostra o status (atual/próximo/bloqueado) e estatísticas do tier:
+      - Quantos slots simultâneos
+      - Quantos dias por nível de scouting
+      - Custo semanal de manutenção
+      - (se aplicável) custo do upgrade + reputação mínima
+      - Botão UPGRADE quando é o próximo tier
+-->
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="6dp"
+    android:layout_marginVertical="4dp"
+    app:cardCornerRadius="4dp"
+    app:cardElevation="0dp"
+    app:strokeColor="@color/color_outline_gold"
+    app:strokeWidth="1dp"
+    app:cardBackgroundColor="@color/color_surface">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="14dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tv_dept_tier"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:textColor="@color/color_on_surface"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tv_dept_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:textColor="@color/champion_gold"
+                android:letterSpacing="0.1" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tv_dept_slots"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/color_on_surface_variant"
+            android:textSize="12sp"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:id="@+id/tv_dept_days"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/color_on_surface_variant"
+            android:textSize="12sp"
+            android:layout_marginTop="2dp" />
+
+        <TextView
+            android:id="@+id/tv_dept_weekly"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/color_on_surface_variant"
+            android:textSize="12sp"
+            android:layout_marginTop="2dp" />
+
+        <TextView
+            android:id="@+id/tv_dept_upgrade_cost"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/champion_gold"
+            android:textSize="12sp"
+            android:layout_marginTop="6dp"
+            android:visibility="gone" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_dept_upgrade"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginTop="10dp"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:text="@string/scouting_action_upgrade"
+            app:backgroundTint="@color/champion_gold"
+            android:textColor="@color/pick_ban_bg"
+            app:cornerRadius="4dp"
+            android:visibility="gone" />
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

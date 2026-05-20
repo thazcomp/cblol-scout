@@ -66,6 +66,15 @@ object GameRepository {
             gs.playerOverrides[entry.key] = entry.value.copy(moodHistory = emptyList())
         }
 
+        // Sistema de olheiros: saves anteriores ao sistema não têm o departamento.
+        // Como o tipo é nullable agora, o ScoutingService cria default BASIC na
+        // primeira leitura via `department(state)` — mas inicializamos aqui pra
+        // que o estado seja persistido no próximo save sem surpresas.
+        @Suppress("SENSELESS_COMPARISON")
+        if (gs.scoutingDepartment == null) {
+            gs.scoutingDepartment = com.cblol.scout.data.ScoutingDepartment()
+        }
+
         return gs
     }
 

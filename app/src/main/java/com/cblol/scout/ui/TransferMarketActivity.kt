@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.cblol.scout.R
 import com.cblol.scout.data.Player
 import com.cblol.scout.databinding.ActivityTransferMarketBinding
+import com.cblol.scout.domain.usecase.ScoutingService
 import com.cblol.scout.game.BuyResult
 import com.cblol.scout.game.GameRepository
 import com.cblol.scout.game.TransferMarket
@@ -133,6 +134,9 @@ class TransferMarketActivity : AppCompatActivity() {
         override fun onBindViewHolder(h: VH, i: Int) {
             val p   = players[i]
             val ctx = h.itemView.context
+            val gs  = GameRepository.current()
+            val visibility = ScoutingService.visibilityOf(gs, p)
+
             h.viewBar.setBackgroundColor(TeamColors.forTeam(p.time_id))
             h.tvRole.background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE; cornerRadius = ROLE_BG_CORNER
@@ -142,11 +146,21 @@ class TransferMarketActivity : AppCompatActivity() {
             h.tvName.text    = p.nome_jogo
             h.tvTeam.text    = p.time_nome
             // Badge "CD" aparece só quando o jogador é da 2ª divisão.
-            // Identificação robusta pelo time_id virtual em vez de comparar
-            // o nome do time, que pode mudar no futuro.
             h.tvCdBadge.visibility = if (p.time_id == com.cblol.scout.util.SecondDivisionGenerator.SECOND_DIVISION_TEAM_ID)
                 View.VISIBLE else View.GONE
-            h.tvOverall.text = p.overallRating().toString()
+
+            // Overall respeita visibilidade do scouting:
+            //  - nível 0: "???"
+            //  - nível 1: faixa ("70-79")
+            //  - nível 2+: número exato
+            h.tvOverall.text = when {
+                visibility.showOverallExact -> p.overallRating().toString()
+                visibility.showOverallBand  -> ScoutingService.overallBand(p.overallRating())
+                else                        -> "???"
+            }
+
+            // Preço é sempre visível — jogadores não-scoutados ainda podem ser
+            // "comprados a cegas" (overall calculado por baixo do pano).
             h.tvPrice.text   = ctx.getString(R.string.market_price_label,
                 "%,d".format(TransferMarket.marketPriceOf(p)))
             h.itemView.setOnClickListener { onClick(p) }

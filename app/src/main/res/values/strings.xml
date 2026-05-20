@@ -476,6 +476,50 @@
     <string name="training_hist_cost_format">R$ %1$s gastos</string>
 
     <!-- ════════════════════════════════════════════════════════════════
+         OLHEIROS (ScoutingActivity)
+         ═══════════════════════════════════════════════════════════════ -->
+    <string name="scouting_title">🔍 Olheiros</string>
+    <string name="hub_scouting_button">🔍 Olheiros</string>
+    <string name="hub_scouting_subtitle">Toque para gerenciar olheiros</string>
+    <string name="hub_scouting_subtitle_active">%1$d/%2$d ativos · Tier %3$s</string>
+    <string name="scouting_dept_label">DEPARTAMENTO DE OLHEIROS</string>
+    <string name="scouting_dept_subtitle_format">%1$s · %2$d/%3$d ativos</string>
+    <string name="scouting_tab_active">ATIVOS</string>
+    <string name="scouting_tab_department">DEPARTAMENTO</string>
+    <string name="scouting_level_format">Nível %1$d/%2$d</string>
+    <string name="scouting_progress_format">%1$d / %2$d dias para o próximo nível</string>
+    <string name="scouting_action_start">ESCOTEAR</string>
+    <string name="scouting_action_cancel">CANCELAR</string>
+    <string name="scouting_action_upgrade">UPGRADE DO DEPARTAMENTO</string>
+    <string name="scouting_empty_active">Nenhum jogador em scouting. Vá ao MERCADO e clique em ESCOTEAR no card de um jogador para investigar.</string>
+    <string name="scouting_cancel_confirm_title">Cancelar scouting?</string>
+    <string name="scouting_cancel_confirm_msg">Cancelar scouting de %1$s? O slot será liberado mas o progresso será perdido. O custo inicial não será devolvido.</string>
+    <!-- Departamento (tabs) -->
+    <string name="scouting_dept_slots_format">• %1$d slots simultâneos</string>
+    <string name="scouting_dept_days_format">• %1$d dias por nível</string>
+    <string name="scouting_dept_weekly_format">• R$ %1$s / semana de manutenção</string>
+    <string name="scouting_dept_upgrade_format">Upgrade: R$ %1$s · Requer reputação %2$d</string>
+    <string name="scouting_dept_status_owned">✓ ADQUIRIDO</string>
+    <string name="scouting_dept_status_current">★ ATUAL</string>
+    <string name="scouting_dept_status_next">PRÓXIMO</string>
+    <string name="scouting_dept_status_locked">BLOQUEADO</string>
+    <string name="scouting_upgraded_title">Departamento atualizado!</string>
+    <string name="scouting_upgraded_msg">Departamento agora é %1$s. Mais slots e velocidade maior de scouting.</string>
+    <string name="scouting_upgrade_error_title">Não foi possível atualizar</string>
+    <string name="scouting_upgrade_error_max">O departamento já está no nível máximo.</string>
+    <string name="scouting_upgrade_error_reputation">Reputação insuficiente. Requer %1$d, você tem %2$d.</string>
+    <string name="scouting_upgrade_error_funds">Orçamento insuficiente. Custa R$ %1$s, você tem R$ %2$s.</string>
+    <!-- Botões no card do mercado (ação iniciar scouting) -->
+    <string name="scouting_market_action_start">🔍 Escotear (R$ %1$s)</string>
+    <string name="scouting_started_title">Scouting iniciado!</string>
+    <string name="scouting_started_msg">Sua equipe de olheiros começou a investigar %1$s. Os atributos serão revelados gradualmente conforme os dias passam.</string>
+    <string name="scouting_already_max">Este jogador já está totalmente escotado.</string>
+    <string name="scouting_already_scouting">Este jogador já está sendo escotado.</string>
+    <string name="scouting_slots_full">Departamento sem slots disponíveis. Conclua/cancele um scouting ou faça upgrade.</string>
+    <string name="scouting_same_team">Você não precisa escotar jogadores do seu próprio time.</string>
+    <string name="scouting_insufficient_funds">Orçamento insuficiente para iniciar scouting.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
          ATRIBUIÇÃO DE ROTAS (RoleAssignmentActivity)
          ═══════════════════════════════════════════════════════════════ -->
     <string name="role_assign_title">ESTRATÉGIA DE ROTAS</string>

@@ -11,6 +11,7 @@ import android.widget.TextView
 import android.widget.Toast
 import com.cblol.scout.R
 import com.cblol.scout.data.Player
+import com.cblol.scout.domain.usecase.ScoutingService
 import com.cblol.scout.game.GameRepository
 import com.cblol.scout.game.SellResult
 import com.cblol.scout.game.TransferMarket
@@ -53,9 +54,75 @@ object PlayerDetailDialog {
         bindStats(view, player)
         bindAttributes(view, player)
         bindSalary(view, player, activity)
+        applyScoutingVisibility(view, player)
         setupActions(activity, view, dialog, player, onChanged, onBuy)
 
         dialog.show()
+    }
+
+    /**
+     * Aplica a visibilidade do scouting:
+     *  - Overall: pode aparecer como número exato, faixa ou "???"
+     *  - Atributos derivados: visíveis em níveis 3+ (apenas lane/tf) ou 4+ (todos)
+     *  - Stats brutos + champion pool: visíveis apenas em nível 5
+     *
+     * Quando uma seção inteira fica oculta, esconde os IDs correspondentes
+     * pra não deixar célula vazia.
+     */
+    private fun applyScoutingVisibility(view: View, player: Player) {
+        val gs  = GameRepository.load(view.context.applicationContext) ?: return
+        val vis = ScoutingService.visibilityOf(gs, player)
+        val ctx = view.context
+
+        // Overall (header) — substituiu o número exato pelo que estiver liberado
+        val tvOverall = view.findViewById<TextView>(R.id.tv_bs_overall)
+        tvOverall.text = when {
+            vis.showOverallExact -> player.overallRating().toString()
+            vis.showOverallBand  -> ScoutingService.overallBand(player.overallRating())
+            else                 -> "???"
+        }
+
+        // Atributos derivados: 5 barras
+        //   Nível < 3: tudo oculto ("???")
+        //   Nível 3:   lane_phase + team_fight visíveis, demais ocultos
+        //   Nível 4+:  todos os 5 visíveis
+        val maskOther = !vis.showAllAttributes
+        val maskLaneTf = !vis.showLaneAndTeamfight
+
+        fun maskBar(progressId: Int, valueId: Int, mask: Boolean, actualValue: Int) {
+            val pb = view.findViewById<ProgressBar>(progressId)
+            val tv = view.findViewById<TextView>(valueId)
+            if (mask) {
+                pb.progress = 0
+                pb.alpha = 0.3f
+                tv.text = "???"
+                tv.alpha = 0.5f
+            } else {
+                pb.progress = actualValue
+                pb.alpha = 1f
+                tv.text = actualValue.toString()
+                tv.alpha = 1f
+            }
+        }
+        val a = player.atributos_derivados
+        maskBar(R.id.pb_bs_lane,   R.id.tv_bs_lane_val,   maskLaneTf, a.lane_phase)
+        maskBar(R.id.pb_bs_tf,     R.id.tv_bs_tf_val,     maskLaneTf, a.team_fight)
+        maskBar(R.id.pb_bs_cria,   R.id.tv_bs_cria_val,   maskOther,  a.criatividade)
+        maskBar(R.id.pb_bs_cons,   R.id.tv_bs_cons_val,   maskOther,  a.consistencia)
+        maskBar(R.id.pb_bs_clutch, R.id.tv_bs_clutch_val, maskOther,  a.clutch)
+
+        // Stats brutos (KDA, CS/min, jogos, etc) — todos ocultos se nível < 5
+        if (!vis.showRawStats) {
+            val placeholder = "???"
+            view.findViewById<TextView>(R.id.tv_bs_jogos).text = placeholder
+            view.findViewById<TextView>(R.id.tv_bs_kda).text   = placeholder
+            view.findViewById<TextView>(R.id.tv_bs_kp).text    = placeholder
+            view.findViewById<TextView>(R.id.tv_bs_cs).text    = placeholder
+            view.findViewById<TextView>(R.id.tv_bs_dmg).text   = placeholder
+            view.findViewById<TextView>(R.id.tv_bs_gd15).text  = placeholder
+            view.findViewById<TextView>(R.id.tv_bs_xpd15).text = placeholder
+            view.findViewById<TextView>(R.id.tv_bs_vis).text   = placeholder
+        }
     }
 
     // ── Binds ────────────────────────────────────────────────────────────
@@ -134,8 +201,9 @@ object PlayerDetailDialog {
         val gs      = GameRepository.load(activity.applicationContext)
 
         when {
-            // Modo compra (vindo do mercado)
-            onBuy != null -> setupBuyAction(activity, actions, dialog, player, onBuy)
+            // Modo compra (vindo do mercado): botão de comprar + botão de escotear
+            // (se ainda não está 100% revelado)
+            onBuy != null -> setupMarketActions(activity, actions, dialog, player, onBuy, onChanged)
 
             // Modo gerência (jogador do meu time)
             gs != null && player.time_id == gs.managerTeamId ->
@@ -146,17 +214,29 @@ object PlayerDetailDialog {
         }
     }
 
-    private fun setupBuyAction(
+    /**
+     * Configura o conjunto de ações para um jogador VISTO DO MERCADO.
+     *
+     * Layout:
+     *  [ESCOTEAR (R$ X)]  — visível apenas se ainda não está totalmente revelado
+     *  [CONTRATAR]
+     *
+     * O botão de escotear chama [ScoutingService.startScouting] e mostra um
+     * dialog narrativo. Erros (sem slot, sem dinheiro, etc.) viram tambm
+     * dialogs de feedback.
+     */
+    private fun setupMarketActions(
         activity: Activity,
         actions: LinearLayout,
         dialog: BottomSheetDialog,
         player: Player,
-        onBuy: (Player) -> Unit
+        onBuy: (Player) -> Unit,
+        onChanged: () -> Unit
     ) {
         actions.visibility = View.VISIBLE
         actions.removeAllViews()
 
-        // Divider
+        // Divider entre os atributos e os botões
         val divider = View(activity).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, DIVIDER_HEIGHT
@@ -165,6 +245,31 @@ object PlayerDetailDialog {
         }
         actions.addView(divider)
 
+        // Botão ESCOTEAR (só se ainda não está no nível máximo)
+        val gs = GameRepository.current()
+        val currentLevel = com.cblol.scout.domain.usecase.ScoutingService.scoutLevelOf(gs, player.id)
+        if (currentLevel < com.cblol.scout.domain.usecase.ScoutingService.MAX_LEVEL) {
+            val btnScout = com.google.android.material.button.MaterialButton(
+                activity, null,
+                com.google.android.material.R.attr.materialButtonOutlinedStyle
+            ).apply {
+                text = activity.getString(R.string.scouting_market_action_start,
+                    "%,d".format(com.cblol.scout.domain.usecase.ScoutingService.START_SCOUT_COST))
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { setMargins(0, 0, 0, DIVIDER_MARGIN_V) }
+                setOnClickListener {
+                    startScoutingFromDialog(activity, player) {
+                        dialog.dismiss()
+                        onChanged()
+                    }
+                }
+            }
+            actions.addView(btnScout)
+        }
+
+        // Botão CONTRATAR
         val btnBuy = MaterialButton(activity).apply {
             text = activity.getString(R.string.player_btn_hire)
             layoutParams = LinearLayout.LayoutParams(
@@ -179,6 +284,43 @@ object PlayerDetailDialog {
             }
         }
         actions.addView(btnBuy)
+    }
+
+    /** Tenta iniciar scouting e mostra dialog apropriado para sucesso/erro. */
+    private fun startScoutingFromDialog(
+        activity: Activity,
+        player: Player,
+        onSuccess: () -> Unit
+    ) {
+        val gs = GameRepository.current()
+        val result = com.cblol.scout.domain.usecase.ScoutingService.startScouting(gs, player)
+        when (result) {
+            com.cblol.scout.domain.usecase.ScoutingService.StartResult.OK -> {
+                GameRepository.save(activity.applicationContext)
+                stylizedDialog(activity)
+                    .setTitle(R.string.scouting_started_title)
+                    .setMessage(activity.getString(R.string.scouting_started_msg, player.nome_jogo))
+                    .setPositiveButton(R.string.btn_ok) { _, _ -> onSuccess() }
+                    .show()
+            }
+            com.cblol.scout.domain.usecase.ScoutingService.StartResult.ALREADY_MAX_LEVEL ->
+                showScoutError(activity, R.string.scouting_already_max)
+            com.cblol.scout.domain.usecase.ScoutingService.StartResult.ALREADY_SCOUTING ->
+                showScoutError(activity, R.string.scouting_already_scouting)
+            com.cblol.scout.domain.usecase.ScoutingService.StartResult.SLOTS_FULL ->
+                showScoutError(activity, R.string.scouting_slots_full)
+            com.cblol.scout.domain.usecase.ScoutingService.StartResult.INSUFFICIENT_FUNDS ->
+                showScoutError(activity, R.string.scouting_insufficient_funds)
+            com.cblol.scout.domain.usecase.ScoutingService.StartResult.SAME_TEAM ->
+                showScoutError(activity, R.string.scouting_same_team)
+        }
+    }
+
+    private fun showScoutError(activity: Activity, msgRes: Int) {
+        stylizedDialog(activity)
+            .setMessage(msgRes)
+            .setPositiveButton(R.string.btn_ok, null)
+            .show()
     }
 
     private fun setupManagementActions(

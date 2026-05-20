@@ -104,6 +104,12 @@
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden" />
 
         <activity
+            android:name=".ui.ScoutingActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden" />
+
+        <activity
             android:name=".ui.MatchResultActivity"
             android:exported="false"
             android:screenOrientation="portrait" />
