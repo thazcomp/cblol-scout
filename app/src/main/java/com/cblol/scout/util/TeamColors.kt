@@ -11,7 +11,11 @@ object TeamColors {
         "pain"      to Color.parseColor("#D32F2F"),
         "red"       to Color.parseColor("#B71C1C"),
         "leviatan"  to Color.parseColor("#6A0DAD"),
-        "los"       to Color.parseColor("#E65100")
+        "los"       to Color.parseColor("#E65100"),
+        // Time virtual da 2ª divisão — cor neutra cinza-azulada para
+        // diferenciar visualmente dos clubes da 1ª divisão sem competir com
+        // as marcas reais.
+        "FREE_AGENT_CD" to Color.parseColor("#37474F")
     )
 
     fun forTeam(teamId: String): Int = palette[teamId] ?: Color.parseColor("#546E7A")

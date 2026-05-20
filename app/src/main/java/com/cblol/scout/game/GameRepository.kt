@@ -86,21 +86,53 @@ object GameRepository {
 
     // ───── Helpers de leitura considerando overrides ─────
 
-    /** Retorna jogadores efetivamente lotados num time, considerando transferências. */
+    /**
+     * Retorna jogadores efetivamente lotados num time, considerando transferências.
+     *
+     * Inclui tanto jogadores do snapshot original (1ª divisão) quanto
+     * jogadores procedurais da 2ª divisão — desde que estejam atualmente
+     * vinculados ao time consultado via override. Sem essa união, um jogador
+     * comprado da 2ª divisão sumiria do elenco do gerente.
+     */
     fun rosterOf(context: Context, teamId: String): List<Player> {
         val snap = snapshot(context)
         val gs = state
         val overrides = gs?.playerOverrides ?: emptyMap()
-        return snap.jogadores.map { applyOverride(it, overrides[it.id]) }
-            .filter { it.time_id == teamId }
+
+        val fromSnapshot = snap.jogadores.map { applyOverride(it, overrides[it.id]) }
+        val fromSecondDiv = com.cblol.scout.util.SecondDivisionGenerator.generate()
+            .map { applyOverride(it, overrides[it.id]) }
+
+        return (fromSnapshot + fromSecondDiv).filter { it.time_id == teamId }
     }
 
-    /** Retorna jogadores que NÃO pertencem ao time do gerente (mercado). */
+    /**
+     * Retorna jogadores que NÃO pertencem ao time do gerente (mercado).
+     *
+     * Inclui:
+     *  - Jogadores das outras orgs da 1ª divisão (do snapshot original)
+     *  - **Jogadores da 2ª divisão** (Circuito Desafiante) — procedurais via
+     *    [com.cblol.scout.util.SecondDivisionGenerator]. São mais jovens e mais
+     *    baratos, alternativas viáveis para times com orçamento apertado.
+     *
+     * Filtra jogadores da 2ª divisão que já foram contratados pelo gerente
+     * (via override `newTeamId`) para não aparecerem duplicados no mercado.
+     */
     fun marketRoster(context: Context): List<Player> {
         val gs = current()
         val snap = snapshot(context)
-        return snap.jogadores.map { applyOverride(it, gs.playerOverrides[it.id]) }
+
+        // 1ª divisão (snapshot original) com overrides aplicados
+        val firstDivision = snap.jogadores.map { applyOverride(it, gs.playerOverrides[it.id]) }
             .filter { it.time_id != gs.managerTeamId }
+
+        // 2ª divisão (procedural) também com overrides — importante para não
+        // re-listar jogador já contratado pelo gerente.
+        val secondDivision = com.cblol.scout.util.SecondDivisionGenerator.generate()
+            .map { applyOverride(it, gs.playerOverrides[it.id]) }
+            .filter { it.time_id != gs.managerTeamId }
+
+        return firstDivision + secondDivision
     }
 
     /** Aplica override num jogador (cria nova instância). */

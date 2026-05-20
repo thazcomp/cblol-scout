@@ -119,6 +119,7 @@ class TransferMarketActivity : AppCompatActivity() {
             val tvRole: TextView    = v.findViewById(R.id.tv_mk_role)
             val tvName: TextView    = v.findViewById(R.id.tv_mk_name)
             val tvTeam: TextView    = v.findViewById(R.id.tv_mk_team)
+            val tvCdBadge: TextView = v.findViewById(R.id.tv_mk_cd_badge)
             val tvOverall: TextView = v.findViewById(R.id.tv_mk_overall)
             val tvPrice: TextView   = v.findViewById(R.id.tv_mk_price)
         }
@@ -140,6 +141,11 @@ class TransferMarketActivity : AppCompatActivity() {
             h.tvRole.text    = p.role
             h.tvName.text    = p.nome_jogo
             h.tvTeam.text    = p.time_nome
+            // Badge "CD" aparece só quando o jogador é da 2ª divisão.
+            // Identificação robusta pelo time_id virtual em vez de comparar
+            // o nome do time, que pode mudar no futuro.
+            h.tvCdBadge.visibility = if (p.time_id == com.cblol.scout.util.SecondDivisionGenerator.SECOND_DIVISION_TEAM_ID)
+                View.VISIBLE else View.GONE
             h.tvOverall.text = p.overallRating().toString()
             h.tvPrice.text   = ctx.getString(R.string.market_price_label,
                 "%,d".format(TransferMarket.marketPriceOf(p)))

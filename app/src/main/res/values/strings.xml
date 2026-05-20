@@ -8,6 +8,10 @@
     <string name="logout">Sair</string>
     <string name="generating_timeline">Gerando timeline…</string>
 
+    <!-- Badge "CD" para jogadores da 2ª divisão no mercado -->
+    <string name="market_cd_badge">CD</string>
+    <string name="market_filter_cd">CD</string>
+
     <!-- ═══════════════════════════════════════════════════════════════════
          BOTÕES E AÇÕES GENÉRICAS
          ═══════════════════════════════════════════════════════════════════ -->
