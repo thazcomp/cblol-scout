@@ -520,6 +520,36 @@
     <string name="scouting_insufficient_funds">Orçamento insuficiente para iniciar scouting.</string>
 
     <!-- ════════════════════════════════════════════════════════════════
+         CONTRATOS E FOLHA SALARIAL
+         ═══════════════════════════════════════════════════════════════ -->
+    <!-- Renegociação -->
+    <string name="renegotiate_salary_label">Salário mensal (R$)</string>
+    <string name="renegotiate_bonus_label">Bônus de assinatura (R$) — ajuda o jogador a aceitar</string>
+    <string name="renegotiate_date_label">Nova data de término (yyyy-mm-dd)</string>
+    <string name="renegotiate_hint">O jogador avalia a proposta com base em salário, moral, idade e situação do contrato. Jovens promissores cobram mais; veteranos e jogadores com contrato expirando aceitam mais fácil.</string>
+    <string name="renegotiate_status_format">Contrato: %1$s · %2$d dias restantes</string>
+    <string name="renegotiate_release_format">Multa rescisória atual: R$ %1$s</string>
+
+    <!-- Venda (aviso) -->
+    <string name="dialog_sell_warning_title">Atenção: time ficará desfalcado</string>
+    <string name="btn_sell_anyway">Vender mesmo assim</string>
+    <string name="player_sold_termination_fee">Multa rescisória paga: R$ %1$s</string>
+
+    <!-- Folha salarial -->
+    <string name="payroll_title">💰 Folha Salarial</string>
+    <string name="hub_payroll_button">💰 Folha Salarial</string>
+    <string name="hub_payroll_subtitle">Toque para ver e ajustar salários</string>
+    <string name="hub_payroll_subtitle_value">R$ %1$s/mês</string>
+    <string name="payroll_total_label">FOLHA MENSAL TOTAL</string>
+    <string name="payroll_total_format">R$ %1$s</string>
+    <string name="payroll_health_positive">✓ Patrocínios cobrem a folha (sobra R$ %1$s/mês)</string>
+    <string name="payroll_health_negative">⚠ Folha excede patrocínios em R$ %1$s/mês</string>
+    <string name="payroll_breakdown_header">DETALHAMENTO POR JOGADOR</string>
+    <string name="payroll_salary_format">R$ %1$s</string>
+    <string name="payroll_pct_format">%1$d%% da folha</string>
+    <string name="payroll_hint">Toque em um jogador para renegociar o contrato e ajustar o salário.</string>
+
+    <!-- ════════════════════════════════════════════════════════════════
          ATRIBUIÇÃO DE ROTAS (RoleAssignmentActivity)
          ═══════════════════════════════════════════════════════════════ -->
     <string name="role_assign_title">ESTRATÉGIA DE ROTAS</string>

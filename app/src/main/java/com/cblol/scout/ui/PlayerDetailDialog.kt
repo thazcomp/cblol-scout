@@ -365,14 +365,33 @@ object PlayerDetailDialog {
             .show()
     }
 
-    private fun handleSellResult(activity: Activity, player: Player, onChanged: () -> Unit) {
-        when (val r = TransferMarket.sellPlayer(activity.applicationContext, player.id)) {
+    private fun handleSellResult(
+        activity: Activity,
+        player: Player,
+        onChanged: () -> Unit,
+        force: Boolean = false
+    ) {
+        when (val r = TransferMarket.sellPlayer(activity.applicationContext, player.id, force)) {
             is SellResult.Ok -> {
-                Toast.makeText(activity,
-                    activity.getString(R.string.player_sold_message,
-                        player.nome_jogo, r.toTeam, "%,d".format(r.price)),
-                    Toast.LENGTH_LONG).show()
+                // Mostra o preço recebido e, se houve multa rescisória, informa.
+                val baseMsg = activity.getString(R.string.player_sold_message,
+                    player.nome_jogo, r.toTeam, "%,d".format(r.price))
+                val fullMsg = if (r.terminationFee > 0) {
+                    "$baseMsg\n${activity.getString(R.string.player_sold_termination_fee, "%,d".format(r.terminationFee))}"
+                } else baseMsg
+                Toast.makeText(activity, fullMsg, Toast.LENGTH_LONG).show()
                 onChanged()
+            }
+            is SellResult.WarningRequired -> {
+                // Venda arriscada (único titular sem reserva) — confirma de novo
+                stylizedDialog(activity)
+                    .setTitle(R.string.dialog_sell_warning_title)
+                    .setMessage(r.msg)
+                    .setPositiveButton(R.string.btn_sell_anyway) { _, _ ->
+                        handleSellResult(activity, player, onChanged, force = true)
+                    }
+                    .setNegativeButton(R.string.btn_cancel, null)
+                    .show()
             }
             is SellResult.Error ->
                 Toast.makeText(activity, r.msg, Toast.LENGTH_SHORT).show()
@@ -383,10 +402,25 @@ object PlayerDetailDialog {
         val current = player.contrato.salario_mensal_estimado_brl ?: 0L
         val view = activity.layoutInflater.inflate(R.layout.dialog_renegotiate, null)
         val etSalary = view.findViewById<EditText>(R.id.et_new_salary)
+        val etBonus  = view.findViewById<EditText>(R.id.et_signing_bonus)
         val etDate   = view.findViewById<EditText>(R.id.et_new_date)
         val defaultEnd = activity.getString(R.string.player_default_contract_end)
         etSalary.setText(current.toString())
+        etBonus.setText("0")
         etDate.setText(defaultEnd)
+
+        // Preenche o card de info do contrato (status + multa rescisória)
+        val gs = GameRepository.current()
+        val status   = com.cblol.scout.domain.usecase.ContractService.statusOf(gs, player)
+        val release  = com.cblol.scout.domain.usecase.ContractService.releaseClauseFor(gs, player)
+        val daysLeft = com.cblol.scout.domain.usecase.ContractService.daysRemaining(gs, player)
+        view.findViewById<TextView>(R.id.tv_contract_status).text = when {
+            daysLeft != null -> activity.getString(R.string.renegotiate_status_format,
+                status.label, daysLeft)
+            else -> status.label
+        }
+        view.findViewById<TextView>(R.id.tv_contract_release).text =
+            activity.getString(R.string.renegotiate_release_format, "%,d".format(release))
 
         stylizedDialog(activity)
             .setTitle(activity.getString(R.string.dialog_renegotiate_title, player.nome_jogo))
@@ -394,6 +428,7 @@ object PlayerDetailDialog {
             .setPositiveButton(R.string.btn_propose) { _, _ ->
                 handleRenegotiate(activity, player,
                     etSalary.text.toString().toLongOrNull() ?: current,
+                    etBonus.text.toString().toLongOrNull() ?: 0L,
                     etDate.text.toString().ifBlank { defaultEnd },
                     onChanged)
             }
@@ -403,10 +438,11 @@ object PlayerDetailDialog {
 
     private fun handleRenegotiate(
         activity: Activity, player: Player,
-        newSal: Long, newEnd: String, onChanged: () -> Unit
+        newSal: Long, signingBonus: Long, newEnd: String, onChanged: () -> Unit
     ) {
         val ok = TransferMarket.renegotiateContract(
-            activity.applicationContext, player.id, newSal, newEnd
+            activity.applicationContext, player.id, newSal, newEnd,
+            signingBonus = signingBonus
         )
         val msg = if (ok) activity.getString(R.string.player_contract_renewed)
                   else activity.getString(R.string.player_contract_refused, player.nome_jogo)

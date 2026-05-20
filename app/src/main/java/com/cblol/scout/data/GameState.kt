@@ -206,7 +206,39 @@ data class PlayerOverride(
      * Reseta cada vez que o nível sobe. Persistido para sobreviver a fechar
      * o app no meio de um scouting.
      */
-    val scoutDaysAccumulated: Int = 0
+    val scoutDaysAccumulated: Int = 0,
+
+    /**
+     * Cláusulas avançadas do contrato deste jogador (multa rescisória,
+     * bônus, cláusula de saída). Null = sem cláusulas configuradas
+     * (usa apenas as informações básicas do [Contrato] do snapshot).
+     *
+     * Adicionadas pelo [com.cblol.scout.domain.usecase.ContractService] quando
+     * o jogador é renegociado pela primeira vez ou contratado.
+     */
+    val contractClauses: ContractClauses? = null
+)
+
+/**
+ * Cláusulas adicionais de um contrato. Estendem o [Contrato] básico do
+ * snapshot com regras avançadas que afetam venda, renovação e adesão do
+ * jogador.
+ *
+ * **Multa rescisória** ([releaseClauseBrl]): valor mínimo que outro time
+ * precisa oferecer para tirar o jogador (ou que o próprio time precisa pagar
+ * para encerrar o contrato antes do prazo).
+ *
+ * **Bônus de assinatura** ([signingBonusBrl]): pago no ato da assinatura.
+ * Aumenta a aceitação do jogador em propostas com salário mais baixo.
+ *
+ * **Cláusula de performance** ([performanceClauseBrl]): bônus pago por
+ * temporada se o jogador atingir certas metas (ex: 60% de win rate). Ainda
+ * não avaliada em produção, mas serializada para uso futuro.
+ */
+data class ContractClauses(
+    val releaseClauseBrl: Long = 0L,
+    val signingBonusBrl: Long = 0L,
+    val performanceClauseBrl: Long = 0L
 )
 
 /**

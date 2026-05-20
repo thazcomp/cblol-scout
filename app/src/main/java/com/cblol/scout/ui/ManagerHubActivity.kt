@@ -184,6 +184,18 @@ class ManagerHubActivity : AppCompatActivity() {
             getString(R.string.hub_scouting_subtitle_active,
                 active, tier.maxConcurrentScouts, tier.label)
         }
+        renderPayrollSummary()
+    }
+
+    /**
+     * Atualiza o card de Folha Salarial no Hub mostrando o total mensal atual.
+     */
+    private fun renderPayrollSummary() {
+        val tv = findViewById<android.widget.TextView>(R.id.tv_hub_payroll_subtitle)
+        val total = runCatching {
+            com.cblol.scout.game.GameEngine.totalMonthlyPayroll(applicationContext)
+        }.getOrNull() ?: return
+        tv.text = getString(R.string.hub_payroll_subtitle_value, "%,d".format(total))
     }
 
     /**
@@ -234,6 +246,9 @@ class ManagerHubActivity : AppCompatActivity() {
         }
         findViewById<View>(R.id.card_scouting).setOnClickListener {
             startActivity(Intent(this, ScoutingActivity::class.java))
+        }
+        findViewById<View>(R.id.card_payroll).setOnClickListener {
+            PayrollDialog.show(this) { vm.refresh() }
         }
         binding.btnQuit.setOnClickListener        { confirmQuit() }
     }
