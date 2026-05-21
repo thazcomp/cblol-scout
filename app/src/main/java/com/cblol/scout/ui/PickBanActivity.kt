@@ -82,6 +82,7 @@ class PickBanActivity : AppCompatActivity() {
     private lateinit var btnSkip: MaterialButton
     private lateinit var btnClear: MaterialButton
     private lateinit var btnToggleSuggestions: MaterialButton
+    private lateinit var btnCompHelp: View
     private lateinit var viewBlueTurn: View
     private lateinit var viewRedTurn: View
 
@@ -191,6 +192,7 @@ class PickBanActivity : AppCompatActivity() {
         btnSkip            = findViewById(R.id.btn_skip)
         btnClear           = findViewById(R.id.btn_clear_selection)
         btnToggleSuggestions = findViewById(R.id.btn_toggle_suggestions)
+        btnCompHelp        = findViewById(R.id.btn_comp_help)
         viewBlueTurn       = findViewById(R.id.view_blue_turn_indicator)
         viewRedTurn        = findViewById(R.id.view_red_turn_indicator)
         viewLoadingOverlay = findViewById(R.id.view_loading_overlay)
@@ -470,6 +472,26 @@ class PickBanActivity : AppCompatActivity() {
         btnToggleSuggestions.setOnClickListener {
             toggleSuggestionsVisibility()
         }
+        btnCompHelp.setOnClickListener {
+            showCompSuggestions()
+        }
+    }
+
+    /**
+     * Abre o dialog de ajuda com sugestões de composição.
+     *
+     * Passa os picks ATUAIS do time do jogador e TODOS os bans da partida:
+     *  - Se o jogador já tem picks, o dialog mostra as comps em formação.
+     *  - Se ainda não pickou nada (primeiro pick), mostra as comps mais fortes
+     *    do meta que sobreviveram aos banimentos.
+     *
+     * A Activity apenas dispara o dialog — toda a seleção de comps mora no
+     * [CompSuggestionDialog]/[CompositionRepository] (SRP).
+     */
+    private fun showCompSuggestions() {
+        val myPicks = (if (state.playerIsBlue) state.bluePicks else state.redPicks).map { it.id }
+        val allBans = (state.blueBans + state.redBans).map { it.id }
+        CompSuggestionDialog.show(this, myPicks, allBans)
     }
 
     /**

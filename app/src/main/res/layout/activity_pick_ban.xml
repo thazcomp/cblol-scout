@@ -114,6 +114,23 @@
                     android:textSize="11sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.08" />
+
+                <!-- Botão de AJUDA (?) — abre o dialog de sugestão de composições.
+                     Pequeno, dourado, círculo, alinhado ao lado do número do mapa. -->
+                <TextView
+                    android:id="@+id/btn_comp_help"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_marginStart="6dp"
+                    android:gravity="center"
+                    android:text="?"
+                    android:textColor="@color/pick_ban_bg"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:background="@drawable/bg_help_button"
+                    android:contentDescription="@string/pb_help_button_desc"
+                    android:clickable="true"
+                    android:focusable="true" />
             </LinearLayout>
 
             <!-- Timer removido. O id permanece como TextView GONE para não quebrar bindings antigos. -->

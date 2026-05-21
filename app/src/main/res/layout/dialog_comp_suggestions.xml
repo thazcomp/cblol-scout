@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    dialog_comp_suggestions.xml
+    Conteúdo do dialog de ajuda (botão "?") do Pick & Ban.
+
+    Mostra um header explicativo (que muda conforme há picks ou não) seguido
+    de uma lista vertical scrollável de cards de composição, cada um com nome,
+    tier, bônus, descrição e os campeões-chave (imagem + nome).
+
+    A lista (ll_comp_list) é preenchida em código pelo CompSuggestionDialog.
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="20dp"
+    android:paddingEnd="20dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="4dp">
+
+    <!-- Header contextual (muda entre "montando" e "mais fortes") -->
+    <TextView
+        android:id="@+id/tv_comp_help_header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/color_on_surface_variant"
+        android:textSize="12sp"
+        android:lineSpacingMultiplier="1.1"
+        android:layout_marginBottom="10dp" />
+
+    <!-- Lista de composições (scroll vertical limitado em altura) -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:maxHeight="420dp"
+        android:scrollbars="vertical"
+        android:fadeScrollbars="false">
+
+        <LinearLayout
+            android:id="@+id/ll_comp_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </ScrollView>
+
+    <!-- Estado vazio (sem comps viáveis) -->
+    <TextView
+        android:id="@+id/tv_comp_help_empty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/comp_help_empty"
+        android:textColor="@color/color_on_surface_variant"
+        android:textSize="12sp"
+        android:gravity="center"
+        android:padding="24dp"
+        android:visibility="gone" />
+</LinearLayout>

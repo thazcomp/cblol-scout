@@ -102,6 +102,18 @@
     <string name="ban_suggestion_item">⚡ Banir %1$s — %2$s</string>
     <string name="ban_suggestion_reason">Quebra %1$s (Tier %2$s)</string>
 
+    <!-- Botão e dialog de AJUDA: sugestão de composições -->
+    <string name="pb_help_button_desc">Ajuda · Sugestão de composições</string>
+    <string name="comp_help_title">💡 Sugestão de Composições</string>
+    <string name="comp_help_header_forming">Composições que você está montando com os picks atuais:</string>
+    <string name="comp_help_header_top">Composições mais fortes do meta (considerando os banimentos):</string>
+    <string name="comp_help_empty">Nenhuma composição viável com os picks e banimentos atuais. Tente outros campeões.</string>
+    <string name="comp_help_tier_label">TIER %1$s</string>
+    <string name="comp_help_bonus_label">+%1$d força</string>
+    <string name="comp_help_progress_label">%1$d%% montada</string>
+    <string name="comp_help_champions_header">Campeões-chave:</string>
+    <string name="comp_help_close">FECHAR</string>
+
     <!-- Confirmação de saída do pick & ban -->
     <string name="dialog_exit_pickban_title">Sair do Pick &amp; Ban?</string>
     <string name="dialog_exit_pickban_message">Deseja simular o restante automaticamente e ir direto para a partida?</string>

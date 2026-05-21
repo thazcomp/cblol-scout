@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    item_comp_suggestion.xml
+    Card de uma composição sugerida no dialog de ajuda do Pick & Ban.
+
+    Estrutura:
+      ┌──────────────────────────────────────────────┐
+      │ ▌ Wombo Combo            [TIER S] [+14 força] │
+      │   AoE devastador: ulti encadeado...           │
+      │   85% montada                                 │  ← só quando há picks
+      │   Campeões-chave:                             │
+      │   (o) (o) (o) (o)  ← imagens + nomes          │
+      └──────────────────────────────────────────────┘
+
+    A barra colorida à esquerda (view_comp_tier_bar) é tingida pela cor do tier.
+-->
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    app:cardCornerRadius="6dp"
+    app:cardElevation="0dp"
+    app:strokeColor="@color/color_outline_variant"
+    app:strokeWidth="1dp"
+    app:cardBackgroundColor="@color/pick_ban_suggestion_bg">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <!-- Barra colorida lateral pelo tier -->
+        <View
+            android:id="@+id/view_comp_tier_bar"
+            android:layout_width="4dp"
+            android:layout_height="match_parent"
+            android:background="@color/comp_tier_a" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="10dp">
+
+            <!-- Linha 1: nome + badges (tier + bônus) -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/tv_comp_name"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/color_on_surface"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/tv_comp_tier"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="6dp"
+                    android:paddingVertical="1dp"
+                    android:layout_marginStart="4dp"
+                    android:textColor="@color/pick_ban_bg"
+                    android:textSize="9sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.05" />
+
+                <TextView
+                    android:id="@+id/tv_comp_bonus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:textColor="@color/champion_gold"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- Descrição -->
+            <TextView
+                android:id="@+id/tv_comp_description"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:textColor="@color/color_on_surface_variant"
+                android:textSize="10sp"
+                android:lineSpacingMultiplier="1.05"
+                android:maxLines="3"
+                android:ellipsize="end" />
+
+            <!-- Progresso (% montada) — visível apenas quando há picks -->
+            <TextView
+                android:id="@+id/tv_comp_progress"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/state_success"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <!-- Header dos campeões-chave -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="@string/comp_help_champions_header"
+                android:textColor="@color/champion_gold"
+                android:textSize="9sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08" />
+
+            <!-- Linha horizontal scrollável de campeões (imagem + nome) -->
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:id="@+id/ll_comp_champions"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal" />
+            </HorizontalScrollView>
+        </LinearLayout>
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

@@ -120,4 +120,9 @@
     <color name="suggestion_badge_synergy">#5BB5FF</color>   <!-- Azul: SYNERGY -->
     <color name="suggestion_badge_meta">#C994FF</color>      <!-- Lavanda: META -->
 
+    <!-- ═══ Tiers de composição (dialog de ajuda no Pick & Ban) ═══ -->
+    <color name="comp_tier_s">#FF4B6E</color>   <!-- Tier S: coral/vermelho (god comps) -->
+    <color name="comp_tier_a">#F0B638</color>   <!-- Tier A: dourado (sólidas) -->
+    <color name="comp_tier_b">#5BB5FF</color>   <!-- Tier B: azul (situacionais) -->
+
 </resources>
