@@ -548,6 +548,7 @@
     <string name="payroll_salary_format">R$ %1$s</string>
     <string name="payroll_pct_format">%1$d%% da folha</string>
     <string name="payroll_hint">Toque em um jogador para renegociar o contrato e ajustar o salário.</string>
+    <string name="folha_salarial">Folha Salarial</string>
 
     <!-- ════════════════════════════════════════════════════════════════
          ATRIBUIÇÃO DE ROTAS (RoleAssignmentActivity)

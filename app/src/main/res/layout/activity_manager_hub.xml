@@ -224,190 +224,127 @@
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
 
-                <!-- Card MEU PERFIL: ocupa o GridLayout inteiro (colSpan=2) para virar uma
-                     linha própria abaixo dos 4 cards quadrados. Layout horizontal com avatar
-                     à esquerda, nome+título+level no centro, chevron à direita. -->
+                <!-- Card MEU PERFIL -->
                 <androidx.cardview.widget.CardView android:id="@+id/card_coach_profile"
-                    android:layout_width="0dp"
-                    android:layout_columnSpan="2"
-                    android:layout_columnWeight="1"
-                    android:layout_height="wrap_content"
-                    android:layout_margin="4dp"
+                    android:layout_width="0dp" android:layout_columnWeight="1"
+                    android:layout_height="100dp" android:layout_margin="4dp"
                     android:foreground="?attr/selectableItemBackground" android:clickable="true"
                     android:focusable="true" app:cardCornerRadius="2dp" app:cardElevation="0dp"
                     app:strokeColor="@color/color_outline_gold" app:strokeWidth="1dp"
                     app:cardBackgroundColor="@color/color_surface">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:orientation="horizontal" android:gravity="center_vertical" android:padding="12dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+                        android:orientation="vertical" android:gravity="center" android:padding="8dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="@string/coach_default_avatar" android:textSize="28sp"
-                            android:layout_marginEnd="12dp"/>
-                        <LinearLayout android:layout_width="0dp" android:layout_weight="1"
-                            android:layout_height="wrap_content" android:orientation="vertical">
-                            <TextView android:id="@+id/tv_hub_coach_name"
-                                android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:textSize="15sp" android:fontFamily="sans-serif-medium"
-                                android:textColor="@color/color_on_surface"
-                                android:maxLines="1" android:ellipsize="end"/>
-                            <TextView android:id="@+id/tv_hub_coach_subtitle"
-                                android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:textSize="12sp"
-                                android:textColor="@color/champion_gold"
-                                android:layout_marginTop="2dp"/>
-                        </LinearLayout>
+                            android:text="@string/coach_default_avatar" android:textSize="32sp"/>
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="›" android:textSize="24sp"
-                            android:textColor="@color/color_on_surface_variant"
-                            android:layout_marginStart="8dp"/>
+                            android:text="Meu Perfil" android:textSize="14sp" android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/color_on_surface"/>
+                        <TextView android:id="@+id/tv_hub_coach_subtitle"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:textSize="10sp"
+                            android:textColor="@color/champion_gold"
+                            android:maxLines="1" android:ellipsize="end"
+                            android:visibility="gone"/>
+                        <!-- Mantido (oculto) para compatibilidade com o código que seta o nome -->
+                        <TextView android:id="@+id/tv_hub_coach_name"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:visibility="gone"/>
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
 
-                <!-- Card PATROCÍNIOS: ocupa o GridLayout inteiro (colSpan=2).
-                     Layout horizontal estilo "linha" com ícone à esquerda, título + sub
-                     com receita atual no centro, chevron à direita. -->
+                <!-- Card PATROCÍNIOS -->
                 <androidx.cardview.widget.CardView android:id="@+id/card_sponsors"
-                    android:layout_width="0dp"
-                    android:layout_columnSpan="2"
-                    android:layout_columnWeight="1"
-                    android:layout_height="wrap_content"
-                    android:layout_margin="4dp"
+                    android:layout_width="0dp" android:layout_columnWeight="1"
+                    android:layout_height="100dp" android:layout_margin="4dp"
                     android:foreground="?attr/selectableItemBackground" android:clickable="true"
                     android:focusable="true" app:cardCornerRadius="2dp" app:cardElevation="0dp"
                     app:strokeColor="@color/color_outline_gold" app:strokeWidth="1dp"
                     app:cardBackgroundColor="@color/color_surface">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:orientation="horizontal" android:gravity="center_vertical" android:padding="12dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+                        android:orientation="vertical" android:gravity="center" android:padding="8dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="💼" android:textSize="28sp"
-                            android:layout_marginEnd="12dp"/>
-                        <LinearLayout android:layout_width="0dp" android:layout_weight="1"
-                            android:layout_height="wrap_content" android:orientation="vertical">
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:text="@string/hub_sponsors_button"
-                                android:textSize="15sp" android:fontFamily="sans-serif-medium"
-                                android:textColor="@color/color_on_surface"/>
-                            <TextView android:id="@+id/tv_hub_sponsors_subtitle"
-                                android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:textSize="12sp"
-                                android:textColor="@color/champion_gold"
-                                android:layout_marginTop="2dp"/>
-                        </LinearLayout>
+                            android:text="💼" android:textSize="32sp"/>
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="›" android:textSize="24sp"
-                            android:textColor="@color/color_on_surface_variant"
-                            android:layout_marginStart="8dp"/>
+                            android:text="Patrocínios" android:textSize="14sp" android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/color_on_surface"/>
+                        <TextView android:id="@+id/tv_hub_sponsors_subtitle"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:textSize="10sp"
+                            android:textColor="@color/champion_gold"
+                            android:maxLines="1" android:ellipsize="end"
+                            android:visibility="gone"/>
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
 
-                <!-- Card TREINOS: mesmo layout do card de patrocínios.
-                     Mostra contador de cooldowns ativos ("X em cooldown") ou
-                     mensagem de chamada quando todos estão disponíveis. -->
+                <!-- Card TREINOS -->
                 <androidx.cardview.widget.CardView android:id="@+id/card_training"
-                    android:layout_width="0dp"
-                    android:layout_columnSpan="2"
-                    android:layout_columnWeight="1"
-                    android:layout_height="wrap_content"
-                    android:layout_margin="4dp"
+                    android:layout_width="0dp" android:layout_columnWeight="1"
+                    android:layout_height="100dp" android:layout_margin="4dp"
                     android:foreground="?attr/selectableItemBackground" android:clickable="true"
                     android:focusable="true" app:cardCornerRadius="2dp" app:cardElevation="0dp"
                     app:strokeColor="@color/color_outline_gold" app:strokeWidth="1dp"
                     app:cardBackgroundColor="@color/color_surface">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:orientation="horizontal" android:gravity="center_vertical" android:padding="12dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+                        android:orientation="vertical" android:gravity="center" android:padding="8dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="🏋️" android:textSize="28sp"
-                            android:layout_marginEnd="12dp"/>
-                        <LinearLayout android:layout_width="0dp" android:layout_weight="1"
-                            android:layout_height="wrap_content" android:orientation="vertical">
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:text="@string/hub_training_button"
-                                android:textSize="15sp" android:fontFamily="sans-serif-medium"
-                                android:textColor="@color/color_on_surface"/>
-                            <TextView android:id="@+id/tv_hub_training_subtitle"
-                                android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:text="@string/hub_training_subtitle"
-                                android:textSize="12sp"
-                                android:textColor="@color/champion_gold"
-                                android:layout_marginTop="2dp"/>
-                        </LinearLayout>
+                            android:text="🏋️" android:textSize="32sp"/>
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="›" android:textSize="24sp"
-                            android:textColor="@color/color_on_surface_variant"
-                            android:layout_marginStart="8dp"/>
+                            android:text="Treinos" android:textSize="14sp" android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/color_on_surface"/>
+                        <TextView android:id="@+id/tv_hub_training_subtitle"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:textSize="10sp"
+                            android:textColor="@color/champion_gold"
+                            android:visibility="gone"/>
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
 
-                <!-- Card OLHEIROS: gerencia o departamento de scouting e ofertas
-                     ativas. Subtitle mostra X/Y slots ocupados + tier atual. -->
+                <!-- Card OLHEIROS -->
                 <androidx.cardview.widget.CardView android:id="@+id/card_scouting"
-                    android:layout_width="0dp"
-                    android:layout_columnSpan="2"
-                    android:layout_columnWeight="1"
-                    android:layout_height="wrap_content"
-                    android:layout_margin="4dp"
+                    android:layout_width="0dp" android:layout_columnWeight="1"
+                    android:layout_height="100dp" android:layout_margin="4dp"
                     android:foreground="?attr/selectableItemBackground" android:clickable="true"
                     android:focusable="true" app:cardCornerRadius="2dp" app:cardElevation="0dp"
                     app:strokeColor="@color/color_outline_gold" app:strokeWidth="1dp"
                     app:cardBackgroundColor="@color/color_surface">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:orientation="horizontal" android:gravity="center_vertical" android:padding="12dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+                        android:orientation="vertical" android:gravity="center" android:padding="8dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="🔍" android:textSize="28sp"
-                            android:layout_marginEnd="12dp"/>
-                        <LinearLayout android:layout_width="0dp" android:layout_weight="1"
-                            android:layout_height="wrap_content" android:orientation="vertical">
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:text="@string/hub_scouting_button"
-                                android:textSize="15sp" android:fontFamily="sans-serif-medium"
-                                android:textColor="@color/color_on_surface"/>
-                            <TextView android:id="@+id/tv_hub_scouting_subtitle"
-                                android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:text="@string/hub_scouting_subtitle"
-                                android:textSize="12sp"
-                                android:textColor="@color/champion_gold"
-                                android:layout_marginTop="2dp"/>
-                        </LinearLayout>
+                            android:text="🔍" android:textSize="32sp"/>
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="›" android:textSize="24sp"
-                            android:textColor="@color/color_on_surface_variant"
-                            android:layout_marginStart="8dp"/>
+                            android:text="Olheiros" android:textSize="14sp" android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/color_on_surface"/>
+                        <TextView android:id="@+id/tv_hub_scouting_subtitle"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:textSize="10sp"
+                            android:textColor="@color/champion_gold"
+                            android:maxLines="1" android:ellipsize="end"
+                            android:visibility="gone"/>
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
 
-                <!-- Card FOLHA SALARIAL: abre o PayrollDialog. Subtitle mostra
-                     o total mensal atual da folha. -->
+                <!-- Card FOLHA SALARIAL -->
                 <androidx.cardview.widget.CardView android:id="@+id/card_payroll"
-                    android:layout_width="0dp"
                     android:layout_columnSpan="2"
-                    android:layout_columnWeight="1"
-                    android:layout_height="wrap_content"
-                    android:layout_margin="4dp"
+                    android:layout_width="0dp" android:layout_columnWeight="1"
+                    android:layout_height="100dp" android:layout_margin="4dp"
                     android:foreground="?attr/selectableItemBackground" android:clickable="true"
                     android:focusable="true" app:cardCornerRadius="2dp" app:cardElevation="0dp"
                     app:strokeColor="@color/color_outline_gold" app:strokeWidth="1dp"
                     app:cardBackgroundColor="@color/color_surface">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:orientation="horizontal" android:gravity="center_vertical" android:padding="12dp">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+                        android:orientation="vertical" android:gravity="center" android:padding="8dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="💰" android:textSize="28sp"
-                            android:layout_marginEnd="12dp"/>
-                        <LinearLayout android:layout_width="0dp" android:layout_weight="1"
-                            android:layout_height="wrap_content" android:orientation="vertical">
-                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:text="@string/hub_payroll_button"
-                                android:textSize="15sp" android:fontFamily="sans-serif-medium"
-                                android:textColor="@color/color_on_surface"/>
-                            <TextView android:id="@+id/tv_hub_payroll_subtitle"
-                                android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:text="@string/hub_payroll_subtitle"
-                                android:textSize="12sp"
-                                android:textColor="@color/champion_gold"
-                                android:layout_marginTop="2dp"/>
-                        </LinearLayout>
+                            android:text="💰" android:textSize="32sp"/>
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="›" android:textSize="24sp"
-                            android:textColor="@color/color_on_surface_variant"
-                            android:layout_marginStart="8dp"/>
+                            android:text="@string/folha_salarial" android:textSize="14sp" android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/color_on_surface"/>
+                        <TextView android:id="@+id/tv_hub_payroll_subtitle"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:textSize="10sp"
+                            android:textColor="@color/champion_gold"
+                            android:maxLines="1" android:ellipsize="end"
+                            android:visibility="gone"/>
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
             </GridLayout>
