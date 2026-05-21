@@ -35,7 +35,13 @@ object GameEngine {
         repeat(days) {
             date = date.plusDays(1)
             val iso = date.toString()
+            val previousDate = gs.currentDate
             gs.currentDate = iso
+
+            // Janela de transferência: detecta abertura/fechamento ao cruzar a data.
+            // Loga para o jogador saber que o mercado abriu (inter-temporada) ou
+            // fechou (fim de uma janela).
+            detectTransferWindowTransition(gs, previousDate, iso)
 
             // 0. Decay temporal de moral: jogadores que ficam dias sem jogar movem
             //    a moral em direção ao neutro. Também sorteia pedidos de transferência
@@ -165,6 +171,42 @@ object GameEngine {
         return roster.sumOf { it.contrato.salario_mensal_estimado_brl ?: 0 }
     }
 
+    /**
+     * Detecta transição de janela de transferência entre dois dias consecutivos
+     * e loga a abertura/fechamento para o jogador.
+     *
+     * Compara o estado do mercado em [previousDate] com o de [today]:
+     *  - fechado → aberto: loga "mercado aberto" (com o tipo da janela)
+     *  - aberto → fechado: loga "mercado fechado"
+     *
+     * Delega a detecção ao [com.cblol.scout.domain.usecase.TransferWindowService]
+     * para não duplicar a regra de intervalos de janela.
+     */
+    private fun detectTransferWindowTransition(
+        gs: GameState,
+        previousDate: String,
+        today: String
+    ) {
+        val service = com.cblol.scout.domain.usecase.TransferWindowService
+        val (transition, window) = service.detectTransition(gs, previousDate, today)
+        when (transition) {
+            com.cblol.scout.domain.usecase.TransferWindowService.WindowTransition.OPENED -> {
+                val label = window?.kind?.label ?: "Transferências"
+                GameRepository.log(
+                    "TRANSFER",
+                    "🟢 Janela de transferências ABERTA ($label). O mercado está disponível."
+                )
+            }
+            com.cblol.scout.domain.usecase.TransferWindowService.WindowTransition.CLOSED -> {
+                GameRepository.log(
+                    "TRANSFER",
+                    "🔴 Janela de transferências FECHADA. O mercado não aceita mais movimentações por enquanto."
+                )
+            }
+            com.cblol.scout.domain.usecase.TransferWindowService.WindowTransition.NONE -> Unit
+        }
+    }
+
     private fun teamName(context: Context, teamId: String): String =
         GameRepository.snapshot(context).times.find { it.id == teamId }?.nome ?: teamId
 
@@ -180,21 +222,30 @@ object GameEngine {
         val (budget, sponsorship) = budgetForTier(team.tier_orcamento)
         val splitStart = "2026-03-28"
         val splitEnd   = "2026-06-06"
+        val gameStart  = LocalDate.parse(splitStart).minusDays(7).toString() // 1 sem antes do split
 
         val gs = GameState(
             managerName = managerName,
             managerTeamId = teamId,
             splitStartDate = splitStart,
             splitEndDate = splitEnd,
-            currentDate = LocalDate.parse(splitStart).minusDays(7).toString(), // 1 sem antes do split
+            currentDate = gameStart, // começa na pré-temporada (mercado aberto)
             budget = budget,
             sponsorshipPerWeek = sponsorship
         )
         gs.matches.addAll(ScheduleGenerator.generate(snap.times.map { it.id }, splitStart))
+
+        // Janelas de transferência: pré-temporada (agora) + inter-temporada (meio do split).
+        // O jogo começa dentro da janela de pré-temporada — mercado aberto desde o início.
+        gs.transferWindows.addAll(
+            com.cblol.scout.domain.usecase.TransferWindowService
+                .buildWindowsForSplit(gameStart, splitStart)
+        )
+
         gs.gameLog.add(
             com.cblol.scout.data.LogEntry(
                 gs.currentDate, "CAREER",
-                "Pré-temporada iniciada. Você é o novo técnico do ${team.nome}!"
+                "Pré-temporada iniciada. Você é o novo técnico do ${team.nome}! Mercado de transferências aberto."
             )
         )
         GameRepository.save(context, gs)

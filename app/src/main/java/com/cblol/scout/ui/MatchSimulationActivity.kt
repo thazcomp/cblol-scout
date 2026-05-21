@@ -472,7 +472,13 @@ class MatchSimulationActivity : AppCompatActivity() {
 
         val today    = LocalDate.parse(gs.currentDate)
         val matchDay = LocalDate.parse(match.date)
-        if (seriesFinished && today.isBefore(matchDay)) gs.currentDate = match.date
+        if (seriesFinished && today.isBefore(matchDay)) {
+            val previousDate = gs.currentDate
+            gs.currentDate = match.date
+            // Detecta se o avanço até a data da partida abriu/fechou uma janela
+            // de transferência (ex: cruzou para a inter-temporada).
+            logTransferWindowTransition(gs, previousDate, match.date)
+        }
 
         if (seriesFinished) {
             GameRepository.log("MATCH",
@@ -482,6 +488,36 @@ class MatchSimulationActivity : AppCompatActivity() {
 
         launchResultActivity(homeMapsFinal, awayMapsFinal, winner, prize, seriesFinished, gs.managerTeamId)
         finish()
+    }
+
+    /**
+     * Loga abertura/fechamento de janela de transferência ao avançar a data do
+     * jogo até a data da partida. Delega a regra ao [TransferWindowService] para
+     * não duplicar a lógica de intervalos.
+     */
+    private fun logTransferWindowTransition(
+        gs: com.cblol.scout.data.GameState,
+        previousDate: String,
+        currentDate: String
+    ) {
+        val service = com.cblol.scout.domain.usecase.TransferWindowService
+        val (transition, window) = service.detectTransition(gs, previousDate, currentDate)
+        when (transition) {
+            com.cblol.scout.domain.usecase.TransferWindowService.WindowTransition.OPENED -> {
+                val label = window?.kind?.label ?: "Transferências"
+                GameRepository.log(
+                    "TRANSFER",
+                    "🟢 Janela de transferências ABERTA ($label). O mercado está disponível."
+                )
+            }
+            com.cblol.scout.domain.usecase.TransferWindowService.WindowTransition.CLOSED -> {
+                GameRepository.log(
+                    "TRANSFER",
+                    "🔴 Janela de transferências FECHADA. O mercado não aceita mais movimentações por enquanto."
+                )
+            }
+            com.cblol.scout.domain.usecase.TransferWindowService.WindowTransition.NONE -> Unit
+        }
     }
 
     private fun calculatePrize(winner: String, homeMaps: Int, awayMaps: Int, managerId: String): Long {

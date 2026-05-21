@@ -71,6 +71,7 @@ class TransferMarketActivity : AppCompatActivity() {
         vm.players.observe(this) { players ->
             binding.tvBudget.text = getString(R.string.market_budget_label,
                 "%,d".format(GameRepository.current().budget))
+            renderMarketWindowStatus()
             binding.recycler.layoutManager = LinearLayoutManager(this)
             binding.recycler.adapter = MarketAdapter(players) { showPlayerDetails(it) }
         }
@@ -82,6 +83,24 @@ class TransferMarketActivity : AppCompatActivity() {
                     .setPositiveButton(R.string.btn_ok, null).show()
             }
         }
+    }
+
+    /**
+     * Atualiza o banner de status da janela de transferência: verde quando o
+     * mercado está aberto, escuro quando fechado. O texto vem do
+     * [com.cblol.scout.domain.usecase.TransferWindowService].
+     */
+    private fun renderMarketWindowStatus() {
+        val gs = GameRepository.current()
+        val open = com.cblol.scout.domain.usecase.TransferWindowService.isMarketOpen(gs)
+        val status = com.cblol.scout.domain.usecase.TransferWindowService.statusMessage(gs)
+        binding.tvMarketWindowStatus.text = status
+        val bgRes = if (open) R.color.state_success else R.color.color_surface_elevated
+        val fgRes = if (open) R.color.pick_ban_bg else R.color.color_on_surface_variant
+        binding.tvMarketWindowStatus.setBackgroundColor(
+            androidx.core.content.ContextCompat.getColor(this, bgRes))
+        binding.tvMarketWindowStatus.setTextColor(
+            androidx.core.content.ContextCompat.getColor(this, fgRes))
     }
 
     // ── Diálogos ─────────────────────────────────────────────────────────

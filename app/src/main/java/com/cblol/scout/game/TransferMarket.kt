@@ -200,6 +200,16 @@ object TransferMarket {
         // Validação automática: garante que há sempre 5 titulares
         SquadManager.validateAndFixRoster(context)
     }
+
+    /**
+     * Monta a mensagem de "mercado fechado" mostrada quando o jogador tenta
+     * comprar/vender fora de uma janela de transferência. Inclui quando a
+     * próxima janela abre, para orientar o jogador.
+     */
+    private fun marketClosedMessage(gs: com.cblol.scout.data.GameState): String {
+        val status = com.cblol.scout.domain.usecase.TransferWindowService.statusMessage(gs)
+        return "O mercado de transferências está fechado no momento.\n\n$status"
+    }
 }
 
 sealed class SellResult {

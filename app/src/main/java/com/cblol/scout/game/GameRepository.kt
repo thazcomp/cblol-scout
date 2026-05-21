@@ -75,6 +75,20 @@ object GameRepository {
             gs.scoutingDepartment = com.cblol.scout.data.ScoutingDepartment()
         }
 
+        // Janelas de transferência: saves anteriores ao sistema não têm o campo
+        // (Gson deixa null mesmo com default). Reconstruímos a partir das datas
+        // do split salvas no próprio estado, de modo que carreiras em andamento
+        // passem a ter mercado com janelas sem precisar reiniciar.
+        @Suppress("SENSELESS_COMPARISON")
+        if (gs.transferWindows == null || gs.transferWindows.isEmpty()) {
+            val gameStart = runCatching {
+                java.time.LocalDate.parse(gs.splitStartDate).minusDays(7).toString()
+            }.getOrDefault(gs.currentDate)
+            gs.transferWindows = com.cblol.scout.domain.usecase.TransferWindowService
+                .buildWindowsForSplit(gameStart, gs.splitStartDate)
+                .toMutableList()
+        }
+
         return gs
     }
 

@@ -146,6 +146,18 @@
                         android:text="▶  Jogar Próxima Partida"
                         android:textSize="14sp"
                         app:cornerRadius="8dp"/>
+
+                    <!-- Status da janela de transferência (mercado aberto/fechado).
+                         Texto + cor definidos em código (renderMarketWindow). -->
+                    <TextView android:id="@+id/tv_hub_market_window"
+                        android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:gravity="center"
+                        android:paddingVertical="6dp"
+                        android:textSize="12sp"
+                        android:fontFamily="sans-serif-medium"
+                        android:background="@color/color_surface_elevated"
+                        android:textColor="@color/color_on_surface_variant"/>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 

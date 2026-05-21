@@ -142,9 +142,27 @@ class ManagerHubActivity : AppCompatActivity() {
         renderNextMatch(state)
         renderCoachSummary(state.managerName)
         renderSponsorsSummary()
+        renderMarketWindow()
 
         binding.recyclerLog.layoutManager = LinearLayoutManager(this)
         binding.recyclerLog.adapter = LogAdapter(state.log)
+    }
+
+    /**
+     * Atualiza o banner de janela de transferência no card de próxima partida.
+     * Verde quando o mercado está aberto (pré ou inter-temporada), escuro
+     * quando fechado. Texto vem do [TransferWindowService].
+     */
+    private fun renderMarketWindow() {
+        val tv = findViewById<android.widget.TextView>(R.id.tv_hub_market_window)
+        val gs = runCatching { GameRepository.current() }.getOrNull() ?: return
+        val open   = com.cblol.scout.domain.usecase.TransferWindowService.isMarketOpen(gs)
+        val status = com.cblol.scout.domain.usecase.TransferWindowService.statusMessage(gs)
+        tv.text = status
+        val bgRes = if (open) R.color.state_success else R.color.color_surface_elevated
+        val fgRes = if (open) R.color.pick_ban_bg else R.color.color_on_surface_variant
+        tv.setBackgroundColor(color(bgRes))
+        tv.setTextColor(color(fgRes))
     }
 
     /**

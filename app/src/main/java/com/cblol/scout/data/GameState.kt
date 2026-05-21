@@ -94,7 +94,44 @@ data class GameState(
      *
      * Nullable porque Gson pode deixar null ao desserializar saves antigos.
      */
-    var scoutingDepartment: ScoutingDepartment? = null
+    var scoutingDepartment: ScoutingDepartment? = null,
+
+    /**
+     * Janelas de transferência do split (pré-temporada e inter-temporada).
+     * O mercado de compra/venda só fica aberto dentro de uma dessas janelas.
+     *
+     * Calculadas na criação da carreira pelo
+     * [com.cblol.scout.domain.usecase.TransferWindowService] e persistidas
+     * aqui para que o estado do mercado seja determinístico ao longo do jogo.
+     *
+     * Default lista vazia (em vez de nullable) — saves antigos sem este campo
+     * desserializam como vazio e são repovoados por migração no
+     * [com.cblol.scout.game.GameRepository].
+     */
+    var transferWindows: MutableList<TransferWindow> = mutableListOf()
+)
+
+/**
+ * Tipo de janela de transferência. Cada split tem uma pré-temporada (antes do
+ * primeiro jogo) e uma inter-temporada (pausa no meio do split).
+ *
+ * SOLID/OCP: adicionar uma nova janela (ex: pós-temporada) é só estender este
+ * enum e gerar a janela no [com.cblol.scout.domain.usecase.TransferWindowService].
+ */
+enum class TransferWindowKind(val label: String, val emoji: String) {
+    PRE_SEASON("Pré-temporada", "🌱"),
+    MID_SEASON("Inter-temporada", "🔄")
+}
+
+/**
+ * Uma janela de transferência concreta, com datas de abertura e fechamento
+ * (inclusivas, ISO yyyy-MM-dd). O mercado fica aberto entre [startDate] e
+ * [endDate], inclusive ambas as pontas.
+ */
+data class TransferWindow(
+    val kind: TransferWindowKind,
+    val startDate: String,
+    val endDate: String
 )
 
 /**
