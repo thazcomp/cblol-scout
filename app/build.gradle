@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    id 'io.realm.kotlin'
 }
 
 android {
@@ -23,12 +24,12 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
     }
 
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '11'
     }
 
     buildFeatures {
@@ -55,6 +56,11 @@ dependencies {
     // Koin
     implementation 'io.insert-koin:koin-android:3.5.3'
     implementation(platform("io.insert-koin:koin-bom:3.5.3"))
+
+    // Realm Kotlin SDK — persistência criptografada dos dados estáticos do jogo.
+    // `base` traz o runtime; a criptografia AES-256 é nativa do Realm (basta
+    // fornecer uma chave de 64 bytes ao abrir o arquivo).
+    implementation 'io.realm.kotlin:library-base:1.16.0'
 
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'io.insert-koin:koin-test:3.5.3'

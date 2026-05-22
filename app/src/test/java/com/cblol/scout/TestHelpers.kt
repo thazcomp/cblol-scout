@@ -4,7 +4,19 @@ import com.cblol.scout.data.*
 import org.junit.Assert.*
 import org.junit.Test
 
-// ── Helpers compartilhados entre todos os arquivos de teste ──────────────────
+// ── Helpers compartilhados entre todos os arquivos de teste ─────────────────
+
+/**
+ * Instala o [InMemoryStaticDataSource] em [StaticData] para testes que tocam os
+ * dados estáticos do jogo (campeões, composições, patrocínios, pools).
+ *
+ * Idempotente e barato — pode ser chamado em todo `@Before` sem custo relevante.
+ * Em produção, o equivalente é `CBLOLApp.onCreate` instalando o
+ * `RealmStaticDataSource`.
+ */
+fun installTestStaticData() {
+    StaticData.install(InMemoryStaticDataSource())
+}
 
 fun makeAtributos(value: Int = 70) =
     AtributosDeriv(value, value, value, value, value)

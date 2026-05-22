@@ -2,9 +2,13 @@ package com.cblol.scout
 
 import com.cblol.scout.util.CompositionRepository
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
 
 class CompositionRepositoryTest {
+
+    @Before
+    fun setup() = installTestStaticData()
 
     @Test
     fun all_notEmpty() {

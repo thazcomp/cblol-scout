@@ -349,6 +349,55 @@ const val PRIZE_PER_MAP_WIN = GameConstants.Economy.PRIZE_PER_MAP_WIN
 | Composições e análise de sinergia    | `app/src/main/java/com/cblol/scout/util/CompositionRepository.kt` |
 | Tags de campeões                     | `app/src/main/java/com/cblol/scout/data/ChampionTag.kt` |
 | Dialog de pré-simulação              | `app/src/main/java/com/cblol/scout/ui/PreSimulationDialog.kt` |
+| Fonte de dados estáticos (interface) | `app/src/main/java/com/cblol/scout/domain/datasource/StaticDataSource.kt` |
+| Banco Realm criptografado (impl)     | `app/src/main/java/com/cblol/scout/data/realm/RealmStaticDataSource.kt` |
+| Dados de seed (campeões/comps/etc.)  | `app/src/main/java/com/cblol/scout/data/seed/` |
+
+---
+
+## Camada de dados estáticos (Realm criptografado)
+
+Os dados estáticos do jogo — campeões (roles, tags, ddragonId), composições,
+patrocínios e champion pools — **não ficam hardcoded na lógica**. Eles vivem em
+um **banco Realm criptografado** (AES-256) e são acessados por uma abstração.
+
+### Fluxo
+
+```
+Repositórios (object)              StaticData (holder)        Realm criptografado
+ChampionRepository      ──lê──>   StaticData.source   ──>   RealmStaticDataSource
+CompositionRepository                  ▲                    (cache em memória +
+SponsorCatalog                         │ install()           seed na 1ª execução)
+ChampionPoolRepository                 │
+                              CBLOLApp.onCreate (prod)
+                              @Before dos testes (fake)
+```
+
+- **`domain/datasource/StaticDataSource`**: interface (DIP) com as leituras dos
+  dados estáticos. Não conhece Realm.
+- **`data/realm/RealmStaticDataSource`**: implementação que abre o Realm
+  criptografado, faz **seed** na primeira execução (a partir de `data/seed/*`) e
+  serve os dados de um cache imutável em memória.
+- **`data/realm/RealmKeyProvider`**: gera/protege a chave de 64 bytes do Realm
+  via **Android Keystore** (envelope encryption — a chave nunca é persistida em
+  claro).
+- **`data/realm/RealmEntities`**: entidades `RealmObject` + mapeadores
+  `toDomain()`/`fromDomain()`. Enums viram `String` (o Realm não suporta enum).
+- **`data/StaticData`**: holder que liga o mundo `object` (repositórios) à
+  implementação injetada. Instalado no startup.
+- **`data/seed/*`**: ÚNICA fonte hardcoded restante, usada só para popular o
+  Realm. Não é consultada em runtime pela lógica do jogo.
+
+### Regras
+
+- **Novos dados estáticos** (ex: itens, runas): criar entidade Realm + mapeadores,
+  adicionar ao schema do `RealmStaticDataSource`, criar o seed em `data/seed/` e
+  expor leitura na interface `StaticDataSource`.
+- **Nunca** voltar a hardcodar listas de dados na lógica (`util/`, `game/`,
+  `domain/`). Dado é seed → Realm; lógica fica nos repositórios/serviços.
+- **Testes JVM**: usam `InMemoryStaticDataSource` (mesmos seeds), instalado via
+  `installTestStaticData()` no `@Before`. O runtime nativo do Realm não roda em
+  testes JVM puros, por isso a abstração.
 
 ---
 

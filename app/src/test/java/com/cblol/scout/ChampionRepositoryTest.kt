@@ -2,9 +2,13 @@ package com.cblol.scout
 
 import com.cblol.scout.util.ChampionRepository
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
 
 class ChampionRepositoryTest {
+
+    @Before
+    fun setup() = installTestStaticData()
 
     @Test
     fun getAll_notEmpty() {

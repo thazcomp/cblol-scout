@@ -6,9 +6,13 @@ import com.cblol.scout.data.Side
 import com.cblol.scout.game.Champions
 import com.cblol.scout.game.LiveMatchEngine
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
 
 class LiveMatchEngineTest {
+
+    @Before
+    fun setup() = installTestStaticData()
 
     private val home = makeRoster5("HOME", 75)
     private val away = makeRoster5("AWAY", 75)

@@ -1,4 +1,8 @@
 plugins {
     id 'com.android.application' version '8.5.1' apply false
     id 'org.jetbrains.kotlin.android' version '1.9.22' apply false
+    // Realm Kotlin SDK — banco de dados criptografado para os dados estáticos
+    // (campeões, atributos, composições, patrocínios). Versão compatível com
+    // Kotlin 1.9.22.
+    id 'io.realm.kotlin' version '1.16.0' apply false
 }

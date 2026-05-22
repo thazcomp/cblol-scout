@@ -2,9 +2,13 @@ package com.cblol.scout
 
 import com.cblol.scout.game.MatchSimulator
 import org.junit.Assert.*
+import org.junit.Before
 import org.junit.Test
 
 class MatchSimulatorTest {
+
+    @Before
+    fun setup() = installTestStaticData()
 
     @Test
     fun teamStrength_uniformOverall_returnsValue() {

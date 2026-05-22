@@ -1,6 +1,7 @@
 package com.cblol.scout.util
 
 import com.cblol.scout.data.Player
+import com.cblol.scout.data.StaticData
 import kotlin.random.Random
 
 /**
@@ -12,8 +13,11 @@ import kotlin.random.Random
  * **Determinístico**: o mesmo `player.id` sempre gera o mesmo pool, então recarregar
  * o save não muda os mains do jogador.
  *
- * **Curadoria por role**: cada role tem um catálogo de mains competitivos típicos.
- * Para grandes nomes do CBLOL (ex: Tinowns, Robo) há pools fixos com signature picks.
+ * **Origem dos dados**: os catálogos de pools (signature por jogador histórico e
+ * comuns por role) NÃO ficam mais hardcoded aqui — vivem no banco **Realm
+ * criptografado** e são lidos via [StaticData]. Os dados de seed estão em
+ * [com.cblol.scout.data.seed.ChampionPoolSeed]. Esta classe mantém apenas a
+ * LÓGICA de atribuição/sorteio (que é regra de jogo, não dado).
  *
  * Uso:
  *   ```
@@ -21,63 +25,6 @@ import kotlin.random.Random
  *   ```
  */
 object ChampionPoolRepository {
-
-    /** Pools fixos para jogadores históricos do cenário brasileiro. */
-    private val SIGNATURE_POOLS: Map<String, List<String>> = mapOf(
-        // Top
-        "robo"      to listOf("Aatrox", "Sett", "Renekton", "Camille", "Jax"),
-        "burdol"    to listOf("Gangplank", "Camille", "Jayce", "Gnar", "Aatrox"),
-        "wizer"     to listOf("Yone", "Jax", "Renekton", "Camille", "Sett"),
-        // Jungle
-        "ranger"    to listOf("Vi", "Viego", "LeeSin", "Xinzhao", "Kayn"),
-        "cariok"    to listOf("Sejuani", "Vi", "Hecarim", "Diana", "Wukong"),
-        "shini"     to listOf("Xinzhao", "Viego", "LeeSin", "Graves", "Kayn"),
-        "trigo"     to listOf("Belveth", "Viego", "Kayn", "LeeSin", "Hecarim"),
-        // Mid
-        "tinowns"   to listOf("Azir", "Orianna", "Syndra", "Ahri", "Viktor"),
-        "envy"      to listOf("Yone", "Yasuo", "Akali", "Sylas", "LeBlanc"),
-        "mireu"     to listOf("Orianna", "Azir", "Ahri", "Corki", "Taliyah"),
-        "kuri"      to listOf("Akali", "Yone", "Sylas", "Zed", "LeBlanc"),
-        // ADC
-        "titan"     to listOf("Kaisa", "Jinx", "Ezreal", "Aphelios", "Varus"),
-        "brance"    to listOf("Aphelios", "Jinx", "Caitlyn", "Kaisa", "Zeri"),
-        "stuart"    to listOf("Lucian", "Draven", "Samira", "Tristana", "Kaisa"),
-        "scary"     to listOf("Jinx", "Ezreal", "Kaisa", "Varus", "Aphelios"),
-        // Support
-        "cronos"    to listOf("Thresh", "Nautilus", "Rakan", "Leona", "Karma"),
-        "jojo"      to listOf("Leona", "Rakan", "Nautilus", "Thresh", "Alistar"),
-        "frosty"    to listOf("Karma", "Lulu", "Nami", "Janna", "Milio"),
-        "tay"       to listOf("Thresh", "Rakan", "Pyke", "Nautilus", "Leona")
-    )
-
-    /** Catálogo de mains "comuns" por role para jogadores sem pool fixo. */
-    private val ROLE_POOLS: Map<String, List<String>> = mapOf(
-        "TOP" to listOf(
-            "Aatrox", "Camille", "Renekton", "Gnar", "Gangplank", "Jax", "Sett",
-            "Fiora", "Jayce", "Yone", "Riven", "Mordekaiser", "Ornn", "Malphite",
-            "Darius", "Garen", "Vladimir", "Akali", "Irelia", "Kennen"
-        ),
-        "JNG" to listOf(
-            "Viego", "LeeSin", "Xinzhao", "Vi", "Kayn", "Diana", "Hecarim",
-            "Belveth", "Graves", "Sejuani", "KhaZix", "Evelynn", "Wukong", "Nidalee",
-            "Jarvaniv", "Lillia", "Ekko", "Elise", "Amumu", "Zac"
-        ),
-        "MID" to listOf(
-            "Azir", "Orianna", "Ahri", "Syndra", "Yone", "Akali", "Sylas",
-            "LeBlanc", "Zed", "Viktor", "Taliyah", "Corki", "Lissandra", "Cassiopeia",
-            "Veigar", "Annie", "Galio", "TwistedFate", "Ryze", "Talon"
-        ),
-        "ADC" to listOf(
-            "Jinx", "Kaisa", "Aphelios", "Ezreal", "Varus", "Caitlyn", "Zeri",
-            "Lucian", "Samira", "Draven", "Jhin", "Tristana", "Vayne", "Xayah",
-            "MissFortune", "Sivir", "Ashe", "Kalista", "Nilah"
-        ),
-        "SUP" to listOf(
-            "Thresh", "Nautilus", "Leona", "Rakan", "Karma", "Lulu", "Milio",
-            "Nami", "Pyke", "Blitzcrank", "Alistar", "Soraka", "Janna", "Renata",
-            "Seraphine", "Yuumi", "Brand", "Zyra", "Bard"
-        )
-    )
 
     private const val MIN_POOL_SIZE = 3
     private const val MAX_POOL_SIZE = 5
@@ -100,8 +47,8 @@ object ChampionPoolRepository {
         val currentPool: List<String>? = player.championPool
         if (currentPool != null && currentPool.isNotEmpty()) return player
 
-        val signature = SIGNATURE_POOLS[player.id.lowercase()]
-                     ?: SIGNATURE_POOLS[player.nome_jogo.lowercase()]
+        val signature = StaticData.source.signaturePool(player.id.lowercase())
+                     ?: StaticData.source.signaturePool(player.nome_jogo.lowercase())
         val pool = signature ?: generatePool(player)
 
         return player.copy(championPool = pool)
@@ -118,7 +65,8 @@ object ChampionPoolRepository {
      * mais focado; jogadores mais versáteis têm pool maior).
      */
     private fun generatePool(player: Player): List<String> {
-        val catalog = ROLE_POOLS[player.role] ?: return emptyList()
+        val catalog = StaticData.source.rolePool(player.role)
+        if (catalog.isEmpty()) return emptyList()
         val seed    = player.id.hashCode().toLong()
         val rng     = Random(seed)
 

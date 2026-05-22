@@ -1,5 +1,7 @@
 package com.cblol.scout.di
 
+import com.cblol.scout.data.realm.RealmStaticDataSource
+import com.cblol.scout.domain.datasource.StaticDataSource
 import com.cblol.scout.domain.usecase.*
 import com.cblol.scout.ui.viewmodel.*
 import org.koin.android.ext.koin.androidContext
@@ -7,6 +9,13 @@ import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 
 val appModule = module {
+
+    // ── Fonte de dados estáticos (Realm criptografado) ────────────────
+    // Singleton: abre o Realm uma vez e mantém os dados em cache. Também é
+    // instalado em StaticData no CBLOLApp para os repositórios `object` (que não
+    // recebem injeção) acessarem. Exposto aqui para use cases/ViewModels que
+    // queiram depender da abstração diretamente via DI.
+    single<StaticDataSource> { RealmStaticDataSource(androidContext()) }
 
     // ── UseCases — Career ────────────────────────────────────────────────
     factory { StartNewCareerUseCase(androidContext()) }
