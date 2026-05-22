@@ -147,6 +147,19 @@
                         android:textSize="14sp"
                         app:cornerRadius="8dp"/>
 
+                    <!-- Avançar dia: progride o calendário em 1 dia processando os
+                         ticks diários (scouting, moral, economia). Útil na
+                         pré-temporada e entre partidas para ver o scouting evoluir. -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_advance_day"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="44dp"
+                        android:layout_marginTop="8dp"
+                        android:text="⏭  Avançar 1 dia"
+                        android:textSize="13sp"
+                        app:cornerRadius="8dp"/>
+
                     <!-- Status da janela de transferência (mercado aberto/fechado).
                          Texto + cor definidos em código (renderMarketWindow). -->
                     <TextView android:id="@+id/tv_hub_market_window"

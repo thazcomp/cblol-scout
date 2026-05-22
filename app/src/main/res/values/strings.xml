@@ -613,4 +613,10 @@
         <item>🚀</item>
     </string-array>
 
+    <!-- Avançar dia (Hub) -->
+    <string name="hub_advance_done">Avançou para %1$s.</string>
+    <string name="hub_advance_transfer_requests">Pediram transferência: %1$s</string>
+    <string name="hub_advance_blocked_title">Partida amanhã</string>
+    <string name="hub_advance_blocked_msg">Você tem uma partida no próximo dia. Use \"Jogar Próxima Partida\" para disputá-la.</string>
+
 </resources>

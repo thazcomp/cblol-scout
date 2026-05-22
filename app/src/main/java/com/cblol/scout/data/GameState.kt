@@ -735,7 +735,7 @@ enum class ScoutingDepartmentTier(
     BASIC(
         label = "Básico",
         maxConcurrentScouts = 3,
-        daysPerLevel = 5,
+        daysPerLevel = 3,
         weeklyMaintenanceCost = 8_000L,
         upgradeCost = 0L,
         minReputation = 0
@@ -743,7 +743,7 @@ enum class ScoutingDepartmentTier(
     PRO(
         label = "Profissional",
         maxConcurrentScouts = 5,
-        daysPerLevel = 3,
+        daysPerLevel = 2,
         weeklyMaintenanceCost = 25_000L,
         upgradeCost = 200_000L,
         minReputation = 55
@@ -751,7 +751,7 @@ enum class ScoutingDepartmentTier(
     ELITE(
         label = "Elite",
         maxConcurrentScouts = 8,
-        daysPerLevel = 2,
+        daysPerLevel = 1,
         weeklyMaintenanceCost = 80_000L,
         upgradeCost = 800_000L,
         minReputation = 75

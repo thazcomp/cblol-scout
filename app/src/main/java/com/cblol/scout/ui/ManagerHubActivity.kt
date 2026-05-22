@@ -248,6 +248,7 @@ class ManagerHubActivity : AppCompatActivity() {
 
     private fun setupCardActions() {
         binding.btnPlayNextMatch.setOnClickListener { openPickBanOrSim() }
+        binding.btnAdvanceDay.setOnClickListener { advanceOneDay() }
         binding.cardSquad.setOnClickListener      { startActivity(Intent(this, SquadActivity::class.java)) }
         binding.cardMarket.setOnClickListener     { startActivity(Intent(this, TransferMarketActivity::class.java)) }
         binding.cardSchedule.setOnClickListener   { startActivity(Intent(this, ScheduleActivity::class.java)) }
@@ -340,6 +341,54 @@ class ManagerHubActivity : AppCompatActivity() {
         pendingMapNumber      = 1
         pendingPlayerTeamId   = ""
         pendingOpponentTeamId = ""
+    }
+
+    // ── Avançar dia ─────────────────────────────────────────────────────
+
+    /**
+     * Avança o calendário em 1 dia processando os ticks diários (scouting,
+     * moral, economia, janelas de transferência) via
+     * [com.cblol.scout.game.GameEngine.advanceCalendarTo].
+     *
+     * Se houver uma partida do jogador agendada para o próximo dia, avisa para
+     * jogá-la em vez de pular por cima (não auto-simula a partida do jogador).
+     * Após avançar, atualiza o Hub e mostra um resumo curto.
+     */
+    private fun advanceOneDay() {
+        val gs = GameRepository.current()
+        val today = LocalDate.parse(gs.currentDate)
+        val target = today.plusDays(1)
+
+        // Se há partida do MEU time exatamente no próximo dia, o jogador deve
+        // jogá-la (não queremos auto-simular a partida dele ao avançar o dia).
+        val myMatchTomorrow = gs.matches.any {
+            !it.played && it.date == target.toString() &&
+                (it.homeTeamId == gs.managerTeamId || it.awayTeamId == gs.managerTeamId)
+        }
+        if (myMatchTomorrow) {
+            stylizedDialog(this)
+                .setTitle(R.string.hub_advance_blocked_title)
+                .setMessage(R.string.hub_advance_blocked_msg)
+                .setPositiveButton(R.string.btn_ok, null)
+                .show()
+            return
+        }
+
+        val report = com.cblol.scout.game.GameEngine
+            .advanceCalendarTo(applicationContext, target.toString())
+        vm.refresh()
+
+        // Scouting/moral/economia aparecem no log; aqui só confirmamos o avanço
+        // e sinalizamos pedidos de transferência, se houver.
+        val msg = buildString {
+            append(getString(R.string.hub_advance_done, target.format(dateFormatter)))
+            if (report.transferRequests.isNotEmpty()) {
+                append("\n\n")
+                append(getString(R.string.hub_advance_transfer_requests,
+                    report.transferRequests.joinToString(", ")))
+            }
+        }
+        android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_LONG).show()
     }
 
     // ── Encerrar carreira ───────────────────────────────────────────────

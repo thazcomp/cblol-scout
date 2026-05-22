@@ -470,14 +470,17 @@ class MatchSimulationActivity : AppCompatActivity() {
         val prize = if (seriesFinished && isMine) calculatePrize(winner, homeMapsFinal, awayMapsFinal, gs.managerTeamId) else 0L
         if (prize > 0L) gs.budget += prize
 
-        val today    = LocalDate.parse(gs.currentDate)
-        val matchDay = LocalDate.parse(match.date)
-        if (seriesFinished && today.isBefore(matchDay)) {
-            val previousDate = gs.currentDate
-            gs.currentDate = match.date
-            // Detecta se o avanço até a data da partida abriu/fechou uma janela
-            // de transferência (ex: cruzou para a inter-temporada).
-            logTransferWindowTransition(gs, previousDate, match.date)
+        // Avança o calendário até a data da partida processando TODOS os ticks
+        // diários dos dias intermediários (scouting, moral, economia, janelas de
+        // transferência). Antes a data era apenas atribuída, o que congelava o
+        // avanço do scouting. `advanceCalendarTo` é no-op se a data da partida
+        // não for posterior à data atual, então é seguro em qualquer caso.
+        if (seriesFinished) {
+            val today    = LocalDate.parse(gs.currentDate)
+            val matchDay = LocalDate.parse(match.date)
+            if (today.isBefore(matchDay)) {
+                GameEngine.advanceCalendarTo(applicationContext, match.date)
+            }
         }
 
         if (seriesFinished) {
@@ -488,36 +491,6 @@ class MatchSimulationActivity : AppCompatActivity() {
 
         launchResultActivity(homeMapsFinal, awayMapsFinal, winner, prize, seriesFinished, gs.managerTeamId)
         finish()
-    }
-
-    /**
-     * Loga abertura/fechamento de janela de transferência ao avançar a data do
-     * jogo até a data da partida. Delega a regra ao [TransferWindowService] para
-     * não duplicar a lógica de intervalos.
-     */
-    private fun logTransferWindowTransition(
-        gs: com.cblol.scout.data.GameState,
-        previousDate: String,
-        currentDate: String
-    ) {
-        val service = com.cblol.scout.domain.usecase.TransferWindowService
-        val (transition, window) = service.detectTransition(gs, previousDate, currentDate)
-        when (transition) {
-            com.cblol.scout.domain.usecase.TransferWindowService.WindowTransition.OPENED -> {
-                val label = window?.kind?.label ?: "Transferências"
-                GameRepository.log(
-                    "TRANSFER",
-                    "🟢 Janela de transferências ABERTA ($label). O mercado está disponível."
-                )
-            }
-            com.cblol.scout.domain.usecase.TransferWindowService.WindowTransition.CLOSED -> {
-                GameRepository.log(
-                    "TRANSFER",
-                    "🔴 Janela de transferências FECHADA. O mercado não aceita mais movimentações por enquanto."
-                )
-            }
-            com.cblol.scout.domain.usecase.TransferWindowService.WindowTransition.NONE -> Unit
-        }
     }
 
     private fun calculatePrize(winner: String, homeMaps: Int, awayMaps: Int, managerId: String): Long {

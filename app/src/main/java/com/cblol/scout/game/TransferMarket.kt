@@ -49,6 +49,12 @@ object TransferMarket {
     ): SellResult {
         val gs = GameRepository.current()
         val snap = GameRepository.snapshot(context)
+
+        // Mercado fechado fora das janelas de transferência: bloqueia a venda.
+        if (!com.cblol.scout.domain.usecase.TransferWindowService.isMarketOpen(gs)) {
+            return SellResult.Error(marketClosedMessage(gs))
+        }
+
         val roster = GameRepository.rosterOf(context, gs.managerTeamId)
         val player = roster.find { it.id == playerId }
             ?: return SellResult.Error("Jogador não está no seu elenco")
@@ -104,6 +110,12 @@ object TransferMarket {
     /** Compra: paga o preço, jogador vem para o meu time como reserva. */
     fun buyPlayer(context: Context, playerId: String): BuyResult {
         val gs = GameRepository.current()
+
+        // Mercado fechado fora das janelas de transferência: bloqueia a compra.
+        if (!com.cblol.scout.domain.usecase.TransferWindowService.isMarketOpen(gs)) {
+            return BuyResult.Error(marketClosedMessage(gs))
+        }
+
         val player = GameRepository.marketRoster(context).find { it.id == playerId }
             ?: return BuyResult.Error("Jogador não disponível no mercado")
 

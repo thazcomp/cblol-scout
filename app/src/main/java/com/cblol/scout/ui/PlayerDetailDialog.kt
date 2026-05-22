@@ -200,14 +200,22 @@ object PlayerDetailDialog {
         val actions = view.findViewById<LinearLayout>(R.id.layout_bs_actions)
         val gs      = GameRepository.load(activity.applicationContext)
 
-        when {
-            // Modo compra (vindo do mercado): botão de comprar + botão de escotear
-            // (se ainda não está 100% revelado)
-            onBuy != null -> setupMarketActions(activity, actions, dialog, player, onBuy, onChanged)
+        // IMPORTANTE: a checagem "jogador é do meu time" tem PRECEDÊNCIA sobre o
+        // modo compra. Um jogador que já é meu NUNCA deve mostrar "Observar"
+        // (escotear) ou "Contratar" — não faz sentido escotear/contratar quem já
+        // está no elenco. Antes o branch `onBuy != null` vinha primeiro, então um
+        // jogador do próprio time aberto com onBuy (ex.: mercado listando por
+        // engano um atleta já contratado) exibia as ações de mercado.
+        val isMyPlayer = gs != null && player.time_id == gs.managerTeamId
 
-            // Modo gerência (jogador do meu time)
-            gs != null && player.time_id == gs.managerTeamId ->
+        when {
+            // Modo gerência (jogador do meu time) — tem prioridade máxima
+            isMyPlayer ->
                 setupManagementActions(activity, view, dialog, player, onChanged)
+
+            // Modo compra (vindo do mercado): botão de comprar + escotear
+            onBuy != null ->
+                setupMarketActions(activity, actions, dialog, player, onBuy, onChanged)
 
             // Modo visualização (nenhuma ação)
             else -> actions.visibility = View.GONE

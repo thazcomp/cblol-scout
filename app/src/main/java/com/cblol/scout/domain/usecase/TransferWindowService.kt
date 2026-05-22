@@ -13,10 +13,10 @@ import java.time.temporal.ChronoUnit
  * durante janelas específicas do calendário, espelhando o funcionamento real
  * de ligas de e-sports:
  *
- *  - **Pré-temporada** ([TransferWindowKind.PRE_SEASON]): vai do início do jogo
- *    (uma semana antes do split) até a véspera da primeira partida. É a janela
- *    em que o jogador monta o elenco antes do split começar. **O jogo sempre
- *    começa aqui.**
+ *  - **Pré-temporada** ([TransferWindowKind.PRE_SEASON]): janela GRANDE que vai
+ *    do início do jogo ([PRE_SEASON_DURATION_DAYS] dias antes do split) até a
+ *    véspera da primeira partida. É a janela em que o jogador monta o elenco
+ *    antes do split começar. **O jogo sempre começa aqui.**
  *
  *  - **Inter-temporada** ([TransferWindowKind.MID_SEASON]): uma pausa curta no
  *    meio do split (entre o turno e o returno do round-robin duplo), em que o
@@ -28,8 +28,9 @@ import java.time.temporal.ChronoUnit
  * **Design das datas** (calculadas a partir do split):
  *  - O split tem 14 rodadas a cada 4 dias (~56 dias). A rodada 8 (returno)
  *    começa em `splitStart + 28 dias`.
- *  - Pré-temporada: `[gameStart, splitStart)` — i.e. termina 1 dia antes do
- *    primeiro jogo.
+ *  - Pré-temporada: `[gameStart, splitStart)` com gameStart =
+ *    `splitStart - PRE_SEASON_DURATION_DAYS` — i.e. uma janela longa que
+ *    termina 1 dia antes do primeiro jogo.
  *  - Inter-temporada: janela de [MID_SEASON_DURATION_DAYS] dias terminando na
  *    véspera do returno (rodada 8), centrada na pausa do meio.
  *
@@ -47,6 +48,18 @@ import java.time.temporal.ChronoUnit
  */
 object TransferWindowService {
 
+    /**
+     * Duração (em dias) da janela de **pré-temporada** — a janela maior no
+     * início da temporada. O mercado abre [PRE_SEASON_DURATION_DAYS] dias
+     * antes do primeiro jogo do split, dando ao técnico bastante tempo para
+     * montar o elenco antes da temporada começar.
+     *
+     * É a fonte única de verdade: o [com.cblol.scout.game.GameEngine] usa este
+     * valor para calcular onde o jogo começa (gameStart = splitStart menos
+     * estes dias), de modo que o jogo sempre inicie no primeiro dia da janela.
+     */
+    const val PRE_SEASON_DURATION_DAYS = 21L
+
     /** Duração (em dias) da janela de inter-temporada. */
     const val MID_SEASON_DURATION_DAYS = 6L
 
@@ -57,8 +70,17 @@ object TransferWindowService {
     private const val SECOND_HALF_OFFSET_DAYS = 28L
 
     /**
+     * Data de início do jogo (gameStart) para um dado `splitStart`: recua
+     * [PRE_SEASON_DURATION_DAYS] dias para que o jogo comece no primeiro dia
+     * da janela de pré-temporada. Usado pelo GameEngine na criação da carreira
+     * e pela migração de saves antigos, mantendo tudo em sincronia.
+     */
+    fun gameStartFor(splitStart: String): String =
+        LocalDate.parse(splitStart).minusDays(PRE_SEASON_DURATION_DAYS).toString()
+
+    /**
      * Constrói a lista de janelas de transferência de um split, dado o início
-     * do jogo (`gameStart`, ~1 semana antes) e o início do split (`splitStart`).
+     * do jogo (`gameStart`) e o início do split (`splitStart`).
      *
      * Chamado uma vez na criação da carreira; o resultado é salvo no GameState.
      */
@@ -66,7 +88,7 @@ object TransferWindowService {
         val start = LocalDate.parse(gameStart)
         val split = LocalDate.parse(splitStart)
 
-        // Pré-temporada: do início do jogo até a véspera do split.
+        // Pré-temporada: janela GRANDE do início do jogo até a véspera do split.
         val preSeason = TransferWindow(
             kind = TransferWindowKind.PRE_SEASON,
             startDate = start.toString(),

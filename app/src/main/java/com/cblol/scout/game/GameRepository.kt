@@ -82,7 +82,7 @@ object GameRepository {
         @Suppress("SENSELESS_COMPARISON")
         if (gs.transferWindows == null || gs.transferWindows.isEmpty()) {
             val gameStart = runCatching {
-                java.time.LocalDate.parse(gs.splitStartDate).minusDays(7).toString()
+                com.cblol.scout.domain.usecase.TransferWindowService.gameStartFor(gs.splitStartDate)
             }.getOrDefault(gs.currentDate)
             gs.transferWindows = com.cblol.scout.domain.usecase.TransferWindowService
                 .buildWindowsForSplit(gameStart, gs.splitStartDate)

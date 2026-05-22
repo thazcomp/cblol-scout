@@ -35,124 +35,180 @@ object GameEngine {
         repeat(days) {
             date = date.plusDays(1)
             val iso = date.toString()
-            val previousDate = gs.currentDate
-            gs.currentDate = iso
 
-            // Janela de transferência: detecta abertura/fechamento ao cruzar a data.
-            // Loga para o jogador saber que o mercado abriu (inter-temporada) ou
-            // fechou (fim de uma janela).
-            detectTransferWindowTransition(gs, previousDate, iso)
+            // Processa todos os ticks diários (moral, scouting, economia, janelas).
+            processDailyTicks(context, gs, date, report)
 
-            // 0. Decay temporal de moral: jogadores que ficam dias sem jogar movem
-            //    a moral em direção ao neutro. Também sorteia pedidos de transferência
-            //    para jogadores com moral muito baixa.
-            val roster = GameRepository.rosterOf(context, gs.managerTeamId)
-            val decayResult = MoraleService.applyDailyDecay(gs, roster)
-            decayResult.transferRequests.forEach { playerId ->
-                val player = roster.find { it.id == playerId } ?: return@forEach
-                report.transferRequests += player.nome_jogo
-                GameRepository.log(
-                    "MOOD",
-                    "${player.nome_jogo} pediu transferência por estar desmotivado."
-                )
-            }
-
-            // 0.5. Tick de scouting: avança os jogadores em scouting ativo.
-            //      Pode disparar level-ups (logados) ou completar (libera slot).
-            val scoutTick = ScoutingService.tickDaily(gs)
-            scoutTick.levelUps.forEach { up ->
-                val playerName = GameRepository.snapshot(context).jogadores.find { it.id == up.playerId }?.nome_jogo
-                    ?: com.cblol.scout.util.SecondDivisionGenerator.generate().find { it.id == up.playerId }?.nome_jogo
-                    ?: up.playerId
-                val msg = if (up.newLevel >= ScoutingService.MAX_LEVEL) {
-                    "Scouting de $playerName concluído (nível ${up.newLevel})."
-                } else {
-                    "Scouting de $playerName avançou para nível ${up.newLevel}."
-                }
-                GameRepository.log("SCOUT", msg)
-            }
-
-            // 1. Pagamento de patrocínio (domingo = day_of_week 7)
-            if (date.dayOfWeek.value == 7) {
-                // Patrocínio fixo do tier do time
-                gs.budget += gs.sponsorshipPerWeek
-                report.income += gs.sponsorshipPerWeek
-                GameRepository.log("ECONOMY",
-                    "Patrocínio semanal recebido: R$ ${"%,d".format(gs.sponsorshipPerWeek)}")
-
-                // Patrocínios ATIVOS (cada um paga seu próprio valor) +
-                // remove contratos expirados
-                val sponsorResult = SponsorService.paySponsorsWeekly(gs)
-                if (sponsorResult.totalPaid > 0) {
-                    report.income += sponsorResult.totalPaid
-                    GameRepository.log("ECONOMY",
-                        "Patrocínios: R$ ${"%,d".format(sponsorResult.totalPaid)} recebidos (${gs.activeSponsors?.size ?: 0} ativos)")
-                }
-                sponsorResult.expiredContracts.forEach { contract ->
-                    GameRepository.log("ECONOMY",
-                        "Patrocínio com ${contract.sponsor.name} expirou. Total recebido: R$ ${"%,d".format(contract.totalReceived)}")
-                }
-
-                // Manutenção do departamento de olheiros (descontado do orçamento)
-                val scoutingFee = ScoutingService.weeklyMaintenanceCost(gs)
-                if (scoutingFee > 0) {
-                    gs.budget -= scoutingFee
-                    report.expense += scoutingFee
-                    GameRepository.log("ECONOMY",
-                        "Manutenção do departamento de olheiros: R$ ${"%,d".format(scoutingFee)} (${ScoutingService.tier(gs).label})")
-                }
-            }
-
-            // 1.5. Gera novas ofertas de patrocínio se passou o intervalo
-            SponsorService.generateOffersIfDue(gs)
-
-            // 2. Pagamento de salários (dia 1 de cada mês)
-            if (date.dayOfMonth == 1) {
-                val total = totalMonthlyPayroll(context)
-                gs.budget -= total
-                report.expense += total
-                GameRepository.log("ECONOMY",
-                    "Folha salarial paga: R$ ${"%,d".format(total)}")
-            }
-
-            // 3. Simula partidas do dia
-            val todayMatches = gs.matches.filter { it.date == iso && !it.played }
-            if (todayMatches.isNotEmpty()) {
-                // Validação: garante que há 5 titulares antes de jogar
-                SquadManager.validateAndFixRoster(context)
-            }
-            todayMatches.forEach { m ->
-                MatchSimulator.simulate(context, m)
-                report.matchesPlayed += 1
-
-                val winnerId = m.winnerTeamId()
-                val isMyMatch = m.homeTeamId == gs.managerTeamId || m.awayTeamId == gs.managerTeamId
-
-                if (isMyMatch && winnerId == gs.managerTeamId) {
-                    val prize = PRIZE_PER_SERIES_WIN +
-                        (PRIZE_PER_MAP_WIN * maxOf(m.homeScore, m.awayScore))
-                    gs.budget += prize
-                    report.income += prize
-                    report.myWin = true
-                } else if (isMyMatch) {
-                    val mapPrize = PRIZE_PER_MAP_WIN *
-                        (if (m.homeTeamId == gs.managerTeamId) m.homeScore else m.awayScore)
-                    gs.budget += mapPrize
-                    report.income += mapPrize
-                    report.myLoss = true
-                }
-
-                val homeName = teamName(context, m.homeTeamId)
-                val awayName = teamName(context, m.awayTeamId)
-                GameRepository.log(
-                    "MATCH",
-                    "Rodada ${m.round}: $homeName ${m.homeScore}-${m.awayScore} $awayName"
-                )
-            }
+            // Simula partidas do dia (apenas no avanço automático via advanceDays;
+            // o avanço ao jogar manualmente NÃO simula partidas — ver advanceCalendarTo).
+            simulateMatchesOn(context, gs, iso, report)
         }
 
         GameRepository.save(context)
         return report
+    }
+
+    /**
+     * Avança o calendário do jogo até [targetDateIso] (inclusive), processando
+     * os ticks diários de CADA dia intermediário — moral, scouting, pagamentos
+     * semanais/mensais e janelas de transferência — SEM simular partidas.
+     *
+     * É usado quando o tempo avança porque o jogador jogou uma partida
+     * manualmente (o salto de data acontece na [com.cblol.scout.ui.MatchSimulationActivity]).
+     * Antes desta correção, a data era apenas atribuída (`currentDate = match.date`),
+     * o que pulava todos os ticks — em especial o avanço do scouting, que ficava
+     * congelado.
+     *
+     * Não simula partidas porque a partida que causou o avanço já está sendo
+     * processada pela própria Activity de simulação; partidas de outros times no
+     * período são resolvidas quando o jogador as joga/assiste ou ao fim do split.
+     *
+     * Seguro contra datas no passado/iguais: se [targetDateIso] não for posterior
+     * à data atual, não faz nada.
+     */
+    fun advanceCalendarTo(context: Context, targetDateIso: String): AdvanceReport {
+        val gs = GameRepository.current()
+        val report = AdvanceReport()
+        var date = LocalDate.parse(gs.currentDate)
+        val target = LocalDate.parse(targetDateIso)
+
+        while (date.isBefore(target)) {
+            date = date.plusDays(1)
+            processDailyTicks(context, gs, date, report)
+        }
+
+        GameRepository.save(context)
+        return report
+    }
+
+    /**
+     * Processa os eventos de UM dia: avança a data, detecta transição de janela,
+     * aplica decay de moral, tick de scouting, pagamentos semanais e mensais, e
+     * gera ofertas de patrocínio. NÃO simula partidas (isso é responsabilidade
+     * de quem chama, via [simulateMatchesOn] ou da Activity de simulação).
+     */
+    private fun processDailyTicks(
+        context: Context,
+        gs: GameState,
+        date: LocalDate,
+        report: AdvanceReport
+    ) {
+        val iso = date.toString()
+        val previousDate = gs.currentDate
+        gs.currentDate = iso
+
+        // Janela de transferência: detecta abertura/fechamento ao cruzar a data.
+        detectTransferWindowTransition(gs, previousDate, iso)
+
+        // 0. Decay temporal de moral + pedidos de transferência por insatisfação.
+        val roster = GameRepository.rosterOf(context, gs.managerTeamId)
+        val decayResult = MoraleService.applyDailyDecay(gs, roster)
+        decayResult.transferRequests.forEach { playerId ->
+            val player = roster.find { it.id == playerId } ?: return@forEach
+            report.transferRequests += player.nome_jogo
+            GameRepository.log(
+                "MOOD",
+                "${player.nome_jogo} pediu transferência por estar desmotivado."
+            )
+        }
+
+        // 0.5. Tick de scouting: avança os jogadores em scouting ativo.
+        val scoutTick = ScoutingService.tickDaily(gs)
+        scoutTick.levelUps.forEach { up ->
+            val playerName = GameRepository.snapshot(context).jogadores.find { it.id == up.playerId }?.nome_jogo
+                ?: com.cblol.scout.util.SecondDivisionGenerator.generate().find { it.id == up.playerId }?.nome_jogo
+                ?: up.playerId
+            val msg = if (up.newLevel >= ScoutingService.MAX_LEVEL) {
+                "Scouting de $playerName concluído (nível ${up.newLevel})."
+            } else {
+                "Scouting de $playerName avançou para nível ${up.newLevel}."
+            }
+            GameRepository.log("SCOUT", msg)
+        }
+
+        // 1. Pagamento de patrocínio (domingo = day_of_week 7)
+        if (date.dayOfWeek.value == 7) {
+            gs.budget += gs.sponsorshipPerWeek
+            report.income += gs.sponsorshipPerWeek
+            GameRepository.log("ECONOMY",
+                "Patrocínio semanal recebido: R$ ${"%,d".format(gs.sponsorshipPerWeek)}")
+
+            val sponsorResult = SponsorService.paySponsorsWeekly(gs)
+            if (sponsorResult.totalPaid > 0) {
+                report.income += sponsorResult.totalPaid
+                GameRepository.log("ECONOMY",
+                    "Patrocínios: R$ ${"%,d".format(sponsorResult.totalPaid)} recebidos (${gs.activeSponsors?.size ?: 0} ativos)")
+            }
+            sponsorResult.expiredContracts.forEach { contract ->
+                GameRepository.log("ECONOMY",
+                    "Patrocínio com ${contract.sponsor.name} expirou. Total recebido: R$ ${"%,d".format(contract.totalReceived)}")
+            }
+
+            val scoutingFee = ScoutingService.weeklyMaintenanceCost(gs)
+            if (scoutingFee > 0) {
+                gs.budget -= scoutingFee
+                report.expense += scoutingFee
+                GameRepository.log("ECONOMY",
+                    "Manutenção do departamento de olheiros: R$ ${"%,d".format(scoutingFee)} (${ScoutingService.tier(gs).label})")
+            }
+        }
+
+        // 1.5. Gera novas ofertas de patrocínio se passou o intervalo
+        SponsorService.generateOffersIfDue(gs)
+
+        // 2. Pagamento de salários (dia 1 de cada mês)
+        if (date.dayOfMonth == 1) {
+            val total = totalMonthlyPayroll(context)
+            gs.budget -= total
+            report.expense += total
+            GameRepository.log("ECONOMY",
+                "Folha salarial paga: R$ ${"%,d".format(total)}")
+        }
+    }
+
+    /**
+     * Simula todas as partidas pendentes da data [iso] e aplica prêmios. Usado
+     * apenas no avanço automático ([advanceDays]).
+     */
+    private fun simulateMatchesOn(
+        context: Context,
+        gs: GameState,
+        iso: String,
+        report: AdvanceReport
+    ) {
+        val todayMatches = gs.matches.filter { it.date == iso && !it.played }
+        if (todayMatches.isNotEmpty()) {
+            // Validação: garante que há 5 titulares antes de jogar
+            SquadManager.validateAndFixRoster(context)
+        }
+        todayMatches.forEach { m ->
+            MatchSimulator.simulate(context, m)
+            report.matchesPlayed += 1
+
+            val winnerId = m.winnerTeamId()
+            val isMyMatch = m.homeTeamId == gs.managerTeamId || m.awayTeamId == gs.managerTeamId
+
+            if (isMyMatch && winnerId == gs.managerTeamId) {
+                val prize = PRIZE_PER_SERIES_WIN +
+                    (PRIZE_PER_MAP_WIN * maxOf(m.homeScore, m.awayScore))
+                gs.budget += prize
+                report.income += prize
+                report.myWin = true
+            } else if (isMyMatch) {
+                val mapPrize = PRIZE_PER_MAP_WIN *
+                    (if (m.homeTeamId == gs.managerTeamId) m.homeScore else m.awayScore)
+                gs.budget += mapPrize
+                report.income += mapPrize
+                report.myLoss = true
+            }
+
+            val homeName = teamName(context, m.homeTeamId)
+            val awayName = teamName(context, m.awayTeamId)
+            GameRepository.log(
+                "MATCH",
+                "Rodada ${m.round}: $homeName ${m.homeScore}-${m.awayScore} $awayName"
+            )
+        }
     }
 
     /** Próxima partida do meu time (a partir da data atual, inclusive). */
@@ -222,7 +278,9 @@ object GameEngine {
         val (budget, sponsorship) = budgetForTier(team.tier_orcamento)
         val splitStart = "2026-03-28"
         val splitEnd   = "2026-06-06"
-        val gameStart  = LocalDate.parse(splitStart).minusDays(7).toString() // 1 sem antes do split
+        // Jogo começa no primeiro dia da janela de pré-temporada (janela grande):
+        // splitStart menos PRE_SEASON_DURATION_DAYS. Fonte única no TransferWindowService.
+        val gameStart  = com.cblol.scout.domain.usecase.TransferWindowService.gameStartFor(splitStart)
 
         val gs = GameState(
             managerName = managerName,
