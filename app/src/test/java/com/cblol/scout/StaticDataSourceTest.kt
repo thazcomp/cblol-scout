@@ -1,5 +1,6 @@
 package com.cblol.scout
 
+import com.cblol.scout.data.StaticData
 import com.cblol.scout.data.seed.ChampionPoolSeed
 import com.cblol.scout.data.seed.ChampionSeed
 import com.cblol.scout.data.seed.CompositionSeed
