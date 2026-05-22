@@ -1,5 +1,6 @@
 package com.cblol.scout
 
+import com.cblol.scout.data.StaticData
 import com.cblol.scout.util.ChampionPoolRepository
 import org.junit.Assert.*
 import org.junit.Before

@@ -89,6 +89,12 @@ object GameRepository {
                 .toMutableList()
         }
 
+        // Ofertas recebidas: saves anteriores ao sistema não têm o campo. Como
+        // é nullable, basta garantir uma lista mutável para o motor preencher.
+        if (gs.incomingOffers == null) {
+            gs.incomingOffers = mutableListOf()
+        }
+
         return gs
     }
 

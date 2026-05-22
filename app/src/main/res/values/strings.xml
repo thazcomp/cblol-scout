@@ -618,5 +618,30 @@
     <string name="hub_advance_transfer_requests">Pediram transferência: %1$s</string>
     <string name="hub_advance_blocked_title">Partida amanhã</string>
     <string name="hub_advance_blocked_msg">Você tem uma partida no próximo dia. Use \"Jogar Próxima Partida\" para disputá-la.</string>
+    <string name="hub_advance_incoming_offers">Propostas recebidas por: %1$s</string>
+
+    <!-- Propostas recebidas (ofertas de outros times) -->
+    <string name="incoming_offers_title">Propostas Recebidas</string>
+    <string name="incoming_offers_empty">Nenhuma proposta no momento. Outros times podem oferecer por seus jogadores enquanto a janela estiver aberta.</string>
+    <string name="incoming_offers_empty_closed">Nenhuma proposta. As ofertas de outros times chegam durante as janelas de transferência.</string>
+    <string name="incoming_offers_wants_out">⚠ Quer sair</string>
+    <string name="incoming_offers_subtitle">Proposta de %1$s · expira em %2$s</string>
+    <string name="incoming_offers_amount">R$ %1$s</string>
+    <string name="incoming_offers_above_market">%1$d%% acima do valor de mercado</string>
+    <string name="incoming_offers_below_market">%1$d%% abaixo do valor de mercado</string>
+    <string name="incoming_offers_at_market">No valor de mercado</string>
+    <string name="incoming_offers_accept">ACEITAR</string>
+    <string name="incoming_offers_reject">RECUSAR</string>
+    <string name="incoming_offers_accept_confirm_title">Aceitar proposta?</string>
+    <string name="incoming_offers_accept_confirm_msg">Vender %1$s para %2$s por R$ %3$s? O jogador deixará seu elenco.</string>
+    <string name="incoming_offers_reject_confirm_title">Recusar proposta?</string>
+    <string name="incoming_offers_reject_confirm_msg">Recusar a proposta de %1$s por %2$s?</string>
+    <string name="incoming_offers_reject_warn_morale">\n\n⚠ Este jogador pediu para sair. Recusar vai deixá-lo mais insatisfeito.</string>
+    <string name="incoming_offers_sold_title">Transferência concluída</string>
+    <string name="incoming_offers_sold_msg">%1$s foi vendido para %2$s por R$ %3$s.</string>
+    <string name="incoming_offers_termination_note">\n\nMulta por encerramento antecipado: R$ %1$s.</string>
+    <string name="hub_offers_subtitle">Toque para ver propostas de outros times</string>
+    <string name="hub_offers_subtitle_active">%1$d proposta(s) recebida(s) · toque para responder</string>
+    <string name="player_requested_transfer_banner">⚠ Pediu para sair do clube</string>
 
 </resources>

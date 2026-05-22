@@ -63,6 +63,12 @@ object MoraleService {
     private const val DELTA_SOLD             = -25
     private const val DELTA_HIRED            = +25
 
+    /** Recusar oferta que o jogador queria aceitar (havia pedido para sair). */
+    private const val DELTA_OFFER_REJECTED_REQUESTED = -18
+
+    /** Recusar especulação de outro time por jogador que NÃO pediu pra sair. */
+    private const val DELTA_OFFER_REJECTED   = -4
+
     // ── Decay temporal ───────────────────────────────────────────────────
 
     /** Valor neutro para o qual o decay converge. */
@@ -85,6 +91,20 @@ object MoraleService {
 
     /** Abaixo deste valor, jogador entra na zona "extremamente triste". */
     const val TRANSFER_REQUEST_THRESHOLD = 10
+
+    /**
+     * Abaixo deste valor de moral, um jogador insatisfeito pode pedir para sair
+     * mesmo sem estar no fundo do poço — usado em conjunto com gatilhos
+     * situacionais (muito tempo como reserva, etc).
+     */
+    const val DISSATISFIED_THRESHOLD = 30
+
+    /**
+     * Dias como reserva (sem ser titular) a partir dos quais um jogador
+     * insatisfeito começa a considerar pedir transferência por falta de
+     * oportunidades — mesmo que a moral não esteja no extremo.
+     */
+    const val RESERVE_FRUSTRATION_DAYS = 21
 
     /**
      * Chance (0-1) de pedir transferência por dia em que a moral está
@@ -278,6 +298,19 @@ object MoraleService {
         applyDeltaWithReason(state, playerId, DELTA_BECAME_STARTER, "Promovido a titular")
     }
 
+    /**
+     * Aplica o efeito moral de o clube RECUSAR uma oferta de outro time por um
+     * jogador que havia pedido para sair. Frustra o jogador (queda de moral).
+     */
+    fun recordTransferOfferRejected(state: GameState, playerId: String, hadRequested: Boolean) {
+        val delta = if (hadRequested) DELTA_OFFER_REJECTED_REQUESTED else DELTA_OFFER_REJECTED
+        val reason = if (hadRequested)
+            "Clube recusou proposta que ele queria aceitar"
+        else
+            "Especulação de transferência recusada"
+        applyDeltaWithReason(state, playerId, delta, reason)
+    }
+
     // ── Decay temporal ──────────────────────────────────────────────────
 
     /**
@@ -346,11 +379,11 @@ object MoraleService {
 
             // ── Eventos exclusivos: pedido de transferência ──
             val updatedMood = state.playerOverrides[player.id]?.mood ?: current
-            if (updatedMood <= TRANSFER_REQUEST_THRESHOLD &&
-                state.playerOverrides[player.id]?.transferRequestedOn == null
-            ) {
-                if (Random.nextDouble() < TRANSFER_REQUEST_DAILY_PROB) {
-                    flagTransferRequest(state, player.id)
+            val alreadyRequested = state.playerOverrides[player.id]?.transferRequestedOn != null
+            if (!alreadyRequested) {
+                val reason = transferRequestReason(state, player, updatedMood, today)
+                if (reason != null && Random.nextDouble() < TRANSFER_REQUEST_DAILY_PROB) {
+                    flagTransferRequest(state, player.id, reason)
                     transferRequests += player.id
                 }
             }
@@ -360,14 +393,57 @@ object MoraleService {
     }
 
     /**
+     * Decide se um jogador tem motivo para pedir transferência hoje e retorna
+     * uma descrição curta do motivo (ou null se não há motivo).
+     *
+     * Gatilhos (do mais grave ao situacional):
+     *  1. **Moral no fundo** (<= [TRANSFER_REQUEST_THRESHOLD]): profundamente
+     *     infeliz, quer sair de qualquer jeito.
+     *  2. **Reserva frustrado**: insatisfeito ([DISSATISFIED_THRESHOLD]) E parado
+     *     no banco há mais de [RESERVE_FRUSTRATION_DAYS] dias — quer jogar.
+     *
+     * SOLID/OCP: novos motivos entram aqui sem mexer no loop de decay.
+     */
+    private fun transferRequestReason(
+        state: GameState,
+        player: Player,
+        mood: Int,
+        today: LocalDate
+    ): String? {
+        if (mood <= TRANSFER_REQUEST_THRESHOLD) {
+            return "Profundamente insatisfeito no clube"
+        }
+
+        if (mood <= DISSATISFIED_THRESHOLD && !player.titular) {
+            val override = state.playerOverrides[player.id]
+            val lastPlayed = override?.lastPlayedDate?.let {
+                runCatching { LocalDate.parse(it) }.getOrNull()
+            }
+            val daysOnBench = if (lastPlayed != null) {
+                ChronoUnit.DAYS.between(lastPlayed, today).toInt()
+            } else {
+                ChronoUnit.DAYS.between(LocalDate.parse(state.splitStartDate), today).toInt()
+            }
+            if (daysOnBench >= RESERVE_FRUSTRATION_DAYS) {
+                return "Quer mais oportunidades como titular"
+            }
+        }
+
+        return null
+    }
+
+    /**
      * Marca que o jogador pediu transferência hoje + adiciona ao histórico
      * para aparecer no dialog detalhado.
+     *
+     * @param reason motivo curto do pedido (ex: "Quer mais oportunidades como
+     *   titular"), exibido no histórico de moral.
      */
-    private fun flagTransferRequest(state: GameState, playerId: String) {
+    private fun flagTransferRequest(state: GameState, playerId: String, reason: String = "Pediu transferência") {
         val existing = state.playerOverrides[playerId] ?: return
         val event = MoodEvent(
             date       = state.currentDate,
-            reason     = "Pediu transferência",
+            reason     = "Pediu transferência: $reason",
             delta      = 0,
             valueAfter = existing.mood ?: 0
         )

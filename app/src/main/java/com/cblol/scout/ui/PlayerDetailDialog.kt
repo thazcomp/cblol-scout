@@ -55,9 +55,27 @@ object PlayerDetailDialog {
         bindAttributes(view, player)
         bindSalary(view, player, activity)
         applyScoutingVisibility(view, player)
+        bindTransferRequestBanner(view, player)
         setupActions(activity, view, dialog, player, onChanged, onBuy)
 
         dialog.show()
+    }
+
+    /**
+     * Se o jogador pediu para sair (moral/insatisfação), mostra um aviso no
+     * campo de nome real (que fica logo abaixo do nome de jogo) destacando a
+     * situação ao gerente. Só se aplica a jogadores do próprio elenco — para
+     * jogadores de outros times o campo segue mostrando o nome real.
+     */
+    private fun bindTransferRequestBanner(view: View, player: Player) {
+        val gs = GameRepository.load(view.context.applicationContext) ?: return
+        if (player.time_id != gs.managerTeamId) return
+        if (!com.cblol.scout.domain.usecase.MoraleService.hasRequestedTransfer(gs, player.id)) return
+
+        val tvRealname = view.findViewById<TextView>(R.id.tv_bs_realname)
+        tvRealname.text = view.context.getString(R.string.player_requested_transfer_banner)
+        tvRealname.setTextColor(
+            androidx.core.content.ContextCompat.getColor(view.context, R.color.state_danger))
     }
 
     /**

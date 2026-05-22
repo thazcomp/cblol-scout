@@ -2,8 +2,10 @@ package com.cblol.scout.game
 
 import android.content.Context
 import com.cblol.scout.data.Player
+import com.cblol.scout.data.IncomingTransferOffer
 import com.cblol.scout.domain.usecase.CoachProgressionService
 import com.cblol.scout.domain.usecase.ContractService
+import com.cblol.scout.domain.usecase.IncomingOfferService
 import com.cblol.scout.domain.usecase.MoraleService
 
 /**
@@ -189,6 +191,79 @@ object TransferMarket {
                 false
             }
         }
+    }
+
+    /**
+     * Aceita uma oferta de compra recebida de outro time: o jogador é vendido
+     * para o time proponente pelo valor da oferta. Reaproveita a mesma mecânica
+     * de venda (override de time, moral, progressão, validação de elenco), mas
+     * o destino e o preço vêm da [IncomingTransferOffer] em vez de aleatórios.
+     *
+     * Diferente de [sellPlayer], NÃO exige confirmação de "único titular": o
+     * gerente já está decidindo conscientemente ao aceitar a proposta. A
+     * validação automática de elenco roda em seguida para promover reserva.
+     *
+     * @return [SellResult.Ok] com preço e time, ou [SellResult.Error] se a
+     *   oferta não existe mais / mercado fechou / jogador já saiu.
+     */
+    fun acceptIncomingOffer(context: Context, offerId: String): SellResult {
+        val gs = GameRepository.current()
+
+        if (!com.cblol.scout.domain.usecase.TransferWindowService.isMarketOpen(gs)) {
+            return SellResult.Error(marketClosedMessage(gs))
+        }
+
+        val offer = IncomingOfferService.offerById(gs, offerId)
+            ?: return SellResult.Error("Esta oferta não está mais disponível.")
+
+        val roster = GameRepository.rosterOf(context, gs.managerTeamId)
+        val player = roster.find { it.id == offer.playerId }
+            ?: return SellResult.Error("${offer.playerName} não está mais no seu elenco.")
+
+        val snap = GameRepository.snapshot(context)
+        val buyer = snap.times.find { it.id == offer.fromTeamId }
+        val buyerName = buyer?.nome ?: offer.fromTeamName
+        val price = offer.amountBrl
+        val terminationCost = ContractService.earlyTerminationCost(gs, player)
+
+        GameRepository.updateOverride(offer.playerId) { ov ->
+            ov.copy(newTeamId = offer.fromTeamId, transferredOn = gs.currentDate, titular = false)
+        }
+        gs.budget += price
+        if (terminationCost > 0) {
+            gs.budget -= terminationCost
+            GameRepository.log(
+                "CONTRACT",
+                "Multa por encerramento antecipado: R$ ${"%,d".format(terminationCost)}"
+            )
+        }
+        CoachProgressionService.recordSell(gs.coachProfile, price)
+        MoraleService.recordPlayerSold(gs, offer.playerId)
+        MoraleService.clearTransferRequest(gs, offer.playerId)
+        IncomingOfferService.removeOffer(gs, offerId)
+        GameRepository.log(
+            "TRANSFER",
+            "${offer.playerName} aceitou ir para $buyerName por R$ ${"%,d".format(price)} (proposta recebida)"
+        )
+        GameRepository.save(context)
+
+        SquadManager.validateAndFixRoster(context)
+        return SellResult.Ok(price, buyerName, terminationCost)
+    }
+
+    /**
+     * Recusa uma oferta recebida: descarta a proposta e aplica o efeito moral
+     * (queda maior se o jogador havia pedido para sair).
+     */
+    fun rejectIncomingOffer(context: Context, offerId: String) {
+        val gs = GameRepository.current()
+        val offer = IncomingOfferService.offerById(gs, offerId) ?: return
+        IncomingOfferService.rejectOffer(gs, offer)
+        GameRepository.log(
+            "TRANSFER",
+            "Proposta de ${offer.fromTeamName} por ${offer.playerName} recusada."
+        )
+        GameRepository.save(context)
     }
 
     /** Promove ou rebaixa jogador (titular/reserva). */

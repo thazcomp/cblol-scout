@@ -108,7 +108,65 @@ data class GameState(
      * desserializam como vazio e são repovoados por migração no
      * [com.cblol.scout.game.GameRepository].
      */
-    var transferWindows: MutableList<TransferWindow> = mutableListOf()
+    var transferWindows: MutableList<TransferWindow> = mutableListOf(),
+
+    /**
+     * Ofertas de compra recebidas de OUTROS times por jogadores do elenco do
+     * gerente. Geradas durante as janelas de transferência pelo
+     * [com.cblol.scout.domain.usecase.IncomingOfferService].
+     *
+     * O gerente pode aceitar (jogador sai, recebe o valor) ou recusar cada
+     * oferta. Ofertas expiram após alguns dias ou ao fim da janela.
+     *
+     * Nullable porque Gson pode deixar null ao desserializar saves antigos
+     * que não têm este campo.
+     */
+    var incomingOffers: MutableList<IncomingTransferOffer>? = null,
+
+    /**
+     * Data (ISO) da última vez que o motor sorteou ofertas de compra de outros
+     * times. Usado para gerar ofertas a cada
+     * [com.cblol.scout.domain.usecase.IncomingOfferService.OFFER_INTERVAL_DAYS]
+     * dias enquanto a janela está aberta.
+     */
+    var lastIncomingOffersDate: String? = null
+)
+
+/**
+ * Oferta de compra recebida de outro time por um jogador do elenco do gerente.
+ *
+ * Diferente das transferências que o gerente inicia (comprar/vender no mercado),
+ * estas são propostas que CHEGAM ao gerente durante as janelas — espelhando
+ * times rivais tentando reforçar o elenco.
+ *
+ * O gerente decide se aceita (jogador é vendido pelo [amountBrl], que costuma
+ * ser próximo ou acima do valor de mercado) ou recusa. Jogadores que pediram
+ * transferência tendem a gerar ofertas mais frequentes e a ficar insatisfeitos
+ * se a oferta for recusada.
+ *
+ * @property id identificador único da oferta (para aceitar/recusar)
+ * @property playerId jogador alvo (id no override/snapshot)
+ * @property playerName nome do jogador (snapshot, para a UI não refazer lookup)
+ * @property playerRole role do jogador (para exibição)
+ * @property fromTeamId time que está oferecendo
+ * @property fromTeamName nome do time que está oferecendo
+ * @property amountBrl valor oferecido pela transferência
+ * @property offeredOn data (ISO) em que a oferta chegou
+ * @property expiresOn data (ISO) em que a oferta expira
+ * @property motivatedByRequest true se o jogador havia pedido para sair (a
+ *   recusa nesse caso pesa mais na moral)
+ */
+data class IncomingTransferOffer(
+    val id: String,
+    val playerId: String,
+    val playerName: String,
+    val playerRole: String,
+    val fromTeamId: String,
+    val fromTeamName: String,
+    val amountBrl: Long,
+    val offeredOn: String,
+    val expiresOn: String,
+    val motivatedByRequest: Boolean = false
 )
 
 /**

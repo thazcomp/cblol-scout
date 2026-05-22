@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    item_incoming_offer.xml
+    Card de uma proposta de compra recebida de outro time.
+
+      ┌────────────────────────────────────────────────┐
+      │ ▌ Tinowns  [MID]            [⚠ Pediu pra sair]  │
+      │   Proposta de LOUD · expira em 12/04             │
+      │   R$ 2.450.000                                   │
+      │   [ACEITAR]                      [RECUSAR]       │
+      └────────────────────────────────────────────────┘
+
+    A barra lateral fica dourada quando o jogador pediu transferência (destaque).
+-->
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="4dp"
+    android:layout_marginVertical="5dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="0dp"
+    app:strokeColor="@color/color_outline_variant"
+    app:strokeWidth="1dp"
+    app:cardBackgroundColor="@color/color_surface_elevated">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <View
+            android:id="@+id/view_accent_bar"
+            android:layout_width="4dp"
+            android:layout_height="match_parent"
+            android:background="@color/color_outline_variant" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <!-- Linha 1: nome + role + badge "pediu pra sair" -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/tv_player_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/color_on_surface"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_player_role"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:paddingHorizontal="6dp"
+                    android:paddingVertical="1dp"
+                    android:background="@color/color_surface"
+                    android:textColor="@color/color_on_surface_variant"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <TextView
+                    android:id="@+id/tv_requested_badge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/incoming_offers_wants_out"
+                    android:textColor="@color/champion_gold"
+                    android:textSize="10sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <!-- Linha 2: time proponente + validade -->
+            <TextView
+                android:id="@+id/tv_offer_subtitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:textColor="@color/color_on_surface_variant"
+                android:textSize="12sp" />
+
+            <!-- Valor da proposta -->
+            <TextView
+                android:id="@+id/tv_offer_amount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:textColor="@color/champion_gold"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <!-- Comparação com valor de mercado -->
+            <TextView
+                android:id="@+id/tv_offer_vs_market"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
+                android:textColor="@color/color_on_surface_variant"
+                android:textSize="11sp" />
+
+            <!-- Ações -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="10dp">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_accept"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="44dp"
+                    android:layout_marginEnd="6dp"
+                    android:text="@string/incoming_offers_accept"
+                    android:textSize="13sp"
+                    app:cornerRadius="8dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_reject"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="44dp"
+                    android:layout_marginStart="6dp"
+                    android:text="@string/incoming_offers_reject"
+                    android:textSize="13sp"
+                    app:cornerRadius="8dp" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

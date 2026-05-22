@@ -126,6 +126,10 @@ object GameEngine {
             GameRepository.log("SCOUT", msg)
         }
 
+        // 0.7. Ofertas de compra de outros times (só com mercado aberto).
+        //      Expira as vencidas e sorteia novas a cada intervalo.
+        processIncomingOffers(context, gs, roster, report)
+
         // 1. Pagamento de patrocínio (domingo = day_of_week 7)
         if (date.dayOfWeek.value == 7) {
             gs.budget += gs.sponsorshipPerWeek
@@ -263,6 +267,38 @@ object GameEngine {
         }
     }
 
+    /**
+     * Processa ofertas de compra de outros times num tick diário:
+     *  1. Expira ofertas vencidas (por data ou mercado fechado).
+     *  2. Gera novas ofertas se for dia de gerar e o mercado estiver aberto.
+     *
+     * As novas ofertas vão para o [AdvanceReport] (nomes dos jogadores) para o
+     * Hub poder notificar o gerente, e também são logadas.
+     */
+    private fun processIncomingOffers(
+        context: Context,
+        gs: GameState,
+        roster: List<Player>,
+        report: AdvanceReport
+    ) {
+        com.cblol.scout.domain.usecase.IncomingOfferService.expireOffers(gs)
+
+        val snapshot = GameRepository.snapshot(context)
+        val result = com.cblol.scout.domain.usecase.IncomingOfferService.generateOffersIfDue(
+            state = gs,
+            snapshot = snapshot,
+            roster = roster,
+            marketPriceOf = { TransferMarket.marketPriceOf(it) }
+        )
+        result.newOffers.forEach { offer ->
+            report.incomingOffers += offer.playerName
+            GameRepository.log(
+                "TRANSFER",
+                "💰 ${offer.fromTeamName} ofereceu R$ ${"%,d".format(offer.amountBrl)} por ${offer.playerName}."
+            )
+        }
+    }
+
     private fun teamName(context: Context, teamId: String): String =
         GameRepository.snapshot(context).times.find { it.id == teamId }?.nome ?: teamId
 
@@ -349,5 +385,11 @@ data class AdvanceReport(
      * Jogadores que pediram transferência neste avanço de dias (por insatisfação
      * persistente). Lista de nomes para o Hub mostrar em uma notificação.
      */
-    val transferRequests: MutableList<String> = mutableListOf()
+    val transferRequests: MutableList<String> = mutableListOf(),
+
+    /**
+     * Jogadores que receberam ofertas de compra de outros times neste avanço.
+     * Lista de nomes para o Hub notificar que há propostas a responder.
+     */
+    val incomingOffers: MutableList<String> = mutableListOf()
 )

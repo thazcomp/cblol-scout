@@ -401,6 +401,53 @@ ChampionPoolRepository                 │
 
 ---
 
+## Mercado de transferências dinâmico (pedidos de saída + ofertas recebidas)
+
+Além de comprar/vender por iniciativa do gerente, o mercado é **vivo**: jogadores
+podem pedir para sair e times rivais mandam propostas durante as janelas.
+
+### Jogador pede para sair
+
+`MoraleService.applyDailyDecay` (rodado a cada dia avançado) avalia, por jogador,
+se há motivo para pedir transferência via `transferRequestReason`:
+
+- **Moral no fundo** (`<= TRANSFER_REQUEST_THRESHOLD`, 10): profundamente infeliz.
+- **Reserva frustrado**: insatisfeito (`<= DISSATISFIED_THRESHOLD`, 30), não-titular
+  e há mais de `RESERVE_FRUSTRATION_DAYS` (21) dias no banco.
+
+Havendo motivo, sorteia (`TRANSFER_REQUEST_DAILY_PROB`, 15%/dia) e, se sair, marca
+`PlayerOverride.transferRequestedOn` + registra no histórico de moral. O pedido é
+limpo ao renovar contrato ou vender (`clearTransferRequest`). Novos motivos entram
+em `transferRequestReason` (OCP) sem mexer no loop de decay.
+
+### Outros times oferecem (ofertas recebidas)
+
+`IncomingOfferService` (domain/usecase, JVM-puro) gera/expira/avalia propostas:
+
+- **Geração** (`generateOffersIfDue`): só com mercado aberto
+  (`TransferWindowService.isMarketOpen`), a cada `OFFER_INTERVAL_DAYS` (3) dias.
+  Prioriza quem pediu pra sair (prob 0.70) > craques (0.25) > demais (0.06).
+  Valor = preço de mercado × multiplicador aleatório (+bônus se pediu pra sair).
+  Respeita teto de ofertas ativas e não duplica alvo.
+- **Expiração** (`expireOffers`): remove ofertas vencidas (validade ou janela
+  fechada).
+- **Resposta**: `TransferMarket.acceptIncomingOffer` (vende pelo valor da proposta,
+  reusando a mecânica de venda) e `TransferMarket.rejectIncomingOffer` (descarta +
+  `MoraleService.recordTransferOfferRejected`, que dói mais se o jogador queria sair).
+
+O motor (`GameEngine.processIncomingOffers`) chama isso nos ticks diários e
+reporta no `AdvanceReport.incomingOffers`. A UI fica em `IncomingOffersActivity`
+(card 📩 "Propostas" no Hub, com badge de contagem). Persistência:
+`GameState.incomingOffers` + `lastIncomingOffersDate` (migrados defensivamente no
+`GameRepository`).
+
+**Por que `IncomingOfferService` é separado do `TransferMarket`?** O TransferMarket
+cuida de transações iniciadas pelo gerente; o IncomingOfferService cuida do fluxo
+inverso (iniciativa da IA). Separar respeita SRP e mantém a regra de geração
+isolada e testável (`IncomingOfferServiceTest`, `MoraleTransferRequestTest`).
+
+---
+
 ## Status da migração
 
 Todas as Activities foram migradas para o padrão SOLID + recursos:

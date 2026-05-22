@@ -214,6 +214,24 @@ class ManagerHubActivity : AppCompatActivity() {
             com.cblol.scout.game.GameEngine.totalMonthlyPayroll(applicationContext)
         }.getOrNull() ?: return
         tv.text = getString(R.string.hub_payroll_subtitle_value, "%,d".format(total))
+        renderOffersSummary()
+    }
+
+    /**
+     * Atualiza o badge do card de Propostas Recebidas: mostra a contagem de
+     * ofertas ativas quando há alguma (chamativo em dourado), ou esconde quando
+     * não há propostas.
+     */
+    private fun renderOffersSummary() {
+        val tv = findViewById<android.widget.TextView>(R.id.tv_hub_offers_badge)
+        val gs = runCatching { GameRepository.current() }.getOrNull() ?: return
+        val count = com.cblol.scout.domain.usecase.IncomingOfferService.activeOffers(gs).size
+        if (count > 0) {
+            tv.visibility = View.VISIBLE
+            tv.text = getString(R.string.hub_offers_subtitle_active, count)
+        } else {
+            tv.visibility = View.GONE
+        }
     }
 
     /**
@@ -268,6 +286,9 @@ class ManagerHubActivity : AppCompatActivity() {
         }
         findViewById<View>(R.id.card_payroll).setOnClickListener {
             PayrollDialog.show(this) { vm.refresh() }
+        }
+        findViewById<View>(R.id.card_offers).setOnClickListener {
+            startActivity(IncomingOffersActivity.intent(this))
         }
         binding.btnQuit.setOnClickListener        { confirmQuit() }
     }
@@ -379,13 +400,18 @@ class ManagerHubActivity : AppCompatActivity() {
         vm.refresh()
 
         // Scouting/moral/economia aparecem no log; aqui só confirmamos o avanço
-        // e sinalizamos pedidos de transferência, se houver.
+        // e sinalizamos pedidos de transferência e propostas recebidas, se houver.
         val msg = buildString {
             append(getString(R.string.hub_advance_done, target.format(dateFormatter)))
             if (report.transferRequests.isNotEmpty()) {
                 append("\n\n")
                 append(getString(R.string.hub_advance_transfer_requests,
                     report.transferRequests.joinToString(", ")))
+            }
+            if (report.incomingOffers.isNotEmpty()) {
+                append("\n\n")
+                append(getString(R.string.hub_advance_incoming_offers,
+                    report.incomingOffers.joinToString(", ")))
             }
         }
         android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_LONG).show()

@@ -69,3 +69,47 @@ fun makeMatch(
 )
 
 val EIGHT_TEAMS = listOf("T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8")
+
+/**
+ * Cria um [GameState] mínimo para testes JVM-puros de serviços que dependem do
+ * estado da carreira (moral, ofertas recebidas, janelas de transferência).
+ *
+ * Por padrão cria as janelas de transferência do split, de modo que o mercado
+ * fique aberto na data inicial (pré-temporada). Use [currentDate] para mover o
+ * relógio do jogo.
+ */
+fun makeGameState(
+    managerTeamId: String = "T1",
+    splitStartDate: String = "2026-03-28",
+    splitEndDate: String = "2026-06-06",
+    currentDate: String = com.cblol.scout.domain.usecase.TransferWindowService
+        .gameStartFor("2026-03-28"),
+    budget: Long = 5_000_000L,
+    withWindows: Boolean = true
+): GameState {
+    val gs = GameState(
+        managerName = "Coach",
+        managerTeamId = managerTeamId,
+        splitStartDate = splitStartDate,
+        splitEndDate = splitEndDate,
+        currentDate = currentDate,
+        budget = budget,
+        sponsorshipPerWeek = 200_000L
+    )
+    if (withWindows) {
+        gs.transferWindows = com.cblol.scout.domain.usecase.TransferWindowService
+            .buildWindowsForSplit(
+                com.cblol.scout.domain.usecase.TransferWindowService.gameStartFor(splitStartDate),
+                splitStartDate
+            ).toMutableList()
+    }
+    gs.incomingOffers = mutableListOf()
+    return gs
+}
+
+/** Snapshot mínimo de liga com N times e nenhum jogador (suficiente para ofertas). */
+fun makeSnapshot(teamIds: List<String> = EIGHT_TEAMS): SnapshotData = SnapshotData(
+    meta = Meta(liga = "CBLOL", split = "2026", atualizado_em = "2026-01-01", fontes = emptyList()),
+    times = teamIds.map { Team(id = it, nome = it, tier_orcamento = "B") },
+    jogadores = emptyList()
+)
