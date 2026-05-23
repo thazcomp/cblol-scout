@@ -85,6 +85,15 @@ class OffMatchEventActivity : AppCompatActivity() {
     }
 
     private fun buildSubtitle(event: OffMatchEvent): String {
+        // Eventos de dupla (jogada ensaiada / briga) mostram os dois nomes.
+        if (event.secondPlayerName != null && event.targetPlayerName != null) {
+            return getString(
+                R.string.off_match_subtitle_duo,
+                event.category.label,
+                event.targetPlayerName,
+                event.secondPlayerName
+            )
+        }
         val target = event.targetPlayerName ?: getString(R.string.off_match_target_team)
         return getString(R.string.off_match_subtitle_team, event.category.label, target)
     }
@@ -115,8 +124,20 @@ class OffMatchEventActivity : AppCompatActivity() {
             else -> tvMood.visibility = View.GONE
         }
 
-        // Modificador de overall temporário
+        // Modificador de overall temporário OU efeito de laço (reusa a linha).
+        // Combo/briga não têm modificador de overall, mas têm bondDelta — então
+        // a mesma TextView serve para mostrar a variação de química da dupla.
         when {
+            event.bondDelta > 0 -> {
+                tvOverall.visibility = View.VISIBLE
+                tvOverall.text = getString(R.string.off_match_effect_bond_positive, event.bondDelta)
+                tvOverall.setTextColor(ContextCompat.getColor(this, R.color.state_success))
+            }
+            event.bondDelta < 0 -> {
+                tvOverall.visibility = View.VISIBLE
+                tvOverall.text = getString(R.string.off_match_effect_bond_negative, event.bondDelta)
+                tvOverall.setTextColor(ContextCompat.getColor(this, R.color.state_danger))
+            }
             event.overallModifierDelta > 0 && event.durationDays > 0 -> {
                 tvOverall.visibility = View.VISIBLE
                 tvOverall.text = getString(

@@ -103,6 +103,11 @@ class MatchResultActivity : AppCompatActivity() {
             CoachProgressionService.recordSeriesResult(gs.coachProfile, playerWonSeries)
             MoraleService.recordSeriesResult(gs, roster, playerWonSeries, opponentName)
 
+            // Laços: jogar a série junto aproxima (vitória) ou desgasta levemente
+            // (derrota) a química entre os titulares que dividiram o servidor.
+            com.cblol.scout.domain.usecase.PlayerBondService
+                .recordSeriesResult(gs, roster, playerWonSeries)
+
             // Ao FIM DA SÉRIE: sorteia um evento fora de jogo para apresentar antes
             // do jogador voltar ao Hub. O OffMatchEventService já aplica os efeitos
             // (moral, modificador temporário); a UI apenas exibe a narrativa.

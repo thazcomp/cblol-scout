@@ -51,8 +51,10 @@ object OffMatchEventService {
         OffMatchEventCategory.TRAINING_BREAKTHROUGH to 15,
         OffMatchEventCategory.FAMILY_SUPPORT        to 14,
         OffMatchEventCategory.FAN_SUPPORT           to 12,
+        OffMatchEventCategory.TEAM_COMBO            to 12,
         OffMatchEventCategory.SPONSOR_VISIT         to 10,
         OffMatchEventCategory.INJURY                to 10,
+        OffMatchEventCategory.TEAM_FIGHT            to 8,
         OffMatchEventCategory.RELATIONSHIP_START    to 7,
         OffMatchEventCategory.RELATIONSHIP_END      to 6,
         OffMatchEventCategory.SCANDAL               to 5,
@@ -206,6 +208,8 @@ object OffMatchEventService {
         OffMatchEventCategory.SPONSOR_VISIT         -> buildSponsorVisit(state, roster)
         OffMatchEventCategory.FAN_SUPPORT           -> buildFanSupport(state, roster)
         OffMatchEventCategory.PERSONAL_TRAGEDY      -> buildPersonalTragedy(state, roster)
+        OffMatchEventCategory.TEAM_COMBO            -> buildTeamCombo(state, roster)
+        OffMatchEventCategory.TEAM_FIGHT            -> buildTeamFight(state, roster)
     }
 
     // ── Templates: ENTREVISTA ───────────────────────────────────────────
@@ -465,4 +469,86 @@ object OffMatchEventService {
             durationDays          = 14
         )
     }
+
+    // ── Templates: JOGADA ENSAIADA (laço +) ─────────────────────────────
+
+    /**
+     * Dois jogadores criam uma jogada ensaiada que dá super certo — fortalece o
+     * **laço** entre eles. Escolhe a dupla mais entrosada (via
+     * [PlayerBondService.pickComboPair]) porque combos nascem de quem já se lê
+     * bem. O efeito de laço é aplicado AQUI (não em applyEffects), pois envolve
+     * dois jogadores; a moral leve vai para ambos.
+     */
+    private fun buildTeamCombo(state: GameState, roster: List<Player>): OffMatchEvent? {
+        val pair = PlayerBondService.pickComboPair(state, roster) ?: return null
+        val (a, b) = pair
+
+        // Aplica o efeito de laço imediatamente (registra no histórico do bond).
+        PlayerBondService.recordCombo(state, a.id, b.id, "Jogada ensaiada em treino")
+        val bondDelta = com.cblol.scout.domain.usecase.PlayerBondService
+            .bondBetween(state, a.id, b.id)?.history?.firstOrNull()?.delta ?: 0
+
+        // Moral leve para os dois (o applyEffects cuida do primeiro; o segundo
+        // aplicamos manualmente para não complicar o fluxo de targets).
+        applyMoodViaMoraleService(state, b.id, COMBO_MOOD, "🎯 Jogada ensaiada")
+
+        return OffMatchEvent(
+            id           = UUID.randomUUID().toString(),
+            date         = state.currentDate,
+            category     = OffMatchEventCategory.TEAM_COMBO,
+            sentiment    = OffMatchEventSentiment.POSITIVE,
+            title        = "Jogada ensaiada nasceu",
+            description  = "${a.nome_jogo} e ${b.nome_jogo} passaram o treino inteiro burilando uma " +
+                "jogada combinada — e ela funcionou na perfeição no scrim. A dupla saiu do treino " +
+                "rindo e mais entrosada do que nunca. A química entre os dois deu um salto.",
+            targetPlayerId        = a.id,
+            targetPlayerName      = a.nome_jogo,
+            secondPlayerId        = b.id,
+            secondPlayerName      = b.nome_jogo,
+            bondDelta             = bondDelta,
+            moodDelta             = COMBO_MOOD
+        )
+    }
+
+    // ── Templates: BRIGA (laço -) ───────────────────────────────────
+
+    /**
+     * Dois jogadores se desentendem (briga no vestiário) — deteriora o **laço**
+     * entre eles. Escolhe a dupla com pior química/humor (via
+     * [PlayerBondService.pickFightPair]), pois conflitos nascem de atrito
+     * pré-existente. Efeito de laço aplicado aqui; moral negativa para ambos.
+     */
+    private fun buildTeamFight(state: GameState, roster: List<Player>): OffMatchEvent? {
+        val pair = PlayerBondService.pickFightPair(state, roster) ?: return null
+        val (a, b) = pair
+
+        PlayerBondService.recordFight(state, a.id, b.id, "Briga no vestiário")
+        val bondDelta = com.cblol.scout.domain.usecase.PlayerBondService
+            .bondBetween(state, a.id, b.id)?.history?.firstOrNull()?.delta ?: 0
+
+        applyMoodViaMoraleService(state, b.id, FIGHT_MOOD, "🥊 Briga no vestiário")
+
+        return OffMatchEvent(
+            id           = UUID.randomUUID().toString(),
+            date         = state.currentDate,
+            category     = OffMatchEventCategory.TEAM_FIGHT,
+            sentiment    = OffMatchEventSentiment.NEGATIVE,
+            title        = "Briga no vestiário",
+            description  = "${a.nome_jogo} e ${b.nome_jogo} bateram de frente feio depois de uma " +
+                "discussão sobre a chamada de uma jogada. O clima ficou pesado e os dois mal se " +
+                "falaram no resto do dia. A relação entre eles esfriou.",
+            targetPlayerId        = a.id,
+            targetPlayerName      = a.nome_jogo,
+            secondPlayerId        = b.id,
+            secondPlayerName      = b.nome_jogo,
+            bondDelta             = bondDelta,
+            moodDelta             = FIGHT_MOOD
+        )
+    }
+
+    /** Moral aplicada a cada um da dupla numa jogada ensaiada. */
+    private const val COMBO_MOOD = 5
+
+    /** Moral aplicada a cada um da dupla numa briga. */
+    private const val FIGHT_MOOD = -6
 }

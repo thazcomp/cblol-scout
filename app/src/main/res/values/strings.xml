@@ -644,4 +644,20 @@
     <string name="hub_offers_subtitle_active">%1$d proposta(s) recebida(s) · toque para responder</string>
     <string name="player_requested_transfer_banner">⚠ Pediu para sair do clube</string>
 
+    <!-- Eventos fora de partida: dupla (jogada ensaiada / briga) + efeito de laço -->
+    <string name="off_match_subtitle_duo">%1$s · %2$s &amp; %3$s</string>
+    <string name="off_match_effect_bond_positive">🔗 Laço +%1$d entre a dupla</string>
+    <string name="off_match_effect_bond_negative">💔 Laço %1$d entre a dupla</string>
+
+    <!-- Laços entre jogadores -->
+    <string name="bonds_title">Laços do Elenco</string>
+    <string name="bonds_dialog_title">Laços de %1$s</string>
+    <string name="bonds_empty">Ainda não há laços formados. A química entre os jogadores se desenvolve com o tempo de convivência, resultados e eventos.</string>
+    <string name="bonds_level_format">%1$d</string>
+    <string name="bonds_days_together">%1$d dias juntos</string>
+    <string name="bonds_team_average">Química média do time: %1$d (%2$s)</string>
+    <string name="bonds_team_bonus">Bônus de força: %1$+d</string>
+    <string name="bonds_pair_format">%1$s · %2$s</string>
+    <string name="hub_bonds_subtitle">Toque para ver a química do elenco</string>
+
 </resources>

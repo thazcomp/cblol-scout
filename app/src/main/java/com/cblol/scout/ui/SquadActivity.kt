@@ -69,6 +69,23 @@ class SquadActivity : AppCompatActivity() {
 
     override fun onSupportNavigateUp(): Boolean { finish(); return true }
 
+    override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_squad, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_bonds -> {
+                val gs = GameRepository.current()
+                val roster = GameRepository.rosterOf(applicationContext, gs.managerTeamId)
+                PlayerBondsDialog.show(this, gs, roster)
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
+    }
+
     // ── Setup ────────────────────────────────────────────────────────────
 
     private fun setupHeader() {

@@ -95,6 +95,14 @@ object GameRepository {
             gs.incomingOffers = mutableListOf()
         }
 
+        // Laços entre jogadores: saves anteriores ao sistema não têm o campo.
+        // Como é nullable, basta garantir um mapa mutável; o PlayerBondService
+        // popula os pares (neutros) na primeira leitura/tick. A química começa
+        // do zero para carreiras já em andamento (não há histórico a recuperar).
+        if (gs.playerBonds == null) {
+            gs.playerBonds = mutableMapOf()
+        }
+
         return gs
     }
 

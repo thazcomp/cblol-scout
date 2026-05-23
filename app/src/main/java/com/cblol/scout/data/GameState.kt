@@ -129,7 +129,111 @@ data class GameState(
      * [com.cblol.scout.domain.usecase.IncomingOfferService.OFFER_INTERVAL_DAYS]
      * dias enquanto a janela está aberta.
      */
-    var lastIncomingOffersDate: String? = null
+    var lastIncomingOffersDate: String? = null,
+
+    /**
+     * Laços (química) entre pares de jogadores do elenco do gerente.
+     *
+     * Cada [PlayerBond] mede a relação entre dois jogadores numa escala de
+     * -100 (rivalidade tóxica) a +100 (parceria perfeita). Laços fortes geram
+     * bônus de sinergia na simulação; laços ruins penalizam. A química evolui
+     * lentamente ao longo do tempo conforme os jogadores convivem, jogam juntos,
+     * vencem/perdem, e por eventos fora de partida (jogadas ensaiadas, brigas).
+     *
+     * Chave = [PlayerBond.keyFor] (ids ordenados, ex: "p1|p2"). Mantido como
+     * mapa para lookup O(1) e para o Gson serializar sem problemas.
+     *
+     * Nullable porque Gson pode deixar null ao desserializar saves antigos que
+     * não têm este campo — migrado defensivamente no
+     * [com.cblol.scout.game.GameRepository].
+     */
+    var playerBonds: MutableMap<String, PlayerBond>? = null,
+
+    /**
+     * Data (ISO) da última vez que o motor processou a evolução diária dos
+     * laços. Usado para evitar processar o mesmo dia duas vezes e para calcular
+     * quantos dias de convivência aplicar de uma vez ao avançar o calendário.
+     */
+    var lastBondTickDate: String? = null
+)
+
+/**
+ * Laço (química) entre dois jogadores do elenco.
+ *
+ * Modela a relação interpessoal e a entrosagem em jogo entre [playerAId] e
+ * [playerBId], numa escala simétrica de -100 a +100:
+ *  - **+60 a +100**: parceria forte — combos ensaiados, leem um ao outro.
+ *  - **+20 a +59**: boa relação — entrosamento acima da média.
+ *  - **-19 a +19**: neutro — apenas colegas de trabalho.
+ *  - **-59 a -20**: atrito — desentendimentos atrapalham a comunicação.
+ *  - **-100 a -60**: rivalidade tóxica — sabotam o ambiente do time.
+ *
+ * O laço é SIMÉTRICO (a relação de A com B é a mesma de B com A), por isso a
+ * chave canônica [keyFor] sempre ordena os ids alfabeticamente.
+ *
+ * @property playerAId id do primeiro jogador (sempre <= playerBId)
+ * @property playerBId id do segundo jogador
+ * @property level nível atual do laço (-100..100). 0 = neutro/recém-formado.
+ * @property daysTogether dias de convivência acumulados no mesmo elenco. Quanto
+ *   mais tempo juntos, mais estável e forte o laço tende a ficar.
+ * @property history últimas mudanças notáveis (jogadas, brigas, marcos) para a
+ *   UI exibir. Limitado em [com.cblol.scout.domain.usecase.PlayerBondService.HISTORY_MAX].
+ */
+data class PlayerBond(
+    val playerAId: String,
+    val playerBId: String,
+    val level: Int = 0,
+    val daysTogether: Int = 0,
+    val history: List<BondEvent> = emptyList()
+) {
+    companion object {
+        /**
+         * Chave canônica de um par de jogadores, independente da ordem em que
+         * os ids são passados. Ordena os dois ids e junta com "|".
+         */
+        fun keyFor(id1: String, id2: String): String =
+            if (id1 <= id2) "$id1|$id2" else "$id2|$id1"
+    }
+}
+
+/**
+ * Faixas qualitativas de um laço, derivadas do nível numérico. Usadas pela UI
+ * para escolher rótulo, emoji e cor.
+ *
+ * SOLID/OCP: adicionar uma faixa nova (ex: "lendário") é só estender este enum
+ * e ajustar [from].
+ */
+enum class BondTier(val label: String, val emoji: String) {
+    TOXIC("Rivalidade", "☠️"),
+    TENSE("Atrito", "⚡"),
+    NEUTRAL("Neutro", "🤝"),
+    FRIENDLY("Entrosados", "😎"),
+    BONDED("Parceria", "🔥");
+
+    companion object {
+        fun from(level: Int): BondTier = when {
+            level <= -60 -> TOXIC
+            level <= -20 -> TENSE
+            level <   20 -> NEUTRAL
+            level <   60 -> FRIENDLY
+            else         -> BONDED
+        }
+    }
+}
+
+/**
+ * Uma entrada no histórico de um laço.
+ *
+ * @property date data (ISO) do evento
+ * @property reason descrição curta em PT-BR (ex: "Jogada ensaiada", "Briga no treino")
+ * @property delta variação aplicada ao nível do laço (positiva ou negativa)
+ * @property levelAfter nível do laço após o delta, já com clamp
+ */
+data class BondEvent(
+    val date: String,
+    val reason: String,
+    val delta: Int,
+    val levelAfter: Int
 )
 
 /**
@@ -546,6 +650,18 @@ data class OffMatchEvent(
     val targetPlayerId: String? = null,
     /** Nome do jogador (snapshot, para a UI mostrar sem refazer lookup). */
     val targetPlayerName: String? = null,
+    /**
+     * SEGUNDO jogador envolvido, quando o evento é entre uma DUPLA (jogada
+     * ensaiada / briga de laços). Null para eventos de jogador único ou de time.
+     */
+    val secondPlayerId: String? = null,
+    /** Nome do segundo jogador da dupla (quando [secondPlayerId] != null). */
+    val secondPlayerName: String? = null,
+    /**
+     * Variação aplicada ao LAÇO entre os dois jogadores da dupla (eventos de
+     * dupla). Exibida no card de efeitos. 0 para eventos sem laço.
+     */
+    val bondDelta: Int = 0,
     /** Variação de moral aplicada ao(s) afetado(s). */
     val moodDelta: Int = 0,
     /** Modificador temporário de overall. */
@@ -565,7 +681,13 @@ enum class OffMatchEventCategory(val emoji: String, val label: String) {
     TRAINING_BREAKTHROUGH("💡", "Treino"),
     SPONSOR_VISIT("💼", "Patrocinador"),
     FAN_SUPPORT("🎉", "Torcida"),
-    PERSONAL_TRAGEDY("⚫", "Tragédia")
+    PERSONAL_TRAGEDY("⚫", "Tragédia"),
+
+    /** Jogada ensaiada entre dois jogadores — fortalece o laço da dupla. */
+    TEAM_COMBO("🎯", "Jogada Ensaiada"),
+
+    /** Briga entre dois jogadores — deteriora o laço da dupla. */
+    TEAM_FIGHT("🥊", "Briga")
 }
 
 /** Sentimento geral do evento, usado pela UI para escolher cores. */

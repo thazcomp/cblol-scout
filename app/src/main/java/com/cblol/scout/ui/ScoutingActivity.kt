@@ -113,7 +113,8 @@ class ScoutingActivity : AppCompatActivity() {
         val players = activePlayerIds.mapNotNull { resolvePlayer(it) }
         binding.recycler.adapter = ActiveScoutAdapter(
             items = players,
-            onCancel = ::onCancelScouting
+            onCancel = ::onCancelScouting,
+            onClick = ::openPlayerDetail
         )
     }
 
@@ -139,6 +140,16 @@ class ScoutingActivity : AppCompatActivity() {
     }
 
     // ── Ações ────────────────────────────────────────────────────────────
+
+    /**
+     * Abre a visualização detalhada do jogador escotado. Como o jogador NÃO
+     * pertence ao elenco do gerente, o [PlayerDetailDialog] cai no modo somente
+     * visualização (sem ações de gerência nem de mercado). Os atributos exibidos
+     * respeitam o nível de scouting atual via `applyScoutingVisibility`.
+     */
+    private fun openPlayerDetail(player: Player) {
+        PlayerDetailDialog.show(this, player) { renderState() }
+    }
 
     private fun onCancelScouting(player: Player) {
         stylizedDialog(this)
@@ -200,7 +211,8 @@ class ScoutingActivity : AppCompatActivity() {
 
     private class ActiveScoutAdapter(
         private val items: List<Player>,
-        private val onCancel: (Player) -> Unit
+        private val onCancel: (Player) -> Unit,
+        private val onClick: (Player) -> Unit
     ) : RecyclerView.Adapter<ActiveScoutAdapter.VH>() {
 
         class VH(v: View) : RecyclerView.ViewHolder(v) {
@@ -238,6 +250,7 @@ class ScoutingActivity : AppCompatActivity() {
             h.pbLevel.max     = daysPerLevel
             h.pbLevel.progress = daysAccum
 
+            h.itemView.setOnClickListener { onClick(player) }
             h.btnCancel.setOnClickListener { onCancel(player) }
         }
     }

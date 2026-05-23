@@ -130,6 +130,12 @@ object GameEngine {
         //      Expira as vencidas e sorteia novas a cada intervalo.
         processIncomingOffers(context, gs, roster, report)
 
+        // 0.8. Evolução dos laços (química) entre os jogadores do elenco.
+        //      Considera tempo de convivência, humor médio e pedidos de
+        //      transferência. Marcos (parceria forte / rivalidade tóxica) são
+        //      logados para o gerente acompanhar o clima do vestiário.
+        processPlayerBonds(gs, roster)
+
         // 1. Pagamento de patrocínio (domingo = day_of_week 7)
         if (date.dayOfWeek.value == 7) {
             gs.budget += gs.sponsorshipPerWeek
@@ -299,6 +305,31 @@ object GameEngine {
         }
     }
 
+    /**
+     * Processa a evolução diária dos laços entre os jogadores do elenco e loga
+     * marcos relevantes (formação de parceria forte ou rivalidade tóxica).
+     *
+     * O [com.cblol.scout.domain.usecase.PlayerBondService.tickDaily] é
+     * idempotente por data (usa [GameState.lastBondTickDate]), então é seguro
+     * chamá-lo a cada dia processado: cada chamada avança exatamente 1 dia de
+     * convivência.
+     */
+    private fun processPlayerBonds(gs: GameState, roster: List<Player>) {
+        val milestones = com.cblol.scout.domain.usecase.PlayerBondService.tickDaily(gs, roster)
+        milestones.forEach { m ->
+            val nameA = roster.find { it.id == m.playerAId }?.nome_jogo ?: m.playerAId
+            val nameB = roster.find { it.id == m.playerBId }?.nome_jogo ?: m.playerBId
+            val msg = when (m.tier) {
+                com.cblol.scout.data.BondTier.BONDED ->
+                    "🔥 $nameA e $nameB formaram uma parceria forte dentro e fora do jogo."
+                com.cblol.scout.data.BondTier.TOXIC ->
+                    "☠️ A relação entre $nameA e $nameB azedou de vez — clima pesado no vestiário."
+                else -> return@forEach
+            }
+            GameRepository.log("MOOD", msg)
+        }
+    }
+
     private fun teamName(context: Context, teamId: String): String =
         GameRepository.snapshot(context).times.find { it.id == teamId }?.nome ?: teamId
 
@@ -335,6 +366,12 @@ object GameEngine {
             com.cblol.scout.domain.usecase.TransferWindowService
                 .buildWindowsForSplit(gameStart, splitStart)
         )
+
+        // Laços: inicializa a química (neutra) entre todos os pares do elenco
+        // inicial. A partir daqui ela evolui com o tempo de convivência, humor,
+        // resultados e eventos fora de partida.
+        val initialRoster = GameRepository.rosterOf(context, teamId)
+        com.cblol.scout.domain.usecase.PlayerBondService.ensureBondsFor(gs, initialRoster)
 
         gs.gameLog.add(
             com.cblol.scout.data.LogEntry(

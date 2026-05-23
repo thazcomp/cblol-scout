@@ -88,10 +88,12 @@ object LiveMatchEngine {
                                GameConstants.Player.WRONG_ROLE_PENALTY
 
         val homeStr = teamStrengthWithMood(homeRoster, gs) + GameConstants.Series.HOME_SIDE_BONUS +
-                      homeComp.totalBonus + homeMainBonus -
+                      homeComp.totalBonus + homeMainBonus +
+                      com.cblol.scout.domain.usecase.PlayerBondService.teamStrengthBonus(gs, homeRoster) -
                       (if (playerIsHome) wrongRolePenalty else 0)
         val awayStr = teamStrengthWithMood(awayRoster, gs) +
-                      awayComp.totalBonus + awayMainBonus -
+                      awayComp.totalBonus + awayMainBonus +
+                      com.cblol.scout.domain.usecase.PlayerBondService.teamStrengthBonus(gs, awayRoster) -
                       (if (!playerIsHome) wrongRolePenalty else 0)
 
         val (gameEvents, homeWon, finalKills, duration) =
