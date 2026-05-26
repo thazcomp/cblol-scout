@@ -448,6 +448,68 @@ isolada e testável (`IncomingOfferServiceTest`, `MoraleTransferRequestTest`).
 
 ---
 
+## Sistema de laços entre jogadores (química / chemistry)
+
+Cada par de jogadores do elenco tem um **laço** (-100 a +100) que evolui com o
+tempo e conecta vários sistemas. A regra vive em `PlayerBondService`
+(domain/usecase, JVM-puro) e os dados em `GameState.playerBonds`
+(`Map<chave, PlayerBond>`, chave canônica `PlayerBond.keyFor` = ids ordenados).
+
+### Como o laço evolui
+
+- **Tempo de convivência** (`tickDaily`, rodado nos ticks diários do
+  `GameEngine.processPlayerBonds`): a cada `DRIFT_INTERVAL_DAYS` (3) dias de
+  convivência o laço dá um passo de drift, **modulado pelo humor médio da
+  dupla** (lido do `MoraleService`):
+  - ambos felizes (média ≥ 66): esquenta acelerado;
+  - clima ruim (média ≤ 34): azeda;
+  - neutro: converge devagar para `NATURAL_DRIFT_TARGET` (45).
+- **Contrato**: se um dos dois pediu transferência
+  (`MoraleService.hasRequestedTransfer`), o laço sofre `TRANSFER_REQUEST_BOND_PENALTY`
+  (-2) por dia — clima pesado no vestiário.
+- **Resultado** (`recordSeriesResult`, chamado na `MatchResultActivity` ao fim da
+  série): vitória +3 / derrota -2 em todos os pares titulares.
+- **Eventos fora de partida** (`recordCombo` +12 / `recordFight` -16): ver abaixo.
+
+Drift e deltas são sempre clampados em [-100, 100]. `tickDaily` é idempotente por
+data via `GameState.lastBondTickDate`.
+
+### Efeito na simulação
+
+`teamStrengthBonus` = `round(laço_médio_do_time × TEAM_BOND_STRENGTH_FACTOR)`
+(fator 0.08 → time totalmente entrosado ganha +8 de força; tóxico perde 8). O
+`LiveMatchEngine` soma esse bônus à força de cada lado, junto de moral,
+composição e mains.
+
+### Eventos de jogada ensaiada / briga
+
+Duas novas categorias de `OffMatchEvent` (`TEAM_COMBO`, `TEAM_FIGHT`) entram no
+`OffMatchEventService`:
+
+- **Jogada ensaiada** (`buildTeamCombo`): escolhe a dupla mais entrosada
+  (`pickComboPair`), fortalece o laço (+12) e dá moral leve aos dois.
+- **Briga** (`buildTeamFight`): escolhe a dupla com pior química
+  (`pickFightPair`), deteriora o laço (-16) e tira moral dos dois.
+
+O `OffMatchEvent` ganhou `secondPlayerId/Name` + `bondDelta` para a
+`OffMatchEventActivity` exibir os dois nomes e a variação de química.
+
+### UI e persistência
+
+`PlayerBondsDialog` (aberto pelo menu "Laços" na `SquadActivity`) mostra a
+química média + bônus de força e a lista de pares com faixa
+(`BondTier`: ☠️ Rivalidade / ⚡ Atrito / 🤝 Neutro / 😎 Entrosados / 🔥 Parceria).
+Laços são inicializados (neutros) em `GameEngine.startNewCareer`
+(`ensureBondsFor`) e migrados defensivamente no `GameRepository`. Testes em
+`PlayerBondServiceTest`.
+
+**Por que separado do `MoraleService`?** Moral é um valor por **jogador**; laço é
+uma relação por **par**. Modelos e regras distintos → serviços distintos (SRP). O
+`PlayerBondService` *lê* moral e flag de transferência, mas não os reimplementa
+(DIP).
+
+---
+
 ## Status da migração
 
 Todas as Activities foram migradas para o padrão SOLID + recursos:

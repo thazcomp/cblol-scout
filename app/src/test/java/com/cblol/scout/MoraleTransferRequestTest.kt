@@ -17,16 +17,30 @@ import java.time.LocalDate
  */
 class MoraleTransferRequestTest {
 
-    /** Roda o decay diário por [days] dias, avançando a data, e diz se pediu. */
+    /**
+     * Roda o decay diário por [days] dias, avançando a data, e diz se pediu.
+     *
+     * @param keepMoodFixed quando informado, re-fixa a moral do jogador nesse
+     *   valor a cada dia ANTES do decay. Isso mantém o jogador na zona-gatilho
+     *   de forma determinística — necessário porque o decay temporal puxa a
+     *   moral de volta para o neutro (50) após o período de carência, o que
+     *   senão tiraria o jogador da faixa de pedido em poucos dias e tornaria o
+     *   teste flaky.
+     */
     private fun runDaysAndCheckRequested(
         gs: com.cblol.scout.data.GameState,
         player: com.cblol.scout.data.Player,
-        days: Int
+        days: Int,
+        keepMoodFixed: Int? = null
     ): Boolean {
         var date = LocalDate.parse(gs.currentDate)
         repeat(days) {
             date = date.plusDays(1)
             gs.currentDate = date.toString()
+            if (keepMoodFixed != null) {
+                val ov = gs.playerOverrides[player.id]!!
+                gs.playerOverrides[player.id] = ov.copy(mood = keepMoodFixed)
+            }
             MoraleService.applyDailyDecay(gs, listOf(player))
             if (MoraleService.hasRequestedTransfer(gs, player.id)) return true
         }
@@ -42,10 +56,11 @@ class MoraleTransferRequestTest {
         // Moral no fundo (<= 10) → motivo "profundamente insatisfeito".
         gs.playerOverrides[player.id] = PlayerOverride(
             playerId = player.id, mood = 5,
-            lastPlayedDate = "2026-04-01"  // jogou hoje, então decay não mexe
+            lastPlayedDate = "2026-04-01"
         )
-        // 60 dias com prob 0.15 → chance de nunca pedir ≈ 0.85^60 ≈ 0.006%.
-        assertTrue(runDaysAndCheckRequested(gs, player, 60))
+        // Mantém a moral no fundo a cada dia (jogador segue misável) para não
+        // sair da faixa-gatilho pelo decay. 60 dias × 0.15/dia → falha ≈ 0.006%.
+        assertTrue(runDaysAndCheckRequested(gs, player, 60, keepMoodFixed = 5))
     }
 
     // ── Gatilho 2: reserva frustrado ────────────────────────────────────
@@ -59,7 +74,9 @@ class MoraleTransferRequestTest {
             playerId = player.id, mood = 25,
             lastPlayedDate = "2026-02-01"  // > 21 dias no banco
         )
-        assertTrue(runDaysAndCheckRequested(gs, player, 60))
+        // Mantém a moral em 25 (insatisfeito mas não no fundo) para isolar o
+        // gatilho de "reserva frustrado" sem o decay puxar para o neutro.
+        assertTrue(runDaysAndCheckRequested(gs, player, 60, keepMoodFixed = 25))
     }
 
     @Test

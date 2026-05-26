@@ -35,7 +35,7 @@ object CompositionSeed {
                 "Jarvaniv", "Diana"
             ),
             minRequired = 3,
-            keyChampions = listOf("Orianna", "MissFortune", "Yasuo"),
+            keyChampions = listOf("Malphite", "Orianna", "MissFortune"),
             bonusStrength = 14, tier = "S"
         ),
         TeamComposition(

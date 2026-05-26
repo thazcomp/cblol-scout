@@ -67,25 +67,60 @@ object CompositionRepository {
             }
             if (keyBanned) continue
 
+            // Uma comp só está "online" se ao menos UM de seus campeões-chave
+            // foi pickado. Senão, os picks até batem no mínimo numérico, mas o
+            // núcleo que define a composição não está presente (ex: "Yone+Yasuo"
+            // sem Yone nem Yasuo no time não é a comp Yone+Yasuo).
+            val keyPresent = comp.keyChampions.any { key -> key.lowercase() in picksLower }
+            if (!keyPresent) continue
+
+            // "Time cheio" comprometido com a comp = 5 picks (ou o total de
+            // required, se a comp listar menos). Usar este alvo (em vez do
+            // tamanho bruto de requiredPicks, que pode ter 13-15 opções) evita
+            // punir comps com lista ampla de campeões elegíveis.
+            val fullTarget = minOf(5, required.size)
             val bonus = when {
-                matched.size >= required.size    -> comp.bonusStrength
-                matched.size == comp.minRequired -> comp.bonusStrength / 2
-                else                              -> comp.bonusStrength * matched.size / required.size
+                matched.size >= fullTarget       -> comp.bonusStrength
+                matched.size <= comp.minRequired -> comp.bonusStrength / 2
+                else -> {
+                    // Interpolação linear entre metade (no minRequired) e cheio
+                    // (no fullTarget).
+                    val half = comp.bonusStrength / 2
+                    val span = (fullTarget - comp.minRequired).coerceAtLeast(1)
+                    val progress = matched.size - comp.minRequired
+                    half + (comp.bonusStrength - half) * progress / span
+                }
             }
             val originalNames = picks.filter { it.lowercase() in matched }
-            results += DetectedComp(comp, originalNames, bonus)
+            val keyMatched = comp.keyChampions.count { it.lowercase() in picksLower }
+            results += DetectedComp(comp, originalNames, bonus, keyMatched)
         }
-        return results.sortedByDescending { it.bonus }
+        // Ordena primeiro pela FRAÇÃO de campeões-chave presentes (uma comp com
+        // todos os seus key champions é mais "a comp" do que outra que só
+        // tangencia o mínimo) e, em empate, pelo bônus efetivo. Isso faz, por
+        // ex., "Yone+Yasuo" (2/2 keys) ganhar de "Wombo" (1/3 keys) quando os
+        // picks são Yasuo+Yone+Malphite.
+        return results.sortedWith(
+            compareByDescending<DetectedComp> { it.keyMatchRatio }
+                .thenByDescending { it.bonus }
+        )
     }
 
     /** Uma composição detectada nos picks atuais, com seu bônus efetivo. */
     data class DetectedComp(
         val composition: TeamComposition,
         val matched: List<String>,
-        val bonus: Int
+        val bonus: Int,
+        /** Quantos dos [TeamComposition.keyChampions] estão entre os picks. */
+        val keyMatched: Int = 0
     ) {
         val percent: Int get() =
             (matched.size.toFloat() / composition.requiredPicks.size * 100).toInt()
+
+        /** Fração (0-1) de campeões-chave presentes — usada para ranquear comps. */
+        val keyMatchRatio: Float get() =
+            if (composition.keyChampions.isEmpty()) 0f
+            else keyMatched.toFloat() / composition.keyChampions.size
     }
 
     /**

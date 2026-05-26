@@ -42,7 +42,10 @@ object MatchSimulator {
         val pool = if (starters.size >= GameConstants.Schedule.PLAYERS_PER_TEAM) starters
                    else (starters + roster.filter { !it.titular }.sortedByDescending { it.overallRating() })
                        .take(GameConstants.Schedule.PLAYERS_PER_TEAM)
-        if (pool.isEmpty()) return GameConstants.Player.DEFAULT_OVERALL
+        // Sem nenhum jogador, o time é uma incógnita → força neutra (50), não o
+        // DEFAULT_OVERALL de fallback (que vale para jogadores sem rating, não
+        // para um elenco vazio).
+        if (pool.isEmpty()) return 50
         return pool.sumOf { it.overallRating() } / pool.size
     }
 
