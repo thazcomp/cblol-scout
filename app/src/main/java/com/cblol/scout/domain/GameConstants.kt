@@ -50,6 +50,37 @@ object GameConstants {
         const val OVERALL_BRACKET_RARE        = 55
     }
 
+    /**
+     * Sistema bancário (empréstimos emergenciais) + classificação de saúde
+     * financeira. Governa o [com.cblol.scout.domain.usecase.BankService].
+     */
+    object Bank {
+        /**
+         * Limiar de orçamento abaixo do qual a saúde financeira vira CRÍTICA
+         * (vermelho). Também dispara o aviso de "orçamento baixo" no Hub.
+         */
+        const val CRITICAL_BUDGET = 100_000L
+
+        /**
+         * Limiar de orçamento abaixo do qual a saúde vira ATENÇÃO (amarelo).
+         * Acima disso, SAUDÁVEL (verde).
+         */
+        const val WARNING_BUDGET = 600_000L
+
+        /**
+         * Fator do limite de crédito sobre o patrocínio semanal: o time pode
+         * dever no máximo `patrocinioSemanal × CREDIT_LIMIT_WEEKS` em saldo
+         * devedor total. Evita endividamento impagável.
+         */
+        const val CREDIT_LIMIT_WEEKS = 20
+
+        /**
+         * Crédito mínimo garantido a qualquer time, mesmo com patrocínio baixo
+         * (rede de segurança para times tier B em emergência).
+         */
+        const val MIN_CREDIT_LIMIT = 500_000L
+    }
+
     /** Formato de série BO3. */
     object Series {
         const val MAPS_TO_WIN     = 2

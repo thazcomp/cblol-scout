@@ -194,8 +194,142 @@ data class GameState(
      *
      * Nullable por compatibilidade com saves antigos.
      */
-    var promotedPlayers: MutableList<Player>? = null
+    var promotedPlayers: MutableList<Player>? = null,
+
+    /**
+     * Estado bancário do time: empréstimos ativos + histórico de quitações.
+     *
+     * O banco permite ao gerente tomar empréstimos emergenciais quando o caixa
+     * aperta, pagos em parcelas semanais com juros. Ver
+     * [com.cblol.scout.domain.usecase.BankService].
+     *
+     * Nullable por compatibilidade com saves antigos — inicializado
+     * defensivamente no [com.cblol.scout.game.GameRepository] e no próprio
+     * [com.cblol.scout.domain.usecase.BankService].
+     */
+    var bank: BankState? = null
 )
+
+/**
+ * ╔══════════════════════════════════════════════════╗
+ * ║ SISTEMA BANCÁRIO (EMPRÉSTIMOS)                              ║
+ * ╚══════════════════════════════════════════════════╝
+ *
+ * O banco é a rede de segurança financeira do gerente. Quando o orçamento
+ * aperta (folha salarial alta, manutenções, contratações), ele pode tomar um
+ * **empréstimo emergencial** — recebe o valor à vista e paga em **parcelas
+ * semanais** (descontadas todo domingo pelo [com.cblol.scout.game.GameEngine]),
+ * acrescidas de juros.
+ *
+ *  - Cada [LoanOffer] (catálogo) define um valor, prazo em semanas e taxa de
+ *    juros. Tiers maiores liberam só com reputação/limite de crédito maior.
+ *  - Ao contratar, vira um [BankLoan] ativo com parcelas a pagar.
+ *  - O gerente pode **quitar antecipadamente** o saldo devedor a qualquer
+ *    momento (sem desconto, mas livra das parcelas futuras).
+ *  - O **limite de crédito** depende da reputação do técnico e do patrocínio
+ *    semanal — evita que o jogador tome dívida impagável.
+ */
+
+/**
+ * Estado bancário persistido no save.
+ *
+ * @property loans empréstimos atualmente ativos (com saldo a pagar)
+ * @property lastInstallmentDate data (ISO) da última cobrança semanal de
+ *   parcelas — usado para cobrar uma vez por semana de forma idempotente
+ * @property totalBorrowedEver soma de tudo que já foi emprestado na carreira
+ *   (para estatística/exibição)
+ * @property totalInterestPaid soma de juros já pagos na carreira
+ */
+data class BankState(
+    val loans: MutableList<BankLoan> = mutableListOf(),
+    var lastInstallmentDate: String? = null,
+    var totalBorrowedEver: Long = 0L,
+    var totalInterestPaid: Long = 0L
+)
+
+/**
+ * Um empréstimo ativo.
+ *
+ * O valor total a pagar é `principal × (1 + taxa)`, dividido em
+ * [totalInstallments] parcelas semanais iguais. A cada semana o
+ * [com.cblol.scout.game.GameEngine] desconta uma [installmentAmount] do
+ * orçamento e incrementa [installmentsPaid], até quitar.
+ *
+ * @property id identificador único
+ * @property label nome amigável da linha de crédito (ex: "Crédito Emergencial")
+ * @property principal valor recebido à vista quando contratado
+ * @property interestRate taxa de juros total sobre o principal (ex: 0.15 = 15%)
+ * @property totalInstallments número de parcelas semanais
+ * @property installmentsPaid quantas parcelas já foram pagas
+ * @property installmentAmount valor de cada parcela semanal (já com juros)
+ * @property takenOn data (ISO) em que foi contratado
+ */
+data class BankLoan(
+    val id: String,
+    val label: String,
+    val principal: Long,
+    val interestRate: Double,
+    val totalInstallments: Int,
+    var installmentsPaid: Int = 0,
+    val installmentAmount: Long = 0L,
+    val takenOn: String = ""
+) {
+    /** Total a pagar ao longo de toda a vida do empréstimo (principal + juros). */
+    val totalRepayable: Long get() = installmentAmount * totalInstallments
+
+    /** Quantas parcelas ainda faltam pagar. */
+    val installmentsRemaining: Int get() = (totalInstallments - installmentsPaid).coerceAtLeast(0)
+
+    /** Saldo devedor restante (parcelas que faltam × valor da parcela). */
+    val outstandingBalance: Long get() = installmentAmount * installmentsRemaining
+
+    /** Empréstimo já foi totalmente pago? */
+    val isPaidOff: Boolean get() = installmentsPaid >= totalInstallments
+
+    /** Progresso de quitação (0-100%) para barras na UI. */
+    fun repaymentPercent(): Int =
+        if (totalInstallments <= 0) 100
+        else (installmentsPaid.toFloat() / totalInstallments * 100).toInt().coerceIn(0, 100)
+}
+
+/**
+ * Modelo imutável de uma linha de crédito disponível no banco (catálogo).
+ * Ao ser contratada, vira um [BankLoan] ativo.
+ *
+ * @property id identificador único da linha
+ * @property label nome amigável (ex: "Crédito Emergencial")
+ * @property emoji ícone para a UI
+ * @property principal valor emprestado à vista
+ * @property interestRate juros total sobre o principal (ex: 0.15 = 15%)
+ * @property weeks prazo em semanas (= número de parcelas)
+ * @property minReputation reputação mínima do técnico para liberar a linha
+ * @property description texto curto explicando a linha
+ */
+data class LoanOffer(
+    val id: String,
+    val label: String,
+    val emoji: String,
+    val principal: Long,
+    val interestRate: Double,
+    val weeks: Int,
+    val minReputation: Int = 0,
+    val description: String = ""
+)
+
+/**
+ * Classificação da saúde financeira do time, derivada do orçamento atual em
+ * relação à folha/compromissos. Usada para o aviso visual no Hub.
+ *
+ * SOLID/OCP: novas faixas (ex: "FALÊNCIA") entram aqui sem mexer na lógica.
+ */
+enum class FinancialHealth(val emoji: String, val label: String) {
+    /** Caixa confortável. */
+    HEALTHY("🟢", "Saudável"),
+    /** Caixa apertado — cuidado com gastos. */
+    WARNING("🟡", "Atenção"),
+    /** Caixa crítico ou negativo — risco imediato. */
+    CRITICAL("🔴", "Crítico")
+}
 
 /**
  * ╔══════════════════════════════════════════════════╗

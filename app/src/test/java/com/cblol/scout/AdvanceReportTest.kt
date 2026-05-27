@@ -107,4 +107,17 @@ class AdvanceReportTest {
         assertEquals(listOf("B"), r.incomingOffers)
         assertEquals(listOf("C"), r.academyReady)
     }
+
+    @Test
+    fun financialHealthWarning_defaultsToNull() {
+        val r = AdvanceReport()
+        assertNull(r.financialHealthWarning)
+    }
+
+    @Test
+    fun financialHealthWarning_canBeSet() {
+        val r = AdvanceReport()
+        r.financialHealthWarning = com.cblol.scout.data.FinancialHealth.CRITICAL
+        assertEquals(com.cblol.scout.data.FinancialHealth.CRITICAL, r.financialHealthWarning)
+    }
 }

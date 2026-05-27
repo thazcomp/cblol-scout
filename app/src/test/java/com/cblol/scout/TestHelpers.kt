@@ -85,6 +85,7 @@ fun makeGameState(
     currentDate: String = com.cblol.scout.domain.usecase.TransferWindowService
         .gameStartFor("2026-03-28"),
     budget: Long = 5_000_000L,
+    sponsorshipPerWeek: Long = 200_000L,
     withWindows: Boolean = true
 ): GameState {
     val gs = GameState(
@@ -94,7 +95,7 @@ fun makeGameState(
         splitEndDate = splitEndDate,
         currentDate = currentDate,
         budget = budget,
-        sponsorshipPerWeek = 200_000L
+        sponsorshipPerWeek = sponsorshipPerWeek
     )
     if (withWindows) {
         gs.transferWindows = com.cblol.scout.domain.usecase.TransferWindowService

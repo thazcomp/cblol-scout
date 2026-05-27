@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    item_active_loan.xml — card de um empréstimo ATIVO.
+
+      ┌────────────────────────────────────────────────┐
+      │ 🆘  Crédito Emergencial                          │
+      │     3/10 parcelas pagas                          │
+      │     [████░░░░░░░░] 30%                            │
+      │     Parcela: R$ 57.500 / semana                   │
+      │     Saldo: R$ 402.500                             │
+      │     [ QUITAR ANTECIPADO ]                         │
+      └────────────────────────────────────────────────┘
+
+    Botão de quitação é secundário (outlined) — quitar é decisão deliberada.
+-->
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="6dp"
+    android:layout_marginVertical="5dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="0dp"
+    app:strokeColor="@color/color_outline_variant"
+    app:strokeWidth="1dp"
+    app:cardBackgroundColor="@color/color_surface_elevated">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <!-- Barra lateral colorida indicando progresso -->
+        <View
+            android:id="@+id/view_loan_accent"
+            android:layout_width="4dp"
+            android:layout_height="match_parent"
+            android:background="@color/state_warning" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <!-- Cabeçalho: emoji + nome -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/tv_active_loan_emoji"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="22sp"
+                    android:layout_marginEnd="10dp" />
+
+                <TextView
+                    android:id="@+id/tv_active_loan_name"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/color_on_surface"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <!-- Progresso de quitação -->
+            <TextView
+                android:id="@+id/tv_active_loan_progress"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/color_on_surface_variant"
+                android:textSize="12sp"
+                android:layout_marginTop="6dp" />
+
+            <ProgressBar
+                android:id="@+id/pb_active_loan"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="6dp"
+                android:layout_marginTop="4dp"
+                android:max="100"
+                android:progressTint="@color/state_success"
+                android:progressBackgroundTint="@color/color_outline_variant" />
+
+            <!-- Saldo e parcela -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="10dp"
+                android:baselineAligned="false">
+
+                <LinearLayout
+                    android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content" android:orientation="vertical">
+                    <TextView
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="@string/bank_col_installment"
+                        android:textColor="@color/color_on_surface_variant"
+                        android:textSize="10sp" />
+                    <TextView
+                        android:id="@+id/tv_active_loan_installment"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:textColor="@color/color_on_surface"
+                        android:textSize="14sp" android:textStyle="bold"
+                        android:layout_marginTop="2dp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp" android:layout_weight="1"
+                    android:layout_height="wrap_content" android:orientation="vertical">
+                    <TextView
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="@string/bank_col_balance"
+                        android:textColor="@color/color_on_surface_variant"
+                        android:textSize="10sp" />
+                    <TextView
+                        android:id="@+id/tv_active_loan_balance"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:textColor="@color/state_danger"
+                        android:textSize="14sp" android:textStyle="bold"
+                        android:layout_marginTop="2dp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_active_loan_payoff"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="40dp"
+                android:layout_marginTop="10dp"
+                android:text="@string/bank_action_payoff"
+                android:textSize="12sp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                app:strokeColor="@color/state_success"
+                android:textColor="@color/state_success"
+                app:cornerRadius="8dp" />
+        </LinearLayout>
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

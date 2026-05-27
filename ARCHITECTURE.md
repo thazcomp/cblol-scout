@@ -564,6 +564,72 @@ ser persistido no save para sobreviver entre sessões. Os overrides normais
 
 ---
 
+## Banco (empréstimos emergenciais)
+
+O **banco** é a rede de segurança financeira do gerente — ele dá crédito à
+vista em troca de parcelas semanais com juros, evitando que o orçamento zerar
+seja fim de jogo. Vive em `BankService` (domain/usecase, JVM-puro), com estado
+em `GameState.bank` (`BankState` com lista de [BankLoan] ativos + metadados).
+
+### Saúde financeira e aviso visual
+
+O mesmo serviço classifica o caixa em 3 faixas pelo orçamento atual
+(`GameConstants.Bank`):
+
+- 🟢 **HEALTHY** — acima de R$ 600k.
+- 🟡 **WARNING** — entre R$ 100k e R$ 600k. "Caixa apertado."
+- 🔴 **CRITICAL** — abaixo de R$ 100k (ou negativo). "Caixa crítico!"
+
+Isto alimenta o **aviso visual** no Hub (subtitle dourado/vermelho no card
+🏦 Banco + Toast ao fim de cada avanço de dia, via
+`AdvanceReport.financialHealthWarning`) e o **banner colorido** no topo da
+`BankActivity` com a dica acionável de `healthAdvice` ("Considere vender
+jogadores...", "Acompanhe a folha...", etc.).
+
+### Ciclo de um empréstimo
+
+1. **Catálogo dinâmico** (`offersFor`): quatro linhas de crédito escalonadas
+   pelo limite do time — 💸 micro (15% do limite, 8% juros, 6 semanas),
+   🆘 emergencial (35%, 15%, 10 semanas), 📈 investimento (65%, 22%, 16
+   semanas, reputação 45+) e 🏦 estrutural (100%, 30%, 24 semanas, reputação
+   65+). O catálogo é filtrado pelo crédito ainda disponível.
+2. **Contratação** (`takeLoan`): credita o principal no orçamento e cria um
+   [BankLoan] com parcela calculada (`principal × (1+juros) ÷ semanas`,
+   arredondada para cima).
+3. **Cobrança semanal** (`chargeWeeklyInstallments`): o
+   `GameEngine.processDailyTicks` chama todo domingo. Idempotente por semana
+   via `BankState.lastInstallmentDate` (só cobra se passaram ≥ 7 dias). Cada
+   empréstimo paga uma parcela; quitados são removidos da lista.
+4. **Quitação antecipada** (`payOffEarly`): paga todo o saldo devedor de uma
+   vez, livra das parcelas futuras. Exige saldo no caixa.
+
+### Limite de crédito (anti-dívida impagável)
+
+`creditLimit` = `patrocínioSemanal × 20 × repFactor`, com piso de R$ 500k.
+`repFactor = 0.5 + reputação/100` (varia 0.5x a 1.5x). O catálogo nunca oferece
+mais do que o saldo de crédito (limite − dívida atual) — ou seja, o jogador
+NÃO consegue se afundar mais do que consegue pagar com o patrocínio. É a
+linha de defesa que justifica deixar o empréstimo ser uma ferramenta livre, e
+não algo "travado" por mecânicas externas.
+
+### Integração e UI
+
+`GameEngine.processDailyTicks` chama `BankService.chargeWeeklyInstallments` no
+bloco de domingo (depois dos pagamentos de patrocínios e manutenções) e marca
+`report.financialHealthWarning` ao final, se a saúde ficou em zona de atenção.
+A `BankActivity` (abas EMPRÉSTIMOS / MINHAS DÍVIDAS) acessada pelo card 🏦 Banco
+do Hub mostra ofertas, empréstimos ativos (com barra de quitação + saldo +
+botão QUITAR ANTECIPADO) e o banner colorido de saúde financeira. Testes em
+`BankServiceTest`.
+
+**Por que separado dos demais serviços financeiros?** Patrocínios geram
+receita; folha salarial é despesa fixa; o banco é uma fonte de **liquidez
+emergencial com custo futuro** — uma terceira categoria com regras próprias
+(juros, parcelas semanais, limite de crédito). Separar respeita SRP e mantém a
+rede de segurança fora do caminho crítico do orçamento mensal.
+
+---
+
 ## Status da migração
 
 Todas as Activities foram migradas para o padrão SOLID + recursos:

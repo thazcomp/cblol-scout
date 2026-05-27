@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    item_loan_offer.xml — card de uma linha de crédito disponível.
+
+      ┌────────────────────────────────────────────────┐
+      │ 🆘  Crédito Emergencial                          │
+      │     Para cobrir a folha quando o caixa aperta    │
+      │     ┌──────────┬──────────┬──────────┐           │
+      │     │ Recebe   │ Parcela  │ Total    │           │
+      │     │ R$ 500k  │ R$ 57.5k │ R$ 575k  │           │
+      │     └──────────┴──────────┴──────────┘           │
+      │     10 semanas · juros 15%                        │
+      │     [ CONTRATAR ]                                 │
+      └────────────────────────────────────────────────┘
+-->
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="6dp"
+    android:layout_marginVertical="5dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="0dp"
+    app:strokeColor="@color/color_outline_gold"
+    app:strokeWidth="1dp"
+    app:cardBackgroundColor="@color/color_surface_elevated">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="14dp">
+
+        <!-- Cabeçalho: emoji + nome -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/tv_loan_emoji"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="24sp"
+                android:layout_marginEnd="10dp" />
+
+            <TextView
+                android:id="@+id/tv_loan_name"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:textColor="@color/color_on_surface"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tv_loan_description"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/color_on_surface_variant"
+            android:textSize="12sp"
+            android:layout_marginTop="4dp" />
+
+        <!-- Três colunas: recebe / parcela / total -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="12dp"
+            android:baselineAligned="false">
+
+            <LinearLayout
+                android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content" android:orientation="vertical">
+                <TextView
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="@string/bank_col_receive"
+                    android:textColor="@color/color_on_surface_variant" android:textSize="10sp" />
+                <TextView
+                    android:id="@+id/tv_loan_principal"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:textColor="@color/state_success" android:textSize="15sp"
+                    android:textStyle="bold" android:layout_marginTop="2dp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content" android:orientation="vertical">
+                <TextView
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="@string/bank_col_installment"
+                    android:textColor="@color/color_on_surface_variant" android:textSize="10sp" />
+                <TextView
+                    android:id="@+id/tv_loan_installment"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:textColor="@color/color_on_surface" android:textSize="15sp"
+                    android:textStyle="bold" android:layout_marginTop="2dp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp" android:layout_weight="1"
+                android:layout_height="wrap_content" android:orientation="vertical">
+                <TextView
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:text="@string/bank_col_total"
+                    android:textColor="@color/color_on_surface_variant" android:textSize="10sp" />
+                <TextView
+                    android:id="@+id/tv_loan_total"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:textColor="@color/state_danger" android:textSize="15sp"
+                    android:textStyle="bold" android:layout_marginTop="2dp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tv_loan_terms"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/color_on_surface_variant"
+            android:textSize="11sp"
+            android:layout_marginTop="8dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_loan_take"
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginTop="10dp"
+            android:text="@string/bank_action_take"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            app:backgroundTint="@color/champion_gold"
+            android:textColor="@color/pick_ban_bg"
+            app:cornerRadius="8dp" />
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

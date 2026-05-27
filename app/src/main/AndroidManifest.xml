@@ -124,6 +124,13 @@
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden" />
 
         <activity
+            android:name=".ui.BankActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:parentActivityName=".ui.ManagerHubActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden" />
+
+        <activity
             android:name=".ui.MatchResultActivity"
             android:exported="false"
             android:screenOrientation="portrait" />

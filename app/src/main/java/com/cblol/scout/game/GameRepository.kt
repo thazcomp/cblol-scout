@@ -114,6 +114,13 @@ object GameRepository {
             gs.promotedPlayers = mutableListOf()
         }
 
+        // Banco: saves anteriores ao sistema não têm o estado bancário. Como é
+        // nullable, basta garantir uma estrutura vazia; o BankService cria sob
+        // demanda de qualquer forma. Carreiras em andamento começam sem dívida.
+        if (gs.bank == null) {
+            gs.bank = com.cblol.scout.data.BankState()
+        }
+
         return gs
     }
 

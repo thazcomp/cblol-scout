@@ -4,6 +4,7 @@ import android.content.Context
 import com.cblol.scout.data.GameState
 import com.cblol.scout.data.Player
 import com.cblol.scout.domain.GameConstants
+import com.cblol.scout.domain.usecase.BankService
 import com.cblol.scout.domain.usecase.MoraleService
 import com.cblol.scout.domain.usecase.ScoutingService
 import com.cblol.scout.domain.usecase.SponsorService
@@ -174,6 +175,18 @@ object GameEngine {
                 GameRepository.log("ECONOMY",
                     "Manutenção da categoria de base: R$ ${"%,d".format(academyFee)} (${com.cblol.scout.domain.usecase.AcademyService.tier(gs).label})")
             }
+
+            // Parcelas de empréstimos bancários (uma por semana por empréstimo).
+            val loanResult = BankService.chargeWeeklyInstallments(gs)
+            if (loanResult.totalCharged > 0) {
+                report.expense += loanResult.totalCharged
+                GameRepository.log("ECONOMY",
+                    "Parcelas de empréstimo pagas: R$ ${"%,d".format(loanResult.totalCharged)}")
+            }
+            loanResult.loansPaidOff.forEach { loan ->
+                GameRepository.log("ECONOMY",
+                    "✅ Empréstimo \"${loan.label}\" quitado!")
+            }
         }
 
         // 1.5. Gera novas ofertas de patrocínio se passou o intervalo
@@ -186,6 +199,13 @@ object GameEngine {
             report.expense += total
             GameRepository.log("ECONOMY",
                 "Folha salarial paga: R$ ${"%,d".format(total)}")
+        }
+
+        // 3. Aviso de saúde financeira: marca o relatório se o caixa entrou em
+        //    zona de atenção/crítica após os movimentos do dia, para o Hub poder
+        //    alertar o gerente e sugerir o Banco.
+        if (BankService.shouldWarn(gs)) {
+            report.financialHealthWarning = BankService.financialHealth(gs)
         }
     }
 
@@ -476,5 +496,12 @@ data class AdvanceReport(
      * Prospects da categoria de base que atingiram o nível para subir ao elenco
      * principal neste avanço. Lista de nomes para o Hub notificar o gerente.
      */
-    val academyReady: MutableList<String> = mutableListOf()
+    val academyReady: MutableList<String> = mutableListOf(),
+
+    /**
+     * Saúde financeira ao fim do avanço, quando NÃO está saudável (amarelo ou
+     * vermelho). Null = caixa saudável, sem aviso. O Hub usa isto para exibir
+     * um alerta e sugerir o Banco.
+     */
+    var financialHealthWarning: com.cblol.scout.data.FinancialHealth? = null
 )

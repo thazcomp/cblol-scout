@@ -726,4 +726,48 @@
     <string name="academy_hub_subtitle_ready">%1$d pronto(s) para subir · toque para ver</string>
     <string name="hub_advance_academy_ready">Prontos para subir da base: %1$s</string>
 
+    <!-- ════════════ BANCO (EMPRÉSTIMOS) ════════════ -->
+    <string name="bank_title">Banco</string>
+    <string name="bank_budget_label">ORÇAMENTO ATUAL</string>
+    <string name="bank_credit_label">CRÉDITO DISPONÍVEL</string>
+    <string name="bank_budget_value">R$ %1$s</string>
+    <string name="bank_credit_value">R$ %1$s</string>
+    <string name="bank_debt_summary_format">Dívida ativa: R$ %1$s · R$ %2$s/semana em parcelas</string>
+    <string name="bank_tab_offers">EMPRÉSTIMOS</string>
+    <string name="bank_tab_loans">MINHAS DÍVIDAS</string>
+    <string name="bank_empty_offers">Nenhuma linha de crédito disponível agora. Aumente sua reputação (vencendo partidas) ou quite dívidas atuais para liberar crédito.</string>
+    <string name="bank_empty_loans">Sem dívidas no momento. Suas finanças estão em ordem.</string>
+
+    <!-- Colunas no card de oferta de empréstimo -->
+    <string name="bank_col_receive">RECEBE</string>
+    <string name="bank_col_installment">PARCELA</string>
+    <string name="bank_col_total">TOTAL A PAGAR</string>
+    <string name="bank_col_balance">SALDO DEVEDOR</string>
+    <string name="bank_loan_terms_format">%1$d semanas · juros %2$d%% no total</string>
+
+    <!-- Ações -->
+    <string name="bank_action_take">CONTRATAR</string>
+    <string name="bank_action_payoff">QUITAR ANTECIPADO</string>
+
+    <!-- Contratar empréstimo -->
+    <string name="bank_take_confirm_title">Contratar empréstimo?</string>
+    <string name="bank_take_confirm_msg">%1$s\n\nVocê recebe agora: R$ %2$s\nPaga R$ %3$s por semana, por %4$d semanas\nTotal a pagar: R$ %5$s (juros %6$d%%)</string>
+    <string name="bank_taken_title">Empréstimo contratado!</string>
+    <string name="bank_taken_msg">R$ %1$s creditados no seu orçamento. Parcelas de R$ %2$s serão descontadas semanalmente pelas próximas %3$d semanas.</string>
+    <string name="bank_error_exceeds_credit">Esta linha (R$ %1$s) excede seu crédito disponível (R$ %2$s). Quite dívidas atuais ou escolha uma linha menor.</string>
+    <string name="bank_error_low_reputation">Esta linha exige reputação mínima %1$d. Sua reputação atual é %2$d — melhore vencendo partidas.</string>
+
+    <!-- Quitação antecipada -->
+    <string name="bank_payoff_confirm_title">Quitar empréstimo?</string>
+    <string name="bank_payoff_confirm_msg">Pagar todo o saldo de %1$s agora?\n\nSaldo devedor: R$ %2$s\nOrçamento atual: R$ %3$s\n\nO empréstimo será removido e você não paga mais parcelas.</string>
+    <string name="bank_payoff_done">%1$s quitado. R$ %2$s descontados do orçamento.</string>
+    <string name="bank_payoff_insufficient">Orçamento insuficiente para quitar (precisa R$ %1$s, você tem R$ %2$s). Continue pagando as parcelas semanais ou tente novamente quando tiver caixa.</string>
+
+    <!-- Empréstimo ativo no card -->
+    <string name="bank_active_loan_progress">%1$d / %2$d parcelas pagas</string>
+
+    <!-- Hub -->
+    <string name="hub_bank_subtitle_debt">Dívida: R$ %1$s</string>
+    <string name="hub_advance_financial_warning">Caixa em zona de %1$s. %2$s</string>
+
 </resources>

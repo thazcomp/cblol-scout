@@ -251,6 +251,34 @@ class ManagerHubActivity : AppCompatActivity() {
         } else {
             tv.visibility = View.GONE
         }
+        renderBankSummary()
+    }
+
+    /**
+     * Atualiza o badge do card de Banco: mostra a saúde financeira atual e, se
+     * houver dívida ativa, o saldo devedor. Cor do badge espelha a saude
+     * financeira para reforçar o aviso visual.
+     */
+    private fun renderBankSummary() {
+        val tv = findViewById<android.widget.TextView>(R.id.tv_hub_bank_subtitle)
+        val gs = runCatching { GameRepository.current() }.getOrNull() ?: return
+        val debt = com.cblol.scout.domain.usecase.BankService.totalDebt(gs)
+        val health = com.cblol.scout.domain.usecase.BankService.financialHealth(gs)
+
+        // Prioriza mostrar dívida quando há; senão mostra a saude com emoji.
+        if (debt > 0) {
+            tv.visibility = View.VISIBLE
+            tv.text = getString(R.string.hub_bank_subtitle_debt, "%,d".format(debt))
+            tv.setTextColor(ContextCompat.getColor(this, R.color.state_danger))
+        } else if (health != com.cblol.scout.data.FinancialHealth.HEALTHY) {
+            tv.visibility = View.VISIBLE
+            tv.text = "${health.emoji} ${health.label}"
+            val colorRes = if (health == com.cblol.scout.data.FinancialHealth.CRITICAL)
+                R.color.state_danger else R.color.state_warning
+            tv.setTextColor(ContextCompat.getColor(this, colorRes))
+        } else {
+            tv.visibility = View.GONE
+        }
     }
 
     /**
@@ -311,6 +339,9 @@ class ManagerHubActivity : AppCompatActivity() {
         }
         findViewById<View>(R.id.card_academy).setOnClickListener {
             startActivity(AcademyActivity.intent(this))
+        }
+        findViewById<View>(R.id.card_bank).setOnClickListener {
+            startActivity(BankActivity.intent(this))
         }
         binding.btnQuit.setOnClickListener        { confirmQuit() }
     }
@@ -440,6 +471,17 @@ class ManagerHubActivity : AppCompatActivity() {
                 append(getString(R.string.hub_advance_academy_ready,
                     report.academyReady.joinToString(", ")))
             }
+            // Alerta financeiro: se o avanço cruzou para zona de atenção/crítica,
+            // chama o gerente para o Banco com a dica acionável.
+            report.financialHealthWarning?.let { health ->
+                append("\n\n")
+                append("${health.emoji} ")
+                append(getString(R.string.hub_advance_financial_warning,
+                    health.label,
+                    com.cblol.scout.domain.usecase.BankService.healthAdvice(
+                        GameRepository.current()
+                    )))
+            }
         }
         android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_LONG).show()
     }
@@ -505,6 +547,7 @@ class ManagerHubActivity : AppCompatActivity() {
             "SQUAD"    to R.string.icon_squad,
             "CAREER"   to R.string.icon_career,
             "ACADEMY"  to R.string.icon_career,
+            "BANK"     to R.string.icon_economy,
             "MOOD"     to R.string.icon_squad,
             "SCOUT"    to R.string.icon_transfer
         )
