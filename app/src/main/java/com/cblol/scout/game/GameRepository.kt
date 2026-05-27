@@ -103,6 +103,17 @@ object GameRepository {
             gs.playerBonds = mutableMapOf()
         }
 
+        // Categoria de base: saves anteriores ao sistema não têm a academia nem
+        // a lista de promovidos. Inicializamos vazios; o AcademyService cria a
+        // estrutura BASIC sob demanda. Carreiras em andamento ganham uma base
+        // vazia (sem prospects) — o gerente pode recrutar quando quiser.
+        if (gs.academy == null) {
+            gs.academy = com.cblol.scout.data.Academy()
+        }
+        if (gs.promotedPlayers == null) {
+            gs.promotedPlayers = mutableListOf()
+        }
+
         return gs
     }
 
@@ -139,8 +150,12 @@ object GameRepository {
         val fromSnapshot = snap.jogadores.map { applyOverride(it, overrides[it.id]) }
         val fromSecondDiv = com.cblol.scout.util.SecondDivisionGenerator.generate()
             .map { applyOverride(it, overrides[it.id]) }
+        // Jogadores promovidos da base: vivem no próprio GameState (não há fonte
+        // estática). Recebem overrides normalmente (salário, titularidade).
+        val fromAcademy = (gs?.promotedPlayers ?: emptyList())
+            .map { applyOverride(it, overrides[it.id]) }
 
-        return (fromSnapshot + fromSecondDiv).filter { it.time_id == teamId }
+        return (fromSnapshot + fromSecondDiv + fromAcademy).filter { it.time_id == teamId }
     }
 
     /**
@@ -195,6 +210,66 @@ object GameRepository {
         val gs = current()
         val current = gs.playerOverrides[playerId] ?: PlayerOverride(playerId)
         gs.playerOverrides[playerId] = transform(current)
+    }
+
+    /**
+     * Materializa um prospect promovido da base como um [Player] real no elenco
+     * do gerente e o persiste em [GameState.promotedPlayers].
+     *
+     * O [Player] criado entra como **reserva** (`titular = false`); o
+     * [SquadManager.validateAndFixRoster] decide depois se há vaga de titular.
+     * Atributos derivados são distribuídos em torno do overall atual do prospect
+     * (mesma técnica do gerador da 2ª divisão). O salário vem do
+     * [com.cblol.scout.domain.usecase.AcademyService.suggestedSalaryFor].
+     *
+     * @param prospect prospect já REMOVIDO da academia (ver AcademyService.promoteProspect)
+     * @param salary salário mensal do contrato base
+     * @param teamName nome do time do gerente (para o campo time_nome)
+     */
+    fun addPromotedProspect(
+        context: Context,
+        prospect: com.cblol.scout.data.AcademyProspect,
+        salary: Long,
+        teamName: String
+    ): Player {
+        val gs = current()
+        val ov = prospect.currentOverall
+        // Espalha o overall pelos 5 atributos com leve variação (±2), mantendo
+        // a média próxima do overall atual.
+        fun jitter() = (ov + (-2..2).random()).coerceIn(35, 95)
+        val attrs = com.cblol.scout.data.AtributosDeriv(
+            lane_phase   = jitter(),
+            team_fight   = jitter(),
+            criatividade = jitter(),
+            consistencia = jitter(),
+            clutch       = jitter()
+        )
+        val player = Player(
+            id            = prospect.id,
+            nome_jogo     = prospect.nome,
+            nome_real     = prospect.nomeReal,
+            time_id       = gs.managerTeamId,
+            time_nome     = teamName,
+            role          = prospect.role,
+            titular       = false,
+            idade         = prospect.idade,
+            nacionalidade = prospect.nacionalidade,
+            contrato      = com.cblol.scout.data.Contrato(
+                termino                     = gs.splitEndDate,
+                valor_estimado_brl          = salary * 12,
+                salario_mensal_estimado_brl = salary,
+                fonte_salario               = "base"
+            ),
+            stats_brutas        = com.cblol.scout.data.StatsBrutas(
+                jogos = 0, kda = 0.0, kp_pct = 0.0, cs_min = 0.0,
+                gd15 = 0, xpd15 = 0, damage_share_pct = 0.0, vision_score_min = 0.0
+            ),
+            atributos_derivados = attrs,
+            championPool        = prospect.championPool
+        )
+        val list = gs.promotedPlayers ?: mutableListOf<Player>().also { gs.promotedPlayers = it }
+        list.add(player)
+        return player
     }
 
     fun log(type: String, message: String) {

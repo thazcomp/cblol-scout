@@ -232,6 +232,25 @@ class ManagerHubActivity : AppCompatActivity() {
         } else {
             tv.visibility = View.GONE
         }
+        renderAcademySummary()
+    }
+
+    /**
+     * Atualiza o badge do card de Categoria de Base: destaca quantos prospects
+     * estão prontos para subir ao elenco principal. Se nenhum está pronto,
+     * esconde o badge (o card continua acessível).
+     */
+    private fun renderAcademySummary() {
+        val tv = findViewById<android.widget.TextView>(R.id.tv_hub_academy_subtitle)
+        val gs = runCatching { GameRepository.current() }.getOrNull() ?: return
+        val ready = com.cblol.scout.domain.usecase.AcademyService.prospects(gs)
+            .count { it.isReady() }
+        if (ready > 0) {
+            tv.visibility = View.VISIBLE
+            tv.text = getString(R.string.academy_hub_subtitle_ready, ready)
+        } else {
+            tv.visibility = View.GONE
+        }
     }
 
     /**
@@ -289,6 +308,9 @@ class ManagerHubActivity : AppCompatActivity() {
         }
         findViewById<View>(R.id.card_offers).setOnClickListener {
             startActivity(IncomingOffersActivity.intent(this))
+        }
+        findViewById<View>(R.id.card_academy).setOnClickListener {
+            startActivity(AcademyActivity.intent(this))
         }
         binding.btnQuit.setOnClickListener        { confirmQuit() }
     }
@@ -413,6 +435,11 @@ class ManagerHubActivity : AppCompatActivity() {
                 append(getString(R.string.hub_advance_incoming_offers,
                     report.incomingOffers.joinToString(", ")))
             }
+            if (report.academyReady.isNotEmpty()) {
+                append("\n\n")
+                append(getString(R.string.hub_advance_academy_ready,
+                    report.academyReady.joinToString(", ")))
+            }
         }
         android.widget.Toast.makeText(this, msg, android.widget.Toast.LENGTH_LONG).show()
     }
@@ -476,7 +503,10 @@ class ManagerHubActivity : AppCompatActivity() {
             "ECONOMY"  to R.string.icon_economy,
             "CONTRACT" to R.string.icon_contract,
             "SQUAD"    to R.string.icon_squad,
-            "CAREER"   to R.string.icon_career
+            "CAREER"   to R.string.icon_career,
+            "ACADEMY"  to R.string.icon_career,
+            "MOOD"     to R.string.icon_squad,
+            "SCOUT"    to R.string.icon_transfer
         )
     }
 }

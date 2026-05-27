@@ -154,8 +154,179 @@ data class GameState(
      * laços. Usado para evitar processar o mesmo dia duas vezes e para calcular
      * quantos dias de convivência aplicar de uma vez ao avançar o calendário.
      */
-    var lastBondTickDate: String? = null
+    var lastBondTickDate: String? = null,
+
+    /**
+     * Categoria de base (academia) do time do gerente. Abriga jovens promessas
+     * (16-19 anos) que treinam e evoluem com o tempo até estarem prontos para
+     * subir ao elenco principal.
+     *
+     * Diferente da 2ª divisão (jogadores prontos que se compra no mercado), os
+     * prospects da base são desenvolvidos DENTRO da organização: começam com
+     * overall baixo mas têm potencial oculto, e crescem conforme a academia é
+     * mantida e eles recebem tempo de desenvolvimento.
+     *
+     * Nullable porque Gson pode deixar null ao desserializar saves antigos que
+     * não têm este campo — inicializado defensivamente no
+     * [com.cblol.scout.game.GameRepository] e no
+     * [com.cblol.scout.domain.usecase.AcademyService].
+     */
+    var academy: Academy? = null,
+
+    /**
+     * Data (ISO) da última vez que o motor processou o desenvolvimento diário
+     * dos prospects da base + a geração de novos talentos. Idempotente por data.
+     */
+    var lastAcademyTickDate: String? = null,
+
+    /**
+     * Jogadores PROMOVIDOS da categoria de base ao elenco principal.
+     *
+     * Diferente dos jogadores do snapshot (1ª divisão) e dos procedurais da 2ª
+     * divisão (que existem no [com.cblol.scout.util.SecondDivisionGenerator]),
+     * um prospect promovido é um [Player] totalmente novo, criado na hora da
+     * promoção. Como não tem origem em nenhuma fonte estática, precisa ser
+     * guardado aqui para sobreviver entre sessões e aparecer no
+     * [com.cblol.scout.game.GameRepository.rosterOf].
+     *
+     * Os overrides normais (salário, titularidade, moral) continuam valendo via
+     * [playerOverrides], indexados pelo id do Player promovido.
+     *
+     * Nullable por compatibilidade com saves antigos.
+     */
+    var promotedPlayers: MutableList<Player>? = null
 )
+
+/**
+ * ╔══════════════════════════════════════════════════╗
+ * ║ SISTEMA DE CATEGORIA DE BASE (ACADEMIA)                      ║
+ * ╚══════════════════════════════════════════════════╝
+ *
+ * A academia abriga **prospects** — jovens jogadores (16-19 anos) da própria
+ * organização. Diferente do mercado/2ª divisão (jogadores prontos), aqui o
+ * gerente DESENVOLVE talentos do zero:
+ *
+ *  - Cada prospect tem um overall ATUAL baixo (45-62) e um POTENCIAL oculto
+ *    (55-90), revelado só após avaliação (scouting interno).
+ *  - Mantendo a academia (custo semanal) e dando tempo, o prospect evolui em
+ *    direção ao seu potencial.
+ *  - Quando pronto (ou quando o gerente decidir), pode ser PROMOVIDO ao elenco
+ *    principal — sem custo de transferência, só o salário de jogador base.
+ *  - A academia gera novos prospects periodicamente (recrutamento), limitada
+ *    pela capacidade do tier.
+ *
+ * O tier da academia (BASIC/PRO/ELITE) controla capacidade, velocidade de
+ * desenvolvimento, qualidade dos talentos recrutados e custo de manutenção.
+ */
+
+/** Tier da academia (categoria de base). Afeta capacidade, qualidade e custo. */
+enum class AcademyTier(
+    val label: String,
+    val emoji: String,
+    /** Máximo de prospects que cabem na academia simultaneamente. */
+    val capacity: Int,
+    /** Multiplicador de velocidade de desenvolvimento (1.0 = base). */
+    val growthFactor: Double,
+    /** Potencial máximo possível dos talentos recrutados neste tier. */
+    val maxPotential: Int,
+    /** Custo de manutenção semanal (descontado do orçamento). */
+    val weeklyCost: Long,
+    /** Custo para fazer upgrade PARA este tier. */
+    val upgradeCost: Long,
+    /** Reputação mínima do técnico para fazer upgrade para este tier. */
+    val minReputation: Int
+) {
+    BASIC(
+        label = "Básica", emoji = "🌱",
+        capacity = 4, growthFactor = 1.0, maxPotential = 78,
+        weeklyCost = 10_000L, upgradeCost = 0L, minReputation = 0
+    ),
+    PRO(
+        label = "Estruturada", emoji = "🏫",
+        capacity = 6, growthFactor = 1.4, maxPotential = 85,
+        weeklyCost = 35_000L, upgradeCost = 300_000L, minReputation = 55
+    ),
+    ELITE(
+        label = "Elite", emoji = "🏆",
+        capacity = 8, growthFactor = 1.9, maxPotential = 92,
+        weeklyCost = 90_000L, upgradeCost = 1_000_000L, minReputation = 75
+    )
+}
+
+/**
+ * Estado da academia do time. Inicializa no tier [AcademyTier.BASIC] com uma
+ * leva inicial de prospects gerada na criação da carreira.
+ *
+ * @property tier tier atual da academia
+ * @property prospects prospects atualmente na base
+ * @property lastRecruitDate data (ISO) do último recrutamento automático de
+ *   novos talentos (controla o intervalo de geração)
+ */
+data class Academy(
+    var tier: AcademyTier = AcademyTier.BASIC,
+    val prospects: MutableList<AcademyProspect> = mutableListOf(),
+    var lastRecruitDate: String? = null
+)
+
+/**
+ * Um prospect (jovem promessa) da categoria de base.
+ *
+ * @property id identificador único (ex: "prospect_mid_3")
+ * @property nome nome de jogo (gamertag)
+ * @property nomeReal nome civil
+ * @property role rota (TOP/JNG/MID/ADC/SUP)
+ * @property idade idade atual (16-19); ao chegar em [MAX_ACADEMY_AGE] precisa
+ *   ser promovido ou liberado
+ * @property currentOverall overall atual (cresce com o tempo rumo ao potencial)
+ * @property potential teto de overall que o prospect pode atingir (oculto até
+ *   ser avaliado). Mantido como inteiro 1-99.
+ * @property evaluated se o gerente já avaliou o prospect (revela o potencial e
+ *   uma estimativa mais precisa). Avaliar custa dinheiro/tempo.
+ * @property nacionalidade país (sempre BR neste recorte)
+ * @property joinedOn data (ISO) em que entrou na base
+ * @property championPool campeões de destaque do prospect
+ * @property developmentLog histórico curto de marcos de desenvolvimento
+ */
+data class AcademyProspect(
+    val id: String,
+    val nome: String,
+    val nomeReal: String,
+    val role: String,
+    var idade: Int,
+    var currentOverall: Int,
+    val potential: Int,
+    var evaluated: Boolean = false,
+    val nacionalidade: String = "BR",
+    val joinedOn: String = "",
+    val championPool: List<String> = emptyList(),
+    val developmentLog: MutableList<String> = mutableListOf()
+) {
+    companion object {
+        /** Idade máxima na base — depois disso o prospect precisa subir ou sair. */
+        const val MAX_ACADEMY_AGE = 20
+    }
+
+    /**
+     * Faixa de potencial mostrada quando o prospect AINDA não foi avaliado
+     * (estimativa grosseira do olheiro da base). Quando avaliado, a UI mostra
+     * o número exato.
+     */
+    fun potentialBand(): String = when {
+        potential >= 85 -> "Excepcional"
+        potential >= 75 -> "Alto"
+        potential >= 65 -> "Promissor"
+        potential >= 55 -> "Mediano"
+        else            -> "Limitado"
+    }
+
+    /** Quão perto do teto o prospect está (0-100%), para barras de progresso. */
+    fun developmentPercent(): Int =
+        if (potential <= 0) 0
+        else (currentOverall.toFloat() / potential * 100).toInt().coerceIn(0, 100)
+
+    /** Prospect atingiu (ou passou) seu potencial — pronto para subir. */
+    fun isReady(): Boolean = currentOverall >= potential - 2
+}
 
 /**
  * Laço (química) entre dois jogadores do elenco.

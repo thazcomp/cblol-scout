@@ -510,6 +510,60 @@ uma relação por **par**. Modelos e regras distintos → serviços distintos (S
 
 ---
 
+## Categoria de base (academia)
+
+A organização tem uma **academia** que forma jovens promessas do zero. Vive em
+`AcademyService` (domain/usecase, JVM-puro); os dados em `GameState.academy`
+(um `Academy` com tier + lista de `AcademyProspect`) e os jogadores já
+promovidos em `GameState.promotedPlayers`.
+
+### Diferença vs. 2ª divisão / mercado
+
+O mercado e a 2ª divisão (`SecondDivisionGenerator`) vendem jogadores
+**prontos** — caro e imediato. A academia forma talentos **crus**: cada
+`AcademyProspect` começa com overall baixo (45-62) e um **potencial oculto**
+(até o teto do tier), revelado só após **avaliação** (`evaluateProspect`, custa
+R$ 15k). Barato no curto prazo (só manutenção semanal), mas leva tempo e o
+retorno é incerto.
+
+### Ciclo de vida do prospect
+
+1. **Recrutado** — automaticamente a cada 30 dias (`tickDaily`) se há vaga, ou
+   manualmente (`recruitManually`, R$ 50k).
+2. **Avaliado** (opcional) — revela o potencial exato.
+3. **Desenvolvido** — a cada 7 dias de convivência o overall sobe rumo ao
+   potencial (`developmentStepFor`), modulado por tier (`growthFactor`), idade
+   (jovens aprendem mais rápido) e proximidade do teto (rendimento decrescente).
+4. **Promovido** (`promoteProspect`) — sai da base e o
+   `GameRepository.addPromotedProspect` materializa um `Player` real (entra como
+   reserva, contrato `fonte_salario="base"`), seguido de
+   `SquadManager.validateAndFixRoster`. **Ou liberado** (`releaseProspect`).
+
+### Tiers
+
+`AcademyTier` (BASIC/PRO/ELITE) controla capacidade (4/6/8), velocidade de
+desenvolvimento (1.0/1.4/1.9×), potencial máximo dos recrutas (78/85/92) e custo
+semanal (10k/35k/90k). Upgrade exige reputação mínima e custo, igual ao
+departamento de olheiros.
+
+### Integração no motor
+
+`GameEngine.processDailyTicks` chama `processAcademy` (desenvolve + recruta,
+logando marcos via `AdvanceReport.academyReady`). A manutenção semanal é
+cobrada no bloco de domingo, ao lado da dos olheiros.
+`startNewCareer` chama `initializeForNewCareer` (leva inicial = metade da
+capacidade). O `rosterOf` une três fontes — snapshot (1ª div) +
+`SecondDivisionGenerator` (2ª div) + `promotedPlayers` (base). UI em
+`AcademyActivity` (abas PROSPECTS / ACADEMIA), acessível pelo card 🌱 Base do
+Hub. Testes em `AcademyServiceTest`.
+
+**Por que `promotedPlayers` no `GameState`?** Um prospect promovido não existe
+em nenhuma fonte estática (nem snapshot, nem gerador procedural), então precisa
+ser persistido no save para sobreviver entre sessões. Os overrides normais
+(salário, titularidade, moral) continuam valendo por cima, indexados pelo id.
+
+---
+
 ## Status da migração
 
 Todas as Activities foram migradas para o padrão SOLID + recursos:

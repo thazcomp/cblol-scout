@@ -87,4 +87,24 @@ class AdvanceReportTest {
         assertEquals(listOf("A"), r.transferRequests)
         assertEquals(listOf("B"), r.incomingOffers)
     }
+
+    @Test
+    fun academyReady_startsEmpty_andAccumulates() {
+        val r = AdvanceReport()
+        assertTrue(r.academyReady.isEmpty())
+        r.academyReady += "Pétala"
+        r.academyReady += "Joia"
+        assertEquals(listOf("Pétala", "Joia"), r.academyReady)
+    }
+
+    @Test
+    fun academyReady_isIndependentFromOtherLists() {
+        val r = AdvanceReport()
+        r.transferRequests += "A"
+        r.incomingOffers += "B"
+        r.academyReady += "C"
+        assertEquals(listOf("A"), r.transferRequests)
+        assertEquals(listOf("B"), r.incomingOffers)
+        assertEquals(listOf("C"), r.academyReady)
+    }
 }

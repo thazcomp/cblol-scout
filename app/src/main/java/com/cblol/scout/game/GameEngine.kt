@@ -136,6 +136,11 @@ object GameEngine {
         //      logados para o gerente acompanhar o clima do vestiário.
         processPlayerBonds(gs, roster)
 
+        // 0.9. Categoria de base: desenvolve os prospects e recruta novos
+        //      talentos periodicamente. Marcos (prospect pronto, novo recruta)
+        //      vão para o relatório + log.
+        processAcademy(gs, report)
+
         // 1. Pagamento de patrocínio (domingo = day_of_week 7)
         if (date.dayOfWeek.value == 7) {
             gs.budget += gs.sponsorshipPerWeek
@@ -160,6 +165,14 @@ object GameEngine {
                 report.expense += scoutingFee
                 GameRepository.log("ECONOMY",
                     "Manutenção do departamento de olheiros: R$ ${"%,d".format(scoutingFee)} (${ScoutingService.tier(gs).label})")
+            }
+
+            val academyFee = com.cblol.scout.domain.usecase.AcademyService.weeklyMaintenanceCost(gs)
+            if (academyFee > 0) {
+                gs.budget -= academyFee
+                report.expense += academyFee
+                GameRepository.log("ECONOMY",
+                    "Manutenção da categoria de base: R$ ${"%,d".format(academyFee)} (${com.cblol.scout.domain.usecase.AcademyService.tier(gs).label})")
             }
         }
 
@@ -330,6 +343,31 @@ object GameEngine {
         }
     }
 
+    /**
+     * Processa o desenvolvimento diário da categoria de base: evolui prospects e
+     * recruta novos talentos periodicamente. Loga marcos relevantes (prospect
+     * pronto para subir, novo talento recrutado).
+     *
+     * O [com.cblol.scout.domain.usecase.AcademyService.tickDaily] é idempotente
+     * por data (usa [GameState.lastAcademyTickDate]).
+     */
+    private fun processAcademy(gs: GameState, report: AdvanceReport) {
+        val result = com.cblol.scout.domain.usecase.AcademyService.tickDaily(gs)
+        result.readyNow.forEach { p ->
+            report.academyReady += p.nome
+            GameRepository.log(
+                "ACADEMY",
+                "🌟 ${p.nome} (${p.role}) atingiu o nível para subir ao elenco principal!"
+            )
+        }
+        result.recruited.forEach { p ->
+            GameRepository.log(
+                "ACADEMY",
+                "🌱 Novo talento na base: ${p.nome} (${p.role}, ${p.idade} anos)."
+            )
+        }
+    }
+
     private fun teamName(context: Context, teamId: String): String =
         GameRepository.snapshot(context).times.find { it.id == teamId }?.nome ?: teamId
 
@@ -372,6 +410,10 @@ object GameEngine {
         // resultados e eventos fora de partida.
         val initialRoster = GameRepository.rosterOf(context, teamId)
         com.cblol.scout.domain.usecase.PlayerBondService.ensureBondsFor(gs, initialRoster)
+
+        // Categoria de base: cria a academia BASIC e recruta a leva inicial de
+        // prospects, para o gerente já começar com talentos para desenvolver.
+        com.cblol.scout.domain.usecase.AcademyService.initializeForNewCareer(gs)
 
         gs.gameLog.add(
             com.cblol.scout.data.LogEntry(
@@ -428,5 +470,11 @@ data class AdvanceReport(
      * Jogadores que receberam ofertas de compra de outros times neste avanço.
      * Lista de nomes para o Hub notificar que há propostas a responder.
      */
-    val incomingOffers: MutableList<String> = mutableListOf()
+    val incomingOffers: MutableList<String> = mutableListOf(),
+
+    /**
+     * Prospects da categoria de base que atingiram o nível para subir ao elenco
+     * principal neste avanço. Lista de nomes para o Hub notificar o gerente.
+     */
+    val academyReady: MutableList<String> = mutableListOf()
 )

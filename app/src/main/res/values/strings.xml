@@ -660,4 +660,70 @@
     <string name="bonds_pair_format">%1$s · %2$s</string>
     <string name="hub_bonds_subtitle">Toque para ver a química do elenco</string>
 
+    <!-- ═══════════ CATEGORIA DE BASE (ACADEMIA) ═══════════ -->
+    <string name="academy_title">Categoria de Base</string>
+    <string name="academy_header_label">ACADEMIA</string>
+    <string name="academy_subtitle_format">%1$s · %2$d/%3$d prospects</string>
+    <string name="academy_tab_prospects">PROSPECTS</string>
+    <string name="academy_tab_facility">ACADEMIA</string>
+    <string name="academy_empty_prospects">A base está vazia. Recrute jovens talentos para começar a desenvolvê-los — leva tempo, mas pode revelar estrelas.</string>
+
+    <!-- Header / recrutamento -->
+    <string name="academy_recruit_button">Recrutar talento</string>
+    <string name="academy_recruited_title">Novo talento na base</string>
+    <string name="academy_recruited_msg">%1$s (%2$s, %3$d anos) entrou na categoria de base. Custo: R$ %4$s.</string>
+    <string name="academy_error_capacity">A academia está cheia. Faça upgrade do tier ou libere um prospect antes de recrutar.</string>
+    <string name="academy_error_funds_recruit">Orçamento insuficiente para recrutar (R$ %1$s). Você tem R$ %2$s.</string>
+
+    <!-- Card do prospect -->
+    <string name="academy_age_format">%1$d anos</string>
+    <string name="academy_overall_format">OVR %1$d</string>
+    <string name="academy_potential_hidden">Potencial: %1$s (não avaliado)</string>
+    <string name="academy_potential_evaluated">Potencial: %1$d (%2$s)</string>
+    <string name="academy_dev_format">%1$d%% desenvolvido</string>
+    <string name="academy_evaluate">AVALIAR</string>
+    <string name="academy_promote">PROMOVER</string>
+    <string name="academy_release">✕</string>
+
+    <!-- Avaliação -->
+    <string name="academy_evaluate_confirm_title">Avaliar prospect?</string>
+    <string name="academy_evaluate_confirm_msg">Avaliar %1$s revela seu potencial exato. Custo: R$ %2$s.</string>
+    <string name="academy_evaluated_title">Avaliação concluída</string>
+    <string name="academy_evaluated_msg">%1$s tem potencial %2$d (%3$s).</string>
+    <string name="academy_error_funds_evaluate">Orçamento insuficiente para avaliar (R$ %1$s). Você tem R$ %2$s.</string>
+    <string name="academy_error_already_evaluated">Este prospect já foi avaliado.</string>
+
+    <!-- Promoção -->
+    <string name="academy_promote_confirm_title">Promover ao elenco?</string>
+    <string name="academy_promote_confirm_msg">Promover %1$s (%2$s, overall %3$d) ao elenco principal? Ele entra como reserva com salário de R$ %4$s/mês.</string>
+    <string name="academy_promote_not_ready_note">\n\n⚠ Ele ainda não atingiu o potencial — pode render mais se ficar mais tempo na base.</string>
+    <string name="academy_promoted_title">Promovido!</string>
+    <string name="academy_promoted_msg">%1$s agora faz parte do elenco principal. Ajuste a escalação no Elenco se quiser torná-lo titular.</string>
+
+    <!-- Liberação -->
+    <string name="academy_release_confirm_title">Liberar prospect?</string>
+    <string name="academy_release_confirm_msg">Dispensar %1$s da categoria de base? Esta ação não pode ser desfeita.</string>
+
+    <!-- Tiers da academia -->
+    <string name="academy_action_upgrade">FAZER UPGRADE</string>
+    <string name="academy_tier_capacity_format">Capacidade: %1$d prospects</string>
+    <string name="academy_tier_growth_format">Velocidade de desenvolvimento: %1$sx</string>
+    <string name="academy_tier_potential_format">Potencial máximo dos talentos: %1$d</string>
+    <string name="academy_tier_weekly_format">Manutenção semanal: R$ %1$s</string>
+    <string name="academy_tier_upgrade_format">Upgrade: R$ %1$s · reputação mín. %2$d</string>
+    <string name="academy_tier_status_owned">ADQUIRIDO</string>
+    <string name="academy_tier_status_current">ATUAL</string>
+    <string name="academy_tier_status_next">DISPONÍVEL</string>
+    <string name="academy_tier_status_locked">BLOQUEADO</string>
+    <string name="academy_upgraded_title">Academia melhorada!</string>
+    <string name="academy_upgraded_msg">A categoria de base agora é %1$s.</string>
+    <string name="academy_upgrade_error_max">A academia já está no tier máximo (Elite).</string>
+    <string name="academy_upgrade_error_reputation">Reputação insuficiente. Requer %1$d, você tem %2$d.</string>
+    <string name="academy_upgrade_error_funds">Orçamento insuficiente para o upgrade (R$ %1$s). Você tem R$ %2$s.</string>
+
+    <!-- Hub -->
+    <string name="academy_hub_subtitle">Toque para gerir as jovens promessas</string>
+    <string name="academy_hub_subtitle_ready">%1$d pronto(s) para subir · toque para ver</string>
+    <string name="hub_advance_academy_ready">Prontos para subir da base: %1$s</string>
+
 </resources>
