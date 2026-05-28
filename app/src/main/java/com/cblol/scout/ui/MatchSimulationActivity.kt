@@ -478,12 +478,20 @@ class MatchSimulationActivity : AppCompatActivity() {
         // transferência). Antes a data era apenas atribuída, o que congelava o
         // avanço do scouting. `advanceCalendarTo` é no-op se a data da partida
         // não for posterior à data atual, então é seguro em qualquer caso.
+        //
+        // Ele também simula as partidas dos outros times dos dias intermediários.
         if (seriesFinished) {
             val today    = LocalDate.parse(gs.currentDate)
             val matchDay = LocalDate.parse(match.date)
             if (today.isBefore(matchDay)) {
                 GameEngine.advanceCalendarTo(applicationContext, match.date)
             }
+            // Garante que as partidas dos OUTROS times do MESMO dia da partida
+            // do gerente também sejam simuladas — [advanceCalendarTo] só simula
+            // as partidas dos dias estritamente anteriores a `match.date`
+            // (o loop usa `isBefore`), então sem esta chamada extra a tabela
+            // mostraria os jogos do dia da partida do gerente ainda pendentes.
+            GameEngine.simulateOpponentMatchesToday(applicationContext)
         }
 
         if (seriesFinished) {

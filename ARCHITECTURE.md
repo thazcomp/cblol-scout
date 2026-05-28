@@ -765,6 +765,58 @@ e facilita adicionar/variar manchetes — os hooks só dizem "isto aconteceu", o
 
 ---
 
+## Simulação automática dos outros times (tabela sempre em dia)
+
+O calendário de um split tem partidas de TODOS os 8 times. O gerente joga
+apenas as do seu time — mas o tempo segue passando e as partidas dos demais
+precisam acontecer, senão a classificação congelaria. O motor
+resolve isso automaticamente em dois pontos:
+
+### Onde acontece
+
+- **`GameEngine.advanceCalendarTo(targetDate)`** — chamada em dois fluxos:
+  - Pelo Hub ao apertar "Avançar 1 dia".
+  - Pela `MatchSimulationActivity` quando o jogador termina uma partida
+    agendada para uma data futura (o calendário salta para `match.date`).
+
+  Em cada dia intermediário (`isBefore(target)`), o método roda
+  `processDailyTicks` (moral, scouting, economia, janelas de transferência)
+  E chama `simulateOpponentMatchesOn(iso)` que simula as partidas do dia
+  filtrando **apenas as que não envolvem o time do gerente** — as dele ficam
+  pendentes para que ele jogue.
+
+- **`GameEngine.simulateOpponentMatchesToday()`** — chamada pela
+  `MatchSimulationActivity.applyResult` logo depois de a série do gerente
+  acabar. Resolve as partidas dos demais times **do mesmo dia** da partida
+  jogada. É separada de `advanceCalendarTo` porque o loop deste último usa
+  `isBefore`, ou seja, não entra no dia da partida do gerente — sem esta
+  chamada extra, os outros jogos daquele dia ficariam pendentes.
+
+### Garantias
+
+- **Time do gerente nunca é auto-simulado.** O filtro
+  `homeTeamId != managerTeamId && awayTeamId != managerTeamId` no
+  `simulateOpponentMatchesOn` garante que o jogador sempre seja quem disputa
+  os próprios jogos. O Hub reforça isso bloqueando "Avançar 1 dia" quando
+  há partida do gerente no dia seguinte.
+- **Idempotência.** O filtro `!it.played` evita re-simular partidas já
+  resolvidas — se uma data tem 3 jogos e 1 já foi jogado, os outros 2 entram
+  no lote.
+- **A simulação usa o mesmo motor** (`MatchSimulator.simulate`) das partidas
+  auto-simuladas convencionais — mesma fórmula de força, mesmo ruído, mesmas
+  regras. As partidas são logadas no `gameLog` para histórico, mas NÃO viram
+  notícia (o feed é sobre a carreira do gerente, não sobre a liga inteira).
+
+### Por que essa separação (e não auto-simular tudo)?
+
+A partida do gerente é o evento central da experiência — ela tem pick & ban
+manual, simulação visual, telas de resultado e premiação. Auto-simulá-la
+seria tirar do jogador o motivo de jogar. Os outros times são coadjuvantes:
+ser auto-resolvidos pela IA é exatamente o comportamento desejado e mantém a
+liga viva no fundo, com a tabela sempre coerente com a data atual.
+
+---
+
 ## Status da migração
 
 Todas as Activities foram migradas para o padrão SOLID + recursos:

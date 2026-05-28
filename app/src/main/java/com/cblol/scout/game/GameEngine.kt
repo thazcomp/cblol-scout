@@ -52,20 +52,27 @@ object GameEngine {
     /**
      * Avança o calendário do jogo até [targetDateIso] (inclusive), processando
      * os ticks diários de CADA dia intermediário — moral, scouting, pagamentos
-     * semanais/mensais e janelas de transferência — SEM simular partidas.
+     * semanais/mensais, janelas de transferência — E simulando as partidas
+     * **dos OUTROS times** que aconteceriam nesses dias.
      *
      * É usado quando o tempo avança porque o jogador jogou uma partida
-     * manualmente (o salto de data acontece na [com.cblol.scout.ui.MatchSimulationActivity]).
-     * Antes desta correção, a data era apenas atribuída (`currentDate = match.date`),
-     * o que pulava todos os ticks — em especial o avanço do scouting, que ficava
-     * congelado.
+     * manualmente (o salto de data acontece na
+     * [com.cblol.scout.ui.MatchSimulationActivity]) ou usou "Avançar 1 dia" no
+     * Hub.
      *
-     * Não simula partidas porque a partida que causou o avanço já está sendo
-     * processada pela própria Activity de simulação; partidas de outros times no
-     * período são resolvidas quando o jogador as joga/assiste ou ao fim do split.
+     * **Partidas do gerente NÃO são auto-simuladas aqui** — ele precisa jogá-las
+     * manualmente. A Activity que chama esta função garante que avança apenas
+     * até depois de já ter jogado/resolvido a partida dele; o Hub bloqueia o
+     * avanço quando há partida do gerente no dia seguinte. Esta função apenas
+     * resolve as partidas dos demais times do split, garantindo que a
+     * classificação fique atualizada conforme o tempo passa.
      *
-     * Seguro contra datas no passado/iguais: se [targetDateIso] não for posterior
-     * à data atual, não faz nada.
+     * Histórico: antes desta versão, [advanceCalendarTo] só processava ticks e
+     * deixava as partidas dos outros times pendentes para sempre, o que
+     * mantinha a tabela de classificação congelada.
+     *
+     * Seguro contra datas no passado/iguais: se [targetDateIso] não for
+     * posterior à data atual, não faz nada.
      */
     fun advanceCalendarTo(context: Context, targetDateIso: String): AdvanceReport {
         val gs = GameRepository.current()
@@ -76,6 +83,9 @@ object GameEngine {
         while (date.isBefore(target)) {
             date = date.plusDays(1)
             processDailyTicks(context, gs, date, report)
+            // Simula partidas dos OUTROS times do dia (a do gerente, se houver,
+            // fica intacta — ver simulateOpponentMatchesOn).
+            simulateOpponentMatchesOn(context, gs, date.toString(), report)
         }
 
         GameRepository.save(context)
@@ -266,6 +276,56 @@ object GameEngine {
             // feed é sobre a carreira dele, não sobre a liga inteira).
             if (isMyMatch) publishMatchNews(context, gs, m)
         }
+    }
+
+    /**
+     * Simula apenas as partidas **dos outros times** agendadas para [iso],
+     * deixando a do gerente (se houver) intacta para que ele a jogue
+     * manualmente. Usado por [advanceCalendarTo] para manter a classificação
+     * atualizada conforme o tempo passa, sem nunca auto-simular o time do
+     * gerente — o que tiraria do jogador a chance de jogar suas partidas.
+     *
+     * As partidas são resolvidas pelo mesmo motor da simulação automática
+     * ([MatchSimulator.simulate]) e logadas com um ícone neutro — sem entulhar
+     * o feed de notícias do gerente (esse é reservado para os jogos dele).
+     */
+    private fun simulateOpponentMatchesOn(
+        context: Context,
+        gs: GameState,
+        iso: String,
+        report: AdvanceReport
+    ) {
+        val todayMatches = gs.matches.filter {
+            it.date == iso && !it.played &&
+                it.homeTeamId != gs.managerTeamId &&
+                it.awayTeamId != gs.managerTeamId
+        }
+        todayMatches.forEach { m ->
+            MatchSimulator.simulate(context, m)
+            report.matchesPlayed += 1
+            val homeName = teamName(context, m.homeTeamId)
+            val awayName = teamName(context, m.awayTeamId)
+            GameRepository.log(
+                "MATCH",
+                "Rodada ${m.round}: $homeName ${m.homeScore}-${m.awayScore} $awayName"
+            )
+        }
+    }
+
+    /**
+     * Versão pública de [simulateOpponentMatchesOn] para a data ATUAL do jogo,
+     * usada pela [com.cblol.scout.ui.MatchSimulationActivity] logo após o
+     * jogador resolver a própria partida. Garante que as partidas dos demais
+     * times agendadas para o MESMO dia sejam simuladas, mantendo a
+     * classificação coerente. Idempotente: partidas já jogadas são ignoradas
+     * pelo filtro interno.
+     */
+    fun simulateOpponentMatchesToday(context: Context): AdvanceReport {
+        val gs = GameRepository.current()
+        val report = AdvanceReport()
+        simulateOpponentMatchesOn(context, gs, gs.currentDate, report)
+        GameRepository.save(context)
+        return report
     }
 
     /**
