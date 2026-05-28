@@ -489,11 +489,50 @@ class MatchSimulationActivity : AppCompatActivity() {
         if (seriesFinished) {
             GameRepository.log("MATCH",
                 "Rodada ${match.round}: ${binding.tvHomeName.text} $homeMapsFinal-$awayMapsFinal ${binding.tvAwayName.text}")
+            // Cobertura jornalística: só para partidas do time do gerente.
+            if (isMine) publishMatchNews(gs, winner, homeMapsFinal, awayMapsFinal)
         }
         GameRepository.save(applicationContext)
 
         launchResultActivity(homeMapsFinal, awayMapsFinal, winner, prize, seriesFinished, gs.managerTeamId)
         finish()
+    }
+
+    /**
+     * Publica a notícia da série recém-encerrada no feed (NewsService). Detecta
+     * zebra comparando a força dos dois elencos — mesma heurística do
+     * [GameEngine] para partidas auto-simuladas, mantendo o tom consistente.
+     */
+    private fun publishMatchNews(
+        gs: com.cblol.scout.data.GameState,
+        winnerId: String,
+        homeMapsFinal: Int,
+        awayMapsFinal: Int
+    ) {
+        val managerIsHome = match.homeTeamId == gs.managerTeamId
+        val opponentId = if (managerIsHome) match.awayTeamId else match.homeTeamId
+        val managerMaps = if (managerIsHome) homeMapsFinal else awayMapsFinal
+        val opponentMaps = if (managerIsHome) awayMapsFinal else homeMapsFinal
+        val managerWon = winnerId == gs.managerTeamId
+
+        val managerStrength = com.cblol.scout.game.MatchSimulator.teamStrength(
+            GameRepository.rosterOf(applicationContext, gs.managerTeamId))
+        val opponentStrength = com.cblol.scout.game.MatchSimulator.teamStrength(
+            GameRepository.rosterOf(applicationContext, opponentId))
+        val wasUpset = if (managerWon) managerStrength + 5 <= opponentStrength
+                       else opponentStrength + 5 <= managerStrength
+
+        com.cblol.scout.domain.usecase.NewsService.reportMatchResult(
+            state = gs,
+            managerTeamName = if (managerIsHome) binding.tvHomeName.text.toString()
+                              else binding.tvAwayName.text.toString(),
+            opponentName = if (managerIsHome) binding.tvAwayName.text.toString()
+                           else binding.tvHomeName.text.toString(),
+            managerWon = managerWon,
+            managerMaps = managerMaps,
+            opponentMaps = opponentMaps,
+            wasUpset = wasUpset
+        )
     }
 
     private fun calculatePrize(winner: String, homeMaps: Int, awayMaps: Int, managerId: String): Long {

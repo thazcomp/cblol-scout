@@ -111,6 +111,10 @@ object GameEngine {
                 "MOOD",
                 "${player.nome_jogo} pediu transferência por estar desmotivado."
             )
+            // Cobertura de bastidores: pedido de transferência vira notícia.
+            com.cblol.scout.domain.usecase.NewsService.reportTransferRequest(
+                gs, player.nome_jogo, teamName(context, gs.managerTeamId)
+            )
         }
 
         // 0.5. Tick de scouting: avança os jogadores em scouting ativo.
@@ -257,7 +261,43 @@ object GameEngine {
                 "MATCH",
                 "Rodada ${m.round}: $homeName ${m.homeScore}-${m.awayScore} $awayName"
             )
+
+            // Cobertura jornalística: só para partidas do time do gerente (o
+            // feed é sobre a carreira dele, não sobre a liga inteira).
+            if (isMyMatch) publishMatchNews(context, gs, m)
         }
+    }
+
+    /**
+     * Publica a notícia de uma partida do time do gerente no feed, detectando
+     * se o resultado foi uma "zebra" (favorito caiu) ao comparar a força dos
+     * dois elencos. A força vem do mesmo cálculo da simulação
+     * ([MatchSimulator.teamStrength]).
+     */
+    private fun publishMatchNews(context: Context, gs: GameState, m: com.cblol.scout.data.Match) {
+        val managerIsHome = m.homeTeamId == gs.managerTeamId
+        val opponentId = if (managerIsHome) m.awayTeamId else m.homeTeamId
+        val managerMaps = if (managerIsHome) m.homeScore else m.awayScore
+        val opponentMaps = if (managerIsHome) m.awayScore else m.homeScore
+        val managerWon = m.winnerTeamId() == gs.managerTeamId
+
+        val managerStrength = MatchSimulator.teamStrength(
+            GameRepository.rosterOf(context, gs.managerTeamId))
+        val opponentStrength = MatchSimulator.teamStrength(
+            GameRepository.rosterOf(context, opponentId))
+        // Zebra = quem tinha desvantagem clara de força (>= 5 pontos) venceu.
+        val wasUpset = if (managerWon) managerStrength + 5 <= opponentStrength
+                       else opponentStrength + 5 <= managerStrength
+
+        com.cblol.scout.domain.usecase.NewsService.reportMatchResult(
+            state = gs,
+            managerTeamName = teamName(context, gs.managerTeamId),
+            opponentName = teamName(context, opponentId),
+            managerWon = managerWon,
+            managerMaps = managerMaps,
+            opponentMaps = opponentMaps,
+            wasUpset = wasUpset
+        )
     }
 
     /** Próxima partida do meu time (a partir da data atual, inclusive). */
@@ -363,14 +403,19 @@ object GameEngine {
         milestones.forEach { m ->
             val nameA = roster.find { it.id == m.playerAId }?.nome_jogo ?: m.playerAId
             val nameB = roster.find { it.id == m.playerBId }?.nome_jogo ?: m.playerBId
-            val msg = when (m.tier) {
-                com.cblol.scout.data.BondTier.BONDED ->
-                    "🔥 $nameA e $nameB formaram uma parceria forte dentro e fora do jogo."
-                com.cblol.scout.data.BondTier.TOXIC ->
-                    "☠️ A relação entre $nameA e $nameB azedou de vez — clima pesado no vestiário."
+            when (m.tier) {
+                com.cblol.scout.data.BondTier.BONDED -> {
+                    GameRepository.log("MOOD",
+                        "🔥 $nameA e $nameB formaram uma parceria forte dentro e fora do jogo.")
+                    com.cblol.scout.domain.usecase.NewsService.reportStrongBond(gs, nameA, nameB)
+                }
+                com.cblol.scout.data.BondTier.TOXIC -> {
+                    GameRepository.log("MOOD",
+                        "☠️ A relação entre $nameA e $nameB azedou de vez — clima pesado no vestiário.")
+                    com.cblol.scout.domain.usecase.NewsService.reportLockerRoomCrisis(gs, nameA, nameB)
+                }
                 else -> return@forEach
             }
-            GameRepository.log("MOOD", msg)
         }
     }
 

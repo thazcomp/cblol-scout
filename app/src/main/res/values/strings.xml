@@ -777,4 +777,9 @@
     <string name="team_select_tier_label_cd">CD</string>
     <string name="team_select_start_message_second">Circuito Desafiante · 2ª divisão\n💰 Orçamento: R$ %1$s\n📈 Patrocínio: R$ %2$s/semana\n\nMenos dinheiro, mais desafio. Use o banco e a categoria de base para crescer.</string>
 
+    <!-- ════════════ FEED DE NOTÍCIAS ════════════ -->
+    <string name="news_title">📰 Notícias</string>
+    <string name="news_header_subtitle">A imprensa de esports cobrindo a sua trajetória</string>
+    <string name="news_empty">Ainda não há notícias. Jogue partidas e movimente o elenco para a imprensa começar a cobrir o seu time.</string>
+
 </resources>

@@ -693,6 +693,78 @@ isso) e a infraestrutura toda já contempla as duas divisões coexistindo.
 
 ---
 
+## Feed de notícias
+
+O **feed de notícias** simula a cobertura da imprensa de esports sobre a
+carreira do gerente. Vive em `NewsService` (domain/usecase, JVM-puro), com o
+feed persistido em `GameState.news` (lista de `NewsItem`, mais recentes
+primeiro, limitada a `MAX_FEED_SIZE = 40`).
+
+### Conceito e diferença do log
+
+O `gameLog` (`GameRepository.log`) é o registro **cru e técnico** dos eventos
+("Rodada 3: Meu Time 2-0 Rival"). A notícia é a **leitura jornalística** do
+mesmo fato, com fonte fictícia, manchete chamativa e lead ("Atropelo! Meu Time
+não toma sustos e despacha o Rival por 2-0"). São dois níveis de abstração:
+manter separado respeita SRP e deixa o tom das notícias evoluir sem mexer no
+log. **As notícias não afetam a simulação** — são puramente imersivas.
+
+### Fontes fictícias
+
+Para não colidir com veículos reais, as fontes são portais inventados, agrupados
+por afinidade de editoria (mas qualquer um pode cobrir qualquer assunto):
+partidas (Rift Report, Linha de Base, Central do Rift), mercado/finanças
+(Mercado GG, Janela Aberta, Boletim Pro), geral (Portal Nexus, Esports Já,
+Tribuna Gamer) e bastidores (Bastidores GG, Raio-X do Elenco, Fofoca do Rift).
+Cada manchete tem 3-4 variações sorteadas (`pick(...)`) para o feed não repetir
+o mesmo texto.
+
+### Eventos cobertos e prioridade editorial
+
+Cada `report*` publica um `NewsItem` com uma prioridade (HEADLINE/HIGH/MEDIUM/
+LOW). A prioridade ordena empates de data e define a manchete de capa no Hub:
+
+- **Partidas** (`reportMatchResult`): editorializa por contexto — zebra
+  (favorito caiu, HEADLINE), goleada 2-0, jogo apertado 2-1, tropeço. O
+  chamador informa `wasUpset` comparando a força dos elencos
+  (`MatchSimulator.teamStrength`), mantendo o serviço desacoplado.
+- **Marcos de jogador** (`reportPlayerMilestone`): atuações de destaque.
+- **Transferências** (`reportSigning`/`reportDeparture`): chegada cara é HIGH.
+- **Base** (`reportAcademyPromotion`): joia de overall ≥ 70 é HEADLINE.
+- **Finanças** (`reportSponsorship`/`reportFinancialCrisis`).
+- **Vestiário** (`reportStrongBond`/`reportLockerRoomCrisis`/
+  `reportTransferRequest`): química e crises.
+- **Tabela** (`reportStandings`): liderança e zona de risco são HIGH.
+
+### Hooks de geração
+
+- `GameEngine.simulateMatchesOn` → `publishMatchNews` para partidas
+  auto-simuladas do gerente.
+- `MatchSimulationActivity.applyResult` → `publishMatchNews` para partidas
+  jogadas/assistidas manualmente. As duas usam a mesma heurística de zebra.
+- `GameEngine.processPlayerBonds` → parceria forte / crise tóxica.
+- `GameEngine` (decay de moral) → pedido de transferência.
+- `AcademyActivity.onPromote` → promoção da base.
+
+Outros pontos (patrocínio assinado, venda/compra no mercado, crise financeira
+no tick) têm métodos prontos no serviço e podem ser plugados conforme desejado.
+
+### UI
+
+O card 📰 Notícias no Hub mostra a manchete de maior destaque
+(`NewsService.latestHeadline`) como subtítulo; tocá-lo abre a `NewsActivity`,
+que lista o feed completo via `item_news` (barra lateral colorida por
+editoria, fonte + data + categoria + manchete + lead). Testes em
+`NewsServiceTest`.
+
+**Por que separado dos demais sistemas?** A notícia é uma camada de
+*apresentação narrativa* sobre eventos que já existem. Concentrar a redação num
+único serviço (em vez de espalhar strings pelos hooks) mantém o tom consistente
+e facilita adicionar/variar manchetes — os hooks só dizem "isto aconteceu", o
+`NewsService` decide "como noticiar".
+
+---
+
 ## Status da migração
 
 Todas as Activities foram migradas para o padrão SOLID + recursos:

@@ -140,6 +140,13 @@ object GameRepository {
             gs.secondDivisionPlayers = mutableListOf()
         }
 
+        // Feed de notícias: saves anteriores ao sistema não têm o campo. Como é
+        // nullable, basta garantir uma lista mutável; o NewsService publica sob
+        // demanda. Carreiras em andamento começam com o feed vazio.
+        if (gs.news == null) {
+            gs.news = mutableListOf()
+        }
+
         return gs
     }
 

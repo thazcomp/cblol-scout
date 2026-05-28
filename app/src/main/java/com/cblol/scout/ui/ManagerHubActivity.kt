@@ -279,6 +279,24 @@ class ManagerHubActivity : AppCompatActivity() {
         } else {
             tv.visibility = View.GONE
         }
+        renderNewsSummary()
+    }
+
+    /**
+     * Atualiza o badge do card de Notícias: mostra a manchete de maior destaque
+     * (truncada). Se o feed está vazio, esconde o badge — o card continua
+     * acessível para abrir a tela (que mostra o empty state).
+     */
+    private fun renderNewsSummary() {
+        val tv = findViewById<android.widget.TextView>(R.id.tv_hub_news_subtitle)
+        val gs = runCatching { GameRepository.current() }.getOrNull() ?: return
+        val headline = com.cblol.scout.domain.usecase.NewsService.latestHeadline(gs)
+        if (headline != null) {
+            tv.visibility = View.VISIBLE
+            tv.text = headline.headline
+        } else {
+            tv.visibility = View.GONE
+        }
     }
 
     /**
@@ -342,6 +360,9 @@ class ManagerHubActivity : AppCompatActivity() {
         }
         findViewById<View>(R.id.card_bank).setOnClickListener {
             startActivity(BankActivity.intent(this))
+        }
+        findViewById<View>(R.id.card_news).setOnClickListener {
+            startActivity(NewsActivity.intent(this))
         }
         binding.btnQuit.setOnClickListener        { confirmQuit() }
     }

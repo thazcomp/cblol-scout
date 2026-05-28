@@ -258,8 +258,88 @@ data class GameState(
      * Distinto de [promotedPlayers] (academia) e de [Player]s do snapshot ou
      * do [com.cblol.scout.util.SecondDivisionGenerator] (free agents).
      */
-    var secondDivisionPlayers: MutableList<Player> = mutableListOf()
+    var secondDivisionPlayers: MutableList<Player> = mutableListOf(),
+
+    /**
+     * Feed de notícias do mundo do jogo — manchetes editorializadas de portais
+     * fictícios de esports, cobrindo partidas, marcos de jogadores,
+     * transferências, finanças, etc.
+     *
+     * Diferente do [gameLog] (cru e técnico), as notícias são narrativas e têm
+     * fonte/manchete/lead. Geradas pelo
+     * [com.cblol.scout.domain.usecase.NewsService] a partir dos mesmos eventos
+     * que alimentam o log. Mais recentes primeiro.
+     *
+     * Nullable por compatibilidade com saves antigos — inicializado
+     * defensivamente no [com.cblol.scout.game.GameRepository].
+     */
+    var news: MutableList<NewsItem>? = null
 )
+
+/**
+ * ╔══════════════════════════════════════════════════╗
+ * ║ SISTEMA DE NOTÍCIAS (FEED DE ESPORTS)                       ║
+ * ╚══════════════════════════════════════════════════╝
+ *
+ * Simula a cobertura da imprensa de esports sobre a carreira: cada [NewsItem]
+ * é uma manchete redigida no estilo de um portal/canal fictício, gerada a
+ * partir de eventos relevantes (resultados de partida, marcos de jogadores,
+ * transferências, promoções da base, finanças, química do elenco).
+ *
+ * A intenção é dar VIDA ao mundo — ver "Surpresa no Rift: time do gerente
+ * atropela a LOUD" é mais imersivo que o log cru "Vitória 2-0". As notícias
+ * NÃO afetam a simulação; são puramente narrativas/imersivas.
+ */
+
+/**
+ * Uma notícia do feed de esports.
+ *
+ * @property id identificador único
+ * @property date data (ISO) em que a notícia foi publicada (= data do evento)
+ * @property source nome do portal/canal fictício (ex: "Rift Report")
+ * @property sourceEmoji emoji/ícone do portal
+ * @property headline manchete chamativa (a linha principal)
+ * @property body lead/sub-manchete — 1-2 frases desenvolvendo a notícia
+ * @property category categoria temática (define cor/ícone na UI)
+ * @property priority prioridade editorial: quanto maior, mais "destaque" a
+ *   notícia teve. Manchetes de capa (viradas épicas, títulos) têm prioridade
+ *   alta; notas de rodapé (treino comum) têm prioridade baixa. Usado para
+ *   ordenar empates de data e destacar a manchete principal no Hub.
+ */
+data class NewsItem(
+    val id: String,
+    val date: String,
+    val source: String,
+    val sourceEmoji: String,
+    val headline: String,
+    val body: String,
+    val category: NewsCategory,
+    val priority: Int = 0
+)
+
+/**
+ * Categoria de uma notícia. Define o emoji/cor de destaque e ajuda a agrupar
+ * o tipo de cobertura.
+ *
+ * SOLID/OCP: novas editorias (ex: internacional, bastidores) entram aqui sem
+ * mexer no [com.cblol.scout.domain.usecase.NewsService].
+ */
+enum class NewsCategory(val emoji: String, val label: String) {
+    /** Resultado de partida — vitórias, derrotas, viradas, goleadas. */
+    MATCH("🏆", "Partida"),
+    /** Marco individual de jogador — recordes, atuações de destaque. */
+    PLAYER("⭐", "Jogador"),
+    /** Transferências — chegadas, saídas, valores. */
+    TRANSFER("🔄", "Mercado"),
+    /** Categoria de base — promoções, joias reveladas. */
+    ACADEMY("🌱", "Base"),
+    /** Finanças — patrocínios, empréstimos, saúde do clube. */
+    FINANCE("💰", "Finanças"),
+    /** Bastidores do elenco — química, moral, crises. */
+    LOCKER_ROOM("🗣️", "Vestiário"),
+    /** Classificação / corrida pelo título. */
+    STANDINGS("📊", "Tabela")
+}
 
 /**
  * ╔══════════════════════════════════════════════════╗

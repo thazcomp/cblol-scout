@@ -216,6 +216,10 @@ class AcademyActivity : AppCompatActivity() {
                     "ACADEMY",
                     "${prospect.nome} subiu da base para o elenco principal (overall ${prospect.currentOverall})."
                 )
+                // Cobertura jornalística da promoção (joia revelada).
+                com.cblol.scout.domain.usecase.NewsService.reportAcademyPromotion(
+                    gs, prospect.nome, teamName, prospect.currentOverall
+                )
                 GameRepository.save(applicationContext)
                 SquadManager.validateAndFixRoster(applicationContext)
                 stylizedDialog(this)
