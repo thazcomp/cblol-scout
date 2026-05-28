@@ -179,7 +179,7 @@ class MatchSimulationActivity : AppCompatActivity() {
             }
 
             playEvents(gameEvents)
-            withContext(Dispatchers.Main) { applyResult(homeMaps, awayMaps) }
+            withContext(Dispatchers.Main) { applyResult(homeMaps, awayMaps, result.homeWon) }
         }
     }
 
@@ -198,7 +198,7 @@ class MatchSimulationActivity : AppCompatActivity() {
         for (e in result.events) accumulateStats(e)
         val finalHome = partialHome + if (result.homeWon) 1 else 0
         val finalAway = partialAway + if (!result.homeWon) 1 else 0
-        withContext(Dispatchers.Main) { applyResult(finalHome, finalAway) }
+        withContext(Dispatchers.Main) { applyResult(finalHome, finalAway, result.homeWon) }
     }
 
     /** Acumula stats no estado interno sem renderizar nada. */
@@ -452,7 +452,20 @@ class MatchSimulationActivity : AppCompatActivity() {
 
     // ── Aplicação do resultado ───────────────────────────────────────────
 
-    private fun applyResult(homeMapsFinal: Int, awayMapsFinal: Int) {
+    /**
+     * Aplica o resultado do mapa recém-encerrado no estado e abre a
+     * [MatchResultActivity].
+     *
+     * @param homeMapsFinal placar acumulado da série do lado home
+     * @param awayMapsFinal placar acumulado da série do lado away
+     * @param mapWonByHome quem venceu **este** mapa (não necessariamente quem
+     *   lidera a série). É essencial passar isto explicitamente, não derivar
+     *   de `homeMapsFinal > awayMapsFinal`: o placar pode estar EMPATADO
+     *   após um mapa (ex: 1-1) e aí a comparação não diria quem venceu o mapa
+     *   atual. Esse bug fazia a tela mostrar "VITÓRIA" para o lado away mesmo
+     *   quando o home tinha vencido o mapa que levou ao empate.
+     */
+    private fun applyResult(homeMapsFinal: Int, awayMapsFinal: Int, mapWonByHome: Boolean) {
         if (resultApplied) return
         resultApplied = true
 
@@ -467,7 +480,17 @@ class MatchSimulationActivity : AppCompatActivity() {
         }
 
         val gs     = GameRepository.current()
-        val winner = if (homeMapsFinal > awayMapsFinal) match.homeTeamId else match.awayTeamId
+        // Vencedor a reportar para a tela de resultado:
+        //  - Série terminada → quem fez 2 mapas (líder do placar)
+        //  - Mapa intermediário → quem venceu ESTE mapa (mapWonByHome)
+        // Sem essa distinção, um empate 1-1 após o 2º mapa fazia o código
+        // antigo (`homeMapsFinal > awayMapsFinal`) sempre escolher o lado away
+        // como vencedor, gerando "vitória" incorreta para times do lado direito.
+        val winner = if (seriesFinished) {
+            if (homeMapsFinal > awayMapsFinal) match.homeTeamId else match.awayTeamId
+        } else {
+            if (mapWonByHome) match.homeTeamId else match.awayTeamId
+        }
         val isMine = match.homeTeamId == gs.managerTeamId || match.awayTeamId == gs.managerTeamId
 
         val prize = if (seriesFinished && isMine) calculatePrize(winner, homeMapsFinal, awayMapsFinal, gs.managerTeamId) else 0L

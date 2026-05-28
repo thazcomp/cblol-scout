@@ -817,6 +817,28 @@ liga viva no fundo, com a tabela sempre coerente com a data atual.
 
 ---
 
+ ## Tela de resultado: vencedor do mapa atual vs. líder da série
+
+A `MatchSimulationActivity` chama `applyResult(homeMapsFinal, awayMapsFinal,
+mapWonByHome)` após cada mapa de uma série BO3. O parâmetro `mapWonByHome`
+é essencial e não pode ser inferido do placar acumulado:
+
+- **Série encerrada** (2-0 / 2-1 / 0-2 / 1-2): o vencedor exibido na
+  `MatchResultActivity` é o líder do placar (`homeMapsFinal > awayMapsFinal`).
+- **Mapa intermediário com placar empatado** (1-1 após mapa 2): o vencedor
+  *deste* mapa NÃO é dedutível do placar. A flag `mapWonByHome` vem direto
+  do motor (`LiveMatchEngine.generateSingleMap(...).homeWon`) e indica
+  inequivocamente quem venceu o mapa recém-jogado.
+
+**Histórico do bug:** antes, o código usava `homeMapsFinal > awayMapsFinal`
+para escolher o vencedor em todos os casos. Num empate 1-1, a comparação é
+`false` e o `else` apontava sempre para o lado away — então o time que estava
+do lado direito da tela aparecia como vencedor mesmo quando tinha perdido o
+mapa. Isso afetava em cascata XP do técnico, moral do elenco, bônus de
+patrocínio e laços, todos baseados em `MatchResultData.playerWon`.
+
+---
+
 ## Status da migração
 
 Todas as Activities foram migradas para o padrão SOLID + recursos:
