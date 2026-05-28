@@ -37,6 +37,15 @@ object GameConstants {
         const val WEEKLY_SPONSOR_TIER_A = 350_000L
         const val WEEKLY_SPONSOR_TIER_B = 200_000L
 
+        /**
+         * Orçamento e patrocínio iniciais para carreiras que começam na 2ª
+         * divisão. São bem menores que os do tier B da 1ª divisão porque o
+         * desafio do modo é justamente trabalhar com pouco — obrigando o uso
+         * do banco, da categoria de base e da pesca de talentos baratos.
+         */
+        const val STARTING_BUDGET_SECOND_DIV = 500_000L
+        const val WEEKLY_SPONSOR_SECOND_DIV  = 80_000L
+
         /** Multiplicadores de preço de mercado por bracket de overall. */
         const val MARKET_MULTIPLIER_MYTHIC      = 2.4   // overall >= 85
         const val MARKET_MULTIPLIER_LEGENDARY   = 1.8   // 75-84

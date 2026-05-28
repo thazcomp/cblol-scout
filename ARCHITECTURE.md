@@ -630,6 +630,69 @@ rede de segurança fora do caminho crítico do orçamento mensal.
 
 ---
 
+## Modo "começar na 2ª divisão"
+
+O jogador pode iniciar a carreira tanto na **1ª divisão (CBLOL)** — com os 8
+times do snapshot oficial — quanto na **2ª divisão (Circuito Desafiante)**, com
+8 times procedurais gerados na hora. As duas vivem como entidades de primeira
+classe no `GameState`, distinguidas pelo enum `Division`.
+
+### Por que procedural na 2ª divisão?
+
+Times reais do CD mudam todo split, e ter dados oficiais por trás seria pesado
+e ficaria datado em semanas. O `SecondDivisionTeamsGenerator` cria 8 times com
+nomes fictícios ("Aurora E-sports", "Phoenix Gaming"...) e roster completo (5
+titulares + 1 reserva) a partir de um seed. Mesmo seed → mesma saída, o que
+permite à `TeamSelectActivity` mostrar exatamente os times que serão criados
+na carreira (consistência de UX).
+
+### O que muda entre divisões
+
+- **Orçamento e patrocínio**: a 2ª divisão usa
+  `GameConstants.Economy.STARTING_BUDGET_SECOND_DIV` (R$ 500k) e
+  `WEEKLY_SPONSOR_SECOND_DIV` (R$ 80k/semana) — bem menores que o tier B da 1ª.
+  É o que torna o modo um "começar de baixo": obriga o uso ativo do banco, da
+  categoria de base e do mercado de jogadores baratos.
+- **Roster do gerente**: vem de `gs.secondDivisionPlayers` em vez do snapshot.
+  O `GameRepository.rosterOf` já une as 4 fontes (snapshot + free agents CD +
+  academia + roster da 2ª div), então o restante do código não precisa saber
+  da divisão ativa.
+- **Mercado**: o `GameRepository.marketRoster` filtra por divisão. Em carreira
+  na 2ª, jogadores da 1ª div ficam **fora de alcance** (não aparecem no
+  mercado) — a economia da 2ª div não cobriria mesmo, e a separação é uma
+  trava narrativa coerente. Free agents do CD ficam disponíveis em ambas.
+- **Classificação e adversários**: o `MatchSimulator.computeStandings` e
+  outras telas que listam times usam `GameRepository.teamsForCurrentDivision`
+  em vez de `snapshot.times`. Sem isso, a classificação ficaria vazia (os ids
+  `cd2_*` não existem no snapshot).
+- **Cores dos times**: o `TeamColors.forTeam` gera uma cor estável via hash do
+  id quando o time tem prefixo `cd2_`, evitando ter que cadastrar 15 paletas.
+
+### Fluxo do `startNewCareer`
+
+O `GameEngine.startNewCareer` agora aceita `division` e `seed`. O método
+privado `resolveDivisionSetup` empacota os parâmetros iniciais (orçamento,
+lista de times, roster) conforme a divisão escolhida, mantendo o fluxo
+principal limpo. Em carreira na 2ª div, `gs.secondDivisionTeams` e
+`gs.secondDivisionPlayers` são populados ANTES do primeiro `rosterOf` — sem
+isso, `PlayerBondService.ensureBondsFor` pegaria roster vazio.
+
+### UI
+
+A `TeamSelectActivity` ganhou um `TabLayout` com duas abas. O seed da 2ª
+divisão é sorteado uma vez no `onCreate` e reutilizado tanto para gerar a
+lista mostrada quanto para a chamada `vm.startCareer(..., seed)`, garantindo
+que o time que o usuário vê é exatamente o que existirá na carreira.
+
+### Promoção/rebaixamento
+
+**NÃO implementados nesta iteração** — escopo controlado. O split na 2ª
+divisão termina e o próximo começa na mesma divisão. Promoção automática pelo
+desempenho é um próximo passo natural (`GameState.division` já é mutável para
+isso) e a infraestrutura toda já contempla as duas divisões coexistindo.
+
+---
+
 ## Status da migração
 
 Todas as Activities foram migradas para o padrão SOLID + recursos:

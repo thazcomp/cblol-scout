@@ -105,9 +105,12 @@ class MatchSimulationActivity : AppCompatActivity() {
     }
 
     private fun renderTeamHeader() {
-        val snap = GameRepository.snapshot(applicationContext)
-        val home = snap.times.find { it.id == match.homeTeamId } ?: return
-        val away = snap.times.find { it.id == match.awayTeamId } ?: return
+        // Times podem vir do snapshot (1ª div) ou de gs.secondDivisionTeams
+        // (modo começar de baixo). Usamos teamsForCurrentDivision para cobrir
+        // ambos sem ifs espalhados pela tela.
+        val teams = GameRepository.teamsForCurrentDivision(applicationContext)
+        val home = teams.find { it.id == match.homeTeamId } ?: return
+        val away = teams.find { it.id == match.awayTeamId } ?: return
         binding.tvHomeName.text = home.nome
         binding.tvAwayName.text = away.nome
         binding.viewHomeBar.setBackgroundColor(TeamColors.forTeam(home.id))

@@ -1,6 +1,27 @@
 package com.cblol.scout.data
 
 /**
+ * Divisão em que a carreira está sendo disputada.
+ *
+ * O jogador pode começar tanto na elite (CBLOL, 1ª divisão) quanto subindo de
+ * baixo (CD, 2ª divisão). Os modos têm estruturas análogas (round-robin
+ * duplo de 8 times, BO3, janelas de transferência, etc.) mas economia
+ * diferente — a 2ª divisão tem orçamento e patrocínio bem menores, o que
+ * destaca a importância do banco, da categoria de base e do mercado de
+ * jogadores baratos.
+ *
+ * SOLID/OCP: novos formatos (ex: amadora, internacional) entram aqui sem mexer
+ * em quem consome o enum, já que cada lugar trata exaustivamente.
+ */
+enum class Division(val label: String, val shortLabel: String) {
+    /** 1ª divisão (CBLOL) — 8 times do snapshot oficial, orçamento alto. */
+    FIRST("CBLOL", "1ª"),
+
+    /** 2ª divisão (Circuito Desafiante) — 8 times procedurais, orçamento baixo. */
+    SECOND("Circuito Desafiante", "2ª")
+}
+
+/**
  * Estado completo de uma carreira (modo jogo). Persistido em SharedPreferences via Gson.
  */
 data class GameState(
@@ -207,7 +228,37 @@ data class GameState(
      * defensivamente no [com.cblol.scout.game.GameRepository] e no próprio
      * [com.cblol.scout.domain.usecase.BankService].
      */
-    var bank: BankState? = null
+    var bank: BankState? = null,
+
+    /**
+     * Divisão em que a carreira está sendo disputada. Define quais times são
+     * adversários, o calendário do split e o orçamento inicial.
+     *
+     * Default [Division.FIRST] para manter compatibilidade com saves antigos
+     * (criados antes do modo 2ª divisão, sempre na elite).
+     */
+    var division: Division = Division.FIRST,
+
+    /**
+     * Times da 2ª divisão gerados proceduralmente na criação de uma carreira
+     * no modo [Division.SECOND]. Persistidos para que o split seja
+     * determinístico entre sessões — sem isso, regeneraríamos times com nomes
+     * diferentes a cada load.
+     *
+     * Vazio nas carreiras de 1ª divisão (os times de lá vem do snapshot).
+     */
+    var secondDivisionTeams: MutableList<Team> = mutableListOf(),
+
+    /**
+     * Roster dos times da 2ª divisão (id, nome, role, contrato, atributos),
+     * também persistido junto com [secondDivisionTeams] para sobreviver entre
+     * sessões. O [com.cblol.scout.game.GameRepository.rosterOf] inclui estes
+     * jogadores ao montar o elenco do gerente quando a carreira é na 2ª div.
+     *
+     * Distinto de [promotedPlayers] (academia) e de [Player]s do snapshot ou
+     * do [com.cblol.scout.util.SecondDivisionGenerator] (free agents).
+     */
+    var secondDivisionPlayers: MutableList<Player> = mutableListOf()
 )
 
 /**

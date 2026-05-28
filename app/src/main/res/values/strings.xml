@@ -770,4 +770,11 @@
     <string name="hub_bank_subtitle_debt">Dívida: R$ %1$s</string>
     <string name="hub_advance_financial_warning">Caixa em zona de %1$s. %2$s</string>
 
+    <!-- ════════════ MODO 2ª DIVISÃO (CIRCUITO DESAFIANTE) ════════════ -->
+    <string name="team_select_tab_first">1ª DIVISÃO</string>
+    <string name="team_select_tab_second">2ª DIVISÃO · CD</string>
+    <string name="team_select_subtitle_second">Comece de baixo · Circuito Desafiante</string>
+    <string name="team_select_tier_label_cd">CD</string>
+    <string name="team_select_start_message_second">Circuito Desafiante · 2ª divisão\n💰 Orçamento: R$ %1$s\n📈 Patrocínio: R$ %2$s/semana\n\nMenos dinheiro, mais desafio. Use o banco e a categoria de base para crescer.</string>
+
 </resources>

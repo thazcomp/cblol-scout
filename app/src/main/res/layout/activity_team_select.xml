@@ -42,6 +42,15 @@
             android:layout_marginBottom="12dp"/>
     </LinearLayout>
 
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tabs_division"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/color_surface"
+        app:tabIndicatorColor="@color/champion_gold"
+        app:tabSelectedTextColor="@color/champion_gold"
+        app:tabTextColor="@color/color_on_surface_variant" />
+
     <View android:layout_width="match_parent" android:layout_height="1dp"
         android:background="@color/color_outline_variant"/>
 

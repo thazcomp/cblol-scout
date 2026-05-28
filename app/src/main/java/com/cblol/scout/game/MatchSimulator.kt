@@ -52,8 +52,12 @@ object MatchSimulator {
     /** Calcula a tabela do split a partir das partidas jogadas. */
     fun computeStandings(context: Context): List<Standing> {
         val gs = GameRepository.current()
-        val snap = GameRepository.snapshot(context)
-        val perTeam = snap.times.associate { team ->
+        // **Importante**: usa os times da divisão ATIVA (1ª ou 2ª), não sempre
+        // o snapshot. Em carreira da 2ª divisão, os 8 times são procedurais
+        // (gs.secondDivisionTeams) e não existem no snapshot oficial — sem
+        // este redirecionamento, a classificação ficaria vazia.
+        val teams = GameRepository.teamsForCurrentDivision(context)
+        val perTeam = teams.associate { team ->
             team.id to mutableMapOf(
                 "name" to team.nome, "wins" to 0, "losses" to 0, "mw" to 0, "ml" to 0
             )

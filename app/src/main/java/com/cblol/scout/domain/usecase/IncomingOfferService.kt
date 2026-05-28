@@ -78,6 +78,11 @@ object IncomingOfferService {
      * Gera novas ofertas se (a) o mercado está aberto e (b) já passou o
      * intervalo desde a última geração. Idempotente dentro do mesmo intervalo.
      *
+     * @param rivalTeams times que podem oferecer propostas. Em carreira de 1ª
+     *   divisão, vem do snapshot oficial; em 2ª divisão, vem dos times
+     *   procedurais do CD (sem isso, times da elite ofereceriam valores
+     *   desproporcionais ao orçamento da 2ª div). Se preferir manter o
+     *   comportamento antigo, passe `snapshot.times`.
      * @param marketPriceOf função que calcula o valor de mercado de um jogador
      *   (injetada para reaproveitar a regra do TransferMarket sem acoplar a
      *   camada de jogo ao domínio).
@@ -86,7 +91,8 @@ object IncomingOfferService {
         state: GameState,
         snapshot: SnapshotData,
         roster: List<Player>,
-        marketPriceOf: (Player) -> Long
+        marketPriceOf: (Player) -> Long,
+        rivalTeams: List<com.cblol.scout.data.Team> = snapshot.times
     ): GenerationResult {
         if (!TransferWindowService.isMarketOpen(state)) return GenerationResult(emptyList())
 
@@ -110,7 +116,7 @@ object IncomingOfferService {
         val freeSlots = (MAX_ACTIVE_OFFERS - offers.size).coerceAtLeast(0)
         if (freeSlots == 0) return GenerationResult(emptyList())
 
-        val otherTeams = snapshot.times.filter { it.id != state.managerTeamId }
+        val otherTeams = rivalTeams.filter { it.id != state.managerTeamId }
         if (otherTeams.isEmpty()) return GenerationResult(emptyList())
 
         // Candidatos: jogadores do elenco que ainda não têm oferta ativa.

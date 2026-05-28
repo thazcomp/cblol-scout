@@ -79,8 +79,10 @@ class ScheduleActivity : AppCompatActivity() {
     // ── Lista de partidas ────────────────────────────────────────────────
 
     private fun renderList(matches: List<Match>) {
-        val gs   = GameRepository.current()
-        val snap = GameRepository.snapshot(applicationContext)
+        val gs    = GameRepository.current()
+        // Usa teamsForCurrentDivision para suportar tanto 1ª quanto 2ª divisão
+        // (em carreira na 2ª, os ids são procedurais e não existem no snapshot).
+        val teams = GameRepository.teamsForCurrentDivision(applicationContext)
         val sorted = matches.sortedWith(compareBy({ it.round }, { it.date }))
 
         binding.recycler.layoutManager = LinearLayoutManager(this)
@@ -88,7 +90,7 @@ class ScheduleActivity : AppCompatActivity() {
             matches      = sorted,
             currentDate  = gs.currentDate,
             myTeamId     = gs.managerTeamId,
-            teamNames    = snap.times.associate { it.id to it.nome },
+            teamNames    = teams.associate { it.id to it.nome },
             onMatchClick = { m -> handleMatchClick(m) }
         )
 
@@ -102,10 +104,10 @@ class ScheduleActivity : AppCompatActivity() {
     // ── Clique em uma partida ────────────────────────────────────────────
 
     private fun handleMatchClick(m: Match) {
-        val snap     = GameRepository.snapshot(applicationContext)
         val gs       = GameRepository.current()
-        val homeName = snap.times.find { it.id == m.homeTeamId }?.nome ?: m.homeTeamId
-        val awayName = snap.times.find { it.id == m.awayTeamId }?.nome ?: m.awayTeamId
+        val teams    = GameRepository.teamsForCurrentDivision(applicationContext)
+        val homeName = teams.find { it.id == m.homeTeamId }?.nome ?: m.homeTeamId
+        val awayName = teams.find { it.id == m.awayTeamId }?.nome ?: m.awayTeamId
 
         when {
             m.played -> showPlayedDialog(m, homeName, awayName)

@@ -6,8 +6,21 @@ import com.cblol.scout.game.GameEngine
 import com.cblol.scout.game.GameRepository
 
 class StartNewCareerUseCase(private val context: Context) {
-    operator fun invoke(managerName: String, teamId: String): GameState =
-        GameEngine.startNewCareer(context, managerName, teamId)
+    /**
+     * @param division divisão em que começar a carreira. Default é
+     *   [com.cblol.scout.data.Division.FIRST] para preservar compatibilidade
+     *   com chamadas que não especificam (e é o comportamento esperado para
+     *   quem não opta pelo modo "começar de baixo").
+     * @param seed semente para geração determinística dos times da 2ª divisão.
+     *   A TeamSelectActivity passa o mesmo seed que usou para mostrar os times
+     *   na seleção, garantindo que a carreira inicie com os times escolhidos.
+     */
+    operator fun invoke(
+        managerName: String,
+        teamId: String,
+        division: com.cblol.scout.data.Division = com.cblol.scout.data.Division.FIRST,
+        seed: Long = System.currentTimeMillis()
+    ): GameState = GameEngine.startNewCareer(context, managerName, teamId, division, seed)
 }
 
 class LoadCareerUseCase(private val context: Context) {

@@ -116,8 +116,14 @@ object GameEngine {
         // 0.5. Tick de scouting: avança os jogadores em scouting ativo.
         val scoutTick = ScoutingService.tickDaily(gs)
         scoutTick.levelUps.forEach { up ->
+            // Lookup em todas as fontes possíveis: snapshot (1ª div), free agents
+            // do CD, jogadores dos times da 2ª div (modo começar de baixo) e
+            // promovidos da academia. Sem cobrir todas, jogadores da 2ª div
+            // apareceriam como "id cru" no log.
             val playerName = GameRepository.snapshot(context).jogadores.find { it.id == up.playerId }?.nome_jogo
                 ?: com.cblol.scout.util.SecondDivisionGenerator.generate().find { it.id == up.playerId }?.nome_jogo
+                ?: gs.secondDivisionPlayers.find { it.id == up.playerId }?.nome_jogo
+                ?: gs.promotedPlayers?.find { it.id == up.playerId }?.nome_jogo
                 ?: up.playerId
             val msg = if (up.newLevel >= ScoutingService.MAX_LEVEL) {
                 "Scouting de $playerName concluído (nível ${up.newLevel})."
@@ -323,11 +329,16 @@ object GameEngine {
         com.cblol.scout.domain.usecase.IncomingOfferService.expireOffers(gs)
 
         val snapshot = GameRepository.snapshot(context)
+        // Em carreira na 2ª divisão, as ofertas devem vir dos OUTROS times da
+        // 2ª div (não de LOUD/paiN/etc, que ofereceriam valores absurdos para o
+        // orçamento do CD). teamsForCurrentDivision resolve isso.
+        val rivals = GameRepository.teamsForCurrentDivision(context)
         val result = com.cblol.scout.domain.usecase.IncomingOfferService.generateOffersIfDue(
             state = gs,
             snapshot = snapshot,
             roster = roster,
-            marketPriceOf = { TransferMarket.marketPriceOf(it) }
+            marketPriceOf = { TransferMarket.marketPriceOf(it) },
+            rivalTeams = rivals
         )
         result.newOffers.forEach { offer ->
             report.incomingOffers += offer.playerName
@@ -388,68 +399,139 @@ object GameEngine {
         }
     }
 
-    private fun teamName(context: Context, teamId: String): String =
-        GameRepository.snapshot(context).times.find { it.id == teamId }?.nome ?: teamId
+    /**
+     * Resolve o nome de um time pelo id consultando AMBAS as fontes — snapshot
+     * (1ª divisão) e [GameState.secondDivisionTeams] (procedurais da 2ª).
+     * Necessário porque o motor loga partidas independente da divisão.
+     */
+    private fun teamName(context: Context, teamId: String): String {
+        GameRepository.snapshot(context).times.find { it.id == teamId }?.let { return it.nome }
+        val gs = runCatching { GameRepository.current() }.getOrNull() ?: return teamId
+        return gs.secondDivisionTeams.find { it.id == teamId }?.nome ?: teamId
+    }
 
-    /** Cria uma carreira nova: gera estado inicial + calendário. */
+    /**
+     * Cria uma carreira nova: gera estado inicial + calendário.
+     *
+     * @param division divisão em que a carreira começa. Em [com.cblol.scout.data.Division.FIRST],
+     *   os adversários vêm do snapshot e a economia segue o tier do time. Em
+     *   [com.cblol.scout.data.Division.SECOND], geramos 8 times procedurais via
+     *   [com.cblol.scout.util.SecondDivisionTeamsGenerator] e usamos orçamento /
+     *   patrocínio reduzidos da 2ª divisão.
+     * @param seed semente opcional para geração determinística da 2ª divisão.
+     *   Permite que a tela de seleção mostre exatamente os mesmos times que
+     *   serão criados na carreira (consistência de UX).
+     */
     fun startNewCareer(
         context: Context,
         managerName: String,
-        teamId: String
+        teamId: String,
+        division: com.cblol.scout.data.Division = com.cblol.scout.data.Division.FIRST,
+        seed: Long = System.currentTimeMillis()
     ): GameState {
-        val snap = GameRepository.snapshot(context)
-        val team = snap.times.find { it.id == teamId } ?: error("Time não encontrado: $teamId")
-
-        val (budget, sponsorship) = budgetForTier(team.tier_orcamento)
         val splitStart = "2026-03-28"
         val splitEnd   = "2026-06-06"
-        // Jogo começa no primeiro dia da janela de pré-temporada (janela grande):
-        // splitStart menos PRE_SEASON_DURATION_DAYS. Fonte única no TransferWindowService.
         val gameStart  = com.cblol.scout.domain.usecase.TransferWindowService.gameStartFor(splitStart)
+
+        // Resolve time + economia + lista de adversários conforme a divisão.
+        // Em 2ª div, geramos times procedurais agora; em 1ª, usamos o snapshot.
+        val setup = resolveDivisionSetup(context, division, teamId, seed)
 
         val gs = GameState(
             managerName = managerName,
             managerTeamId = teamId,
             splitStartDate = splitStart,
             splitEndDate = splitEnd,
-            currentDate = gameStart, // começa na pré-temporada (mercado aberto)
-            budget = budget,
-            sponsorshipPerWeek = sponsorship
+            currentDate = gameStart,
+            budget = setup.budget,
+            sponsorshipPerWeek = setup.sponsorship
         )
-        gs.matches.addAll(ScheduleGenerator.generate(snap.times.map { it.id }, splitStart))
-
-        // Janelas de transferência: pré-temporada (agora) + inter-temporada (meio do split).
-        // O jogo começa dentro da janela de pré-temporada — mercado aberto desde o início.
+        gs.division = division
+        if (division == com.cblol.scout.data.Division.SECOND) {
+            gs.secondDivisionTeams = setup.teams.toMutableList()
+            gs.secondDivisionPlayers = setup.players.toMutableList()
+        }
+        gs.matches.addAll(ScheduleGenerator.generate(setup.teamIds, splitStart))
         gs.transferWindows.addAll(
             com.cblol.scout.domain.usecase.TransferWindowService
                 .buildWindowsForSplit(gameStart, splitStart)
         )
 
-        // Laços: inicializa a química (neutra) entre todos os pares do elenco
-        // inicial. A partir daqui ela evolui com o tempo de convivência, humor,
-        // resultados e eventos fora de partida.
+        // **Importante**: o GameRepository precisa do GameState salvo antes
+        // de chamar rosterOf, porque o roster da 2ª divisão vive em
+        // gs.secondDivisionPlayers. Sem isso, ensureBondsFor pegaria vazio.
+        GameRepository.save(context, gs)
+
         val initialRoster = GameRepository.rosterOf(context, teamId)
         com.cblol.scout.domain.usecase.PlayerBondService.ensureBondsFor(gs, initialRoster)
-
-        // Categoria de base: cria a academia BASIC e recruta a leva inicial de
-        // prospects, para o gerente já começar com talentos para desenvolver.
         com.cblol.scout.domain.usecase.AcademyService.initializeForNewCareer(gs)
 
+        val divLabel = if (division == com.cblol.scout.data.Division.SECOND)
+            " (Circuito Desafiante)" else ""
         gs.gameLog.add(
             com.cblol.scout.data.LogEntry(
                 gs.currentDate, "CAREER",
-                "Pré-temporada iniciada. Você é o novo técnico do ${team.nome}! Mercado de transferências aberto."
+                "Pré-temporada iniciada$divLabel. Você é o novo técnico do ${setup.teamName}! Mercado de transferências aberto."
             )
         )
         GameRepository.save(context, gs)
         return gs
     }
 
-    /** Devolve (orçamento_inicial, patrocínio_semanal) por tier do time. */
+    /**
+     * Resultado da resolução dos parâmetros iniciais da carreira conforme a
+     * divisão escolhida. Empacota tudo o que [startNewCareer] precisa para
+     * popular o [GameState] de forma uniforme.
+     */
+    private data class DivisionSetup(
+        val budget: Long,
+        val sponsorship: Long,
+        val teamName: String,
+        val teamIds: List<String>,
+        val teams: List<com.cblol.scout.data.Team>,
+        val players: List<Player>
+    )
+
+    private fun resolveDivisionSetup(
+        context: Context,
+        division: com.cblol.scout.data.Division,
+        teamId: String,
+        seed: Long
+    ): DivisionSetup = when (division) {
+        com.cblol.scout.data.Division.FIRST -> {
+            val snap = GameRepository.snapshot(context)
+            val team = snap.times.find { it.id == teamId }
+                ?: error("Time não encontrado na 1ª divisão: $teamId")
+            val (budget, sponsorship) = budgetForTier(team.tier_orcamento)
+            DivisionSetup(
+                budget = budget,
+                sponsorship = sponsorship,
+                teamName = team.nome,
+                teamIds = snap.times.map { it.id },
+                teams = emptyList(),
+                players = emptyList()
+            )
+        }
+        com.cblol.scout.data.Division.SECOND -> {
+            val gen = com.cblol.scout.util.SecondDivisionTeamsGenerator.generate(seed)
+            val team = gen.teams.find { it.id == teamId }
+                ?: error("Time não encontrado na 2ª divisão: $teamId (seed=$seed)")
+            DivisionSetup(
+                budget = GameConstants.Economy.STARTING_BUDGET_SECOND_DIV,
+                sponsorship = GameConstants.Economy.WEEKLY_SPONSOR_SECOND_DIV,
+                teamName = team.nome,
+                teamIds = gen.teams.map { it.id },
+                teams = gen.teams,
+                players = gen.players
+            )
+        }
+    }
+
+    /** Devolve (orçamento_inicial, patrocínio_semanal) por tier do time (1ª divisão). */
     private fun budgetForTier(tier: String): Pair<Long, Long> = when (tier) {
-        "S" -> 5_000_000L to 600_000L
-        "A" -> 3_000_000L to 350_000L
-        else -> 1_500_000L to 200_000L
+        "S" -> GameConstants.Economy.STARTING_BUDGET_TIER_S to GameConstants.Economy.WEEKLY_SPONSOR_TIER_S
+        "A" -> GameConstants.Economy.STARTING_BUDGET_TIER_A to GameConstants.Economy.WEEKLY_SPONSOR_TIER_A
+        else -> GameConstants.Economy.STARTING_BUDGET_TIER_B to GameConstants.Economy.WEEKLY_SPONSOR_TIER_B
     }
 
     fun recordMatchResult(context: Context, matchId: String, mapNumber: Int, winnerTeamId: String) {

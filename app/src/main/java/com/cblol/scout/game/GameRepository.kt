@@ -121,6 +121,25 @@ object GameRepository {
             gs.bank = com.cblol.scout.data.BankState()
         }
 
+        // Divisão + estado da 2ª divisão: saves anteriores ao modo não têm
+        // estes campos. Como `division` tem default não-nullable
+        // (Division.FIRST) e as listas são não-nullable com default vazio, o
+        // Gson pode mesmo assim deixar `division` null em saves antigos
+        // (default values do Kotlin não se aplicam quando o reflection do Gson
+        // popula o campo). Blindamos defensivamente.
+        @Suppress("SENSELESS_COMPARISON")
+        if (gs.division == null) {
+            gs.division = com.cblol.scout.data.Division.FIRST
+        }
+        @Suppress("SENSELESS_COMPARISON")
+        if (gs.secondDivisionTeams == null) {
+            gs.secondDivisionTeams = mutableListOf()
+        }
+        @Suppress("SENSELESS_COMPARISON")
+        if (gs.secondDivisionPlayers == null) {
+            gs.secondDivisionPlayers = mutableListOf()
+        }
+
         return gs
     }
 
@@ -144,10 +163,15 @@ object GameRepository {
     /**
      * Retorna jogadores efetivamente lotados num time, considerando transferências.
      *
-     * Inclui tanto jogadores do snapshot original (1ª divisão) quanto
-     * jogadores procedurais da 2ª divisão — desde que estejam atualmente
-     * vinculados ao time consultado via override. Sem essa união, um jogador
-     * comprado da 2ª divisão sumiria do elenco do gerente.
+     * Une **quatro fontes** possíveis:
+     *  1. Snapshot oficial (1ª divisão)
+     *  2. [com.cblol.scout.util.SecondDivisionGenerator] (free agents do CD)
+     *  3. [com.cblol.scout.data.GameState.promotedPlayers] (academia)
+     *  4. [com.cblol.scout.data.GameState.secondDivisionPlayers] (times da 2ª
+     *     divisão quando a carreira começou lá)
+     *
+     * O filtro final por `teamId` garante que cada jogador apareça apenas no
+     * time em que está atualmente vinculado (considerando overrides).
      */
     fun rosterOf(context: Context, teamId: String): List<Player> {
         val snap = snapshot(context)
@@ -155,43 +179,64 @@ object GameRepository {
         val overrides = gs?.playerOverrides ?: emptyMap()
 
         val fromSnapshot = snap.jogadores.map { applyOverride(it, overrides[it.id]) }
-        val fromSecondDiv = com.cblol.scout.util.SecondDivisionGenerator.generate()
+        val fromSecondDivAgents = com.cblol.scout.util.SecondDivisionGenerator.generate()
             .map { applyOverride(it, overrides[it.id]) }
-        // Jogadores promovidos da base: vivem no próprio GameState (não há fonte
-        // estática). Recebem overrides normalmente (salário, titularidade).
         val fromAcademy = (gs?.promotedPlayers ?: emptyList())
             .map { applyOverride(it, overrides[it.id]) }
+        // Roster procedural dos TIMES da 2ª divisão (modo "começar de baixo").
+        // Vazio em carreiras de 1ª divisão — sem custo.
+        val fromSecondDivTeams = (gs?.secondDivisionPlayers ?: emptyList())
+            .map { applyOverride(it, overrides[it.id]) }
 
-        return (fromSnapshot + fromSecondDiv + fromAcademy).filter { it.time_id == teamId }
+        return (fromSnapshot + fromSecondDivAgents + fromAcademy + fromSecondDivTeams)
+            .filter { it.time_id == teamId }
+    }
+
+    /**
+     * Lista os 8 times da divisão ATIVA da carreira. Em [com.cblol.scout.data.Division.FIRST]
+     * vem do snapshot; em [com.cblol.scout.data.Division.SECOND] vem do estado
+     * persistido. Use sempre que precisar dos adversários do gerente — evita
+     * a armadilha de listar times de 1ª div em carreira de 2ª div (ou vice-versa).
+     */
+    fun teamsForCurrentDivision(context: Context): List<com.cblol.scout.data.Team> {
+        val gs = state ?: return snapshot(context).times
+        return when (gs.division) {
+            com.cblol.scout.data.Division.FIRST  -> snapshot(context).times
+            com.cblol.scout.data.Division.SECOND -> gs.secondDivisionTeams.toList()
+        }
     }
 
     /**
      * Retorna jogadores que NÃO pertencem ao time do gerente (mercado).
      *
-     * Inclui:
-     *  - Jogadores das outras orgs da 1ª divisão (do snapshot original)
-     *  - **Jogadores da 2ª divisão** (Circuito Desafiante) — procedurais via
-     *    [com.cblol.scout.util.SecondDivisionGenerator]. São mais jovens e mais
-     *    baratos, alternativas viáveis para times com orçamento apertado.
-     *
-     * Filtra jogadores da 2ª divisão que já foram contratados pelo gerente
-     * (via override `newTeamId`) para não aparecerem duplicados no mercado.
+     * **Conforme a divisão da carreira**, monta o mercado adequado:
+     *  - **1ª divisão**: jogadores das outras orgs do snapshot + free agents
+     *    procedurais do CD (opção barata para quem precisa renovar).
+     *  - **2ª divisão**: jogadores dos OUTROS times da 2ª divisão + os mesmos
+     *    free agents do CD. Jogadores da 1ª divisão ficam **fora de alcance**
+     *    — um time da 2ª div não teria como contratar um titular do CBLOL
+     *    (e mesmo se tivesse, o orçamento não cobre). É uma trava narrativa
+     *    coerente com o modo.
      */
     fun marketRoster(context: Context): List<Player> {
         val gs = current()
-        val snap = snapshot(context)
-
-        // 1ª divisão (snapshot original) com overrides aplicados
-        val firstDivision = snap.jogadores.map { applyOverride(it, gs.playerOverrides[it.id]) }
-            .filter { it.time_id != gs.managerTeamId }
-
-        // 2ª divisão (procedural) também com overrides — importante para não
-        // re-listar jogador já contratado pelo gerente.
-        val secondDivision = com.cblol.scout.util.SecondDivisionGenerator.generate()
+        val freeAgents = com.cblol.scout.util.SecondDivisionGenerator.generate()
             .map { applyOverride(it, gs.playerOverrides[it.id]) }
             .filter { it.time_id != gs.managerTeamId }
 
-        return firstDivision + secondDivision
+        val rivals = when (gs.division) {
+            com.cblol.scout.data.Division.FIRST -> {
+                snapshot(context).jogadores
+                    .map { applyOverride(it, gs.playerOverrides[it.id]) }
+                    .filter { it.time_id != gs.managerTeamId }
+            }
+            com.cblol.scout.data.Division.SECOND -> {
+                gs.secondDivisionPlayers
+                    .map { applyOverride(it, gs.playerOverrides[it.id]) }
+                    .filter { it.time_id != gs.managerTeamId }
+            }
+        }
+        return rivals + freeAgents
     }
 
     /** Aplica override num jogador (cria nova instância). */
@@ -202,11 +247,18 @@ object GameRepository {
             salario_mensal_estimado_brl = ov.newSalary ?: p.contrato.salario_mensal_estimado_brl,
             fonte_salario = if (ov.newSalary != null) "renegociado" else p.contrato.fonte_salario
         )
+        // Quando o jogador muda de time (newTeamId), procura o nome em ambas as
+        // fontes — snapshot oficial (1ª div) ou times procedurais da 2ª div do
+        // estado atual. Em carreira na 2ª div, sem essa busca o time_nome
+        // ficaria com o id cru ao trocar de time.
+        val resolvedTeamName = ov.newTeamId?.let { id ->
+            snapshot?.times?.find { it.id == id }?.nome
+                ?: state?.secondDivisionTeams?.find { it.id == id }?.nome
+                ?: p.time_nome
+        } ?: p.time_nome
         return p.copy(
             time_id = ov.newTeamId ?: p.time_id,
-            time_nome = ov.newTeamId?.let { id ->
-                snapshot?.times?.find { it.id == id }?.nome ?: p.time_nome
-            } ?: p.time_nome,
+            time_nome = resolvedTeamName,
             titular = ov.titular ?: p.titular,
             contrato = newContract
         )

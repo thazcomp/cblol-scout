@@ -75,9 +75,25 @@ class TeamSelectViewModel(
         _hasSave.value = hasSav.invoke()
     }
 
-    fun startCareer(managerName: String, teamId: String) {
+    /**
+     * Inicia uma carreira nova.
+     *
+     * @param division divisão escolhida — [com.cblol.scout.data.Division.FIRST]
+     *   (CBLOL) ou [com.cblol.scout.data.Division.SECOND] (CD).
+     * @param seed semente usada na seleção de time da 2ª divisão. Quando o
+     *   usuário escolheu um time da 2ª divisão na UI, a Activity passa o
+     *   mesmo seed usado para gerar os 8 times mostrados — garantindo que o
+     *   time selecionado realmente exista na carreira criada. Em carreiras de
+     *   1ª divisão o seed é ignorado pelo motor.
+     */
+    fun startCareer(
+        managerName: String,
+        teamId: String,
+        division: com.cblol.scout.data.Division = com.cblol.scout.data.Division.FIRST,
+        seed: Long = System.currentTimeMillis()
+    ) {
         viewModelScope.launch {
-            withContext(Dispatchers.IO) { startNewCareer(managerName, teamId) }
+            withContext(Dispatchers.IO) { startNewCareer(managerName, teamId, division, seed) }
             _careerStarted.value = true
         }
     }

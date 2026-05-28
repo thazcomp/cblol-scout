@@ -8,14 +8,18 @@ class GetHubStateUseCase(private val context: Context) {
     operator fun invoke(): HubState {
         GameRepository.load(context)  // Ensure GameState is loaded
         val gs   = GameRepository.current()
-        val snap = GameRepository.snapshot(context)
-        val team = snap.times.find { it.id == gs.managerTeamId }!!
+        // Times do gerente podem estar no snapshot (1ª div) ou em
+        // gs.secondDivisionTeams (2ª div). Centralizamos via
+        // teamsForCurrentDivision para não quebrar em carreira do CD.
+        val teams = GameRepository.teamsForCurrentDivision(context)
+        val team  = teams.find { it.id == gs.managerTeamId }
+            ?: error("Time do gerente não encontrado: ${gs.managerTeamId}")
         val next = GameEngine.nextMatchForManager()
         val roster = GameRepository.rosterOf(context, gs.managerTeamId)
 
         val nextMatchDisplay = next?.let {
-            val home = snap.times.find { t -> t.id == it.homeTeamId }?.nome ?: it.homeTeamId
-            val away = snap.times.find { t -> t.id == it.awayTeamId }?.nome ?: it.awayTeamId
+            val home = teams.find { t -> t.id == it.homeTeamId }?.nome ?: it.homeTeamId
+            val away = teams.find { t -> t.id == it.awayTeamId }?.nome ?: it.awayTeamId
             NextMatchDisplay(
                 matchId    = it.id,
                 label      = "$home  vs  $away",
