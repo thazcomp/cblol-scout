@@ -164,16 +164,16 @@ object PlayerDetailDialog {
         val s   = player.stats_brutas
         val ctx = view.context
         view.findViewById<TextView>(R.id.tv_bs_jogos).text  = s.jogos.toString()
-        view.findViewById<TextView>(R.id.tv_bs_kda).text    = s.kda.toString()
+        view.findViewById<TextView>(R.id.tv_bs_kda).text    = s.kdaDisplay()
         view.findViewById<TextView>(R.id.tv_bs_kp).text     =
             ctx.getString(R.string.player_kp_format, s.kp_pct.toInt())
-        view.findViewById<TextView>(R.id.tv_bs_cs).text     = s.cs_min.toString()
+        view.findViewById<TextView>(R.id.tv_bs_cs).text     = s.csMinDisplay()
         view.findViewById<TextView>(R.id.tv_bs_dmg).text    =
-            ctx.getString(R.string.player_dmg_share, s.damage_share_pct.toString())
+            ctx.getString(R.string.player_dmg_share, s.damageShareDisplay())
         view.findViewById<TextView>(R.id.tv_bs_gd15).text   = formatDiff(ctx, s.gd15)
         view.findViewById<TextView>(R.id.tv_bs_xpd15).text  = formatDiff(ctx, s.xpd15)
         view.findViewById<TextView>(R.id.tv_bs_vis).text    =
-            s.vision_score_min?.toString() ?: ctx.getString(R.string.player_stat_not_available)
+            s.visionScoreDisplay() ?: ctx.getString(R.string.player_stat_not_available)
     }
 
     private fun formatDiff(ctx: Context, value: Int?): String = when {

@@ -803,9 +803,11 @@ class PickBanActivity : AppCompatActivity() {
     }
 
     private fun renderTeamNames(playerIsBlue: Boolean) {
-        val snap         = GameRepository.snapshot(applicationContext)
-        val playerName   = snap.times.find { it.id == playerTeamId }?.nome   ?: playerTeamId
-        val opponentName = snap.times.find { it.id == opponentTeamId }?.nome ?: opponentTeamId
+        // Resolve nomes em AMBAS as divisões (em carreira da 2ª div os ids dos
+        // times são procedurais e não existem no snapshot oficial).
+        val teams        = GameRepository.teamsForCurrentDivision(applicationContext)
+        val playerName   = teams.find { it.id == playerTeamId }?.nome   ?: playerTeamId
+        val opponentName = teams.find { it.id == opponentTeamId }?.nome ?: opponentTeamId
         tvBlueName.text = if (playerIsBlue) playerName   else opponentName
         tvRedName.text  = if (playerIsBlue) opponentName else playerName
     }

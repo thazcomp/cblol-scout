@@ -68,7 +68,32 @@ data class StatsBrutas(
     val xpd15: Int?,
     val damage_share_pct: Double,
     val vision_score_min: Double?
-)
+) {
+    /**
+     * Formatações de exibição dos stats brutos. Os valores no modelo são
+     * `Double` com precisão total (ex: 3.7142857142857144); para a UI, sempre
+     * mostramos no máximo 2 casas decimais. Centralizar aqui (em vez de
+     * espalhar `"%.2f".format(...)` pelas telas) garante consistência e
+     * respeita SRP — o modelo sabe como se apresentar.
+     *
+     * Usa Locale.US para garantir ponto decimal (e não vírgula), coerente com
+     * o resto da formatação numérica do app.
+     */
+    fun kdaDisplay(): String = fmt2(kda)
+    fun csMinDisplay(): String = fmt2(cs_min)
+    fun damageShareDisplay(): String = fmt2(damage_share_pct)
+    fun visionScoreDisplay(): String? = vision_score_min?.let { fmt2(it) }
+
+    private companion object {
+        /** Formata um Double com até 2 casas decimais, sem zeros à direita desnecessários. */
+        fun fmt2(v: Double): String {
+            // %.2f → "3.71"; remove ".00"/zeros finais para números redondos
+            // ficarem limpos (ex: 5.00 → "5", 4.50 → "4.5").
+            val s = "%.2f".format(java.util.Locale.US, v)
+            return s.trimEnd('0').trimEnd('.')
+        }
+    }
+}
 
 data class AtributosDeriv(
     val lane_phase: Int,

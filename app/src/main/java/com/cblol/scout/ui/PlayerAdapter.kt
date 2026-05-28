@@ -143,8 +143,8 @@ class PlayerAdapter(
     private fun bindStats(holder: ViewHolder, player: Player, ctx: android.content.Context) {
         val s = player.stats_brutas
         holder.tvGames.text = ctx.getString(R.string.stat_games_format, s.jogos)
-        holder.tvKda.text   = ctx.getString(R.string.stat_kda_format, s.kda.toString())
-        holder.tvCs.text    = ctx.getString(R.string.stat_cs_format,  s.cs_min.toString())
+        holder.tvKda.text   = ctx.getString(R.string.stat_kda_format, s.kdaDisplay())
+        holder.tvCs.text    = ctx.getString(R.string.stat_cs_format,  s.csMinDisplay())
         holder.tvKp.text    = ctx.getString(R.string.stat_kp_format,  s.kp_pct.toInt())
     }
 

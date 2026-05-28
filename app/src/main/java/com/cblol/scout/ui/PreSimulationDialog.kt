@@ -67,10 +67,12 @@ object PreSimulationDialog {
     private fun loadMatchContext(context: Context, matchId: String): MatchContext? {
         val gs    = GameRepository.current()
         val match = gs.matches.find { it.id == matchId } ?: return null
-        val snap  = GameRepository.snapshot(context)
+        // Resolve nomes em AMBAS as divisões (em carreira da 2ª div os ids são
+        // procedurais e não existem no snapshot oficial).
+        val teams = GameRepository.teamsForCurrentDivision(context)
 
-        val homeName = snap.times.find { it.id == match.homeTeamId }?.nome ?: match.homeTeamId
-        val awayName = snap.times.find { it.id == match.awayTeamId }?.nome ?: match.awayTeamId
+        val homeName = teams.find { it.id == match.homeTeamId }?.nome ?: match.homeTeamId
+        val awayName = teams.find { it.id == match.awayTeamId }?.nome ?: match.awayTeamId
 
         val homeRoster = startersOf(context, match.homeTeamId)
         val awayRoster = startersOf(context, match.awayTeamId)

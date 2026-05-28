@@ -89,11 +89,18 @@ class SquadActivity : AppCompatActivity() {
     // ── Setup ────────────────────────────────────────────────────────────
 
     private fun setupHeader() {
-        val gs   = GameRepository.current()
-        val snap = GameRepository.snapshot(applicationContext)
-        val team = snap.times.find { it.id == gs.managerTeamId } ?: return
-        binding.toolbar.title = getString(R.string.squad_title, team.nome)
-        binding.toolbar.setBackgroundColor(TeamColors.forTeam(team.id))
+        val gs = GameRepository.current()
+        // Busca o time do gerente em AMBAS as divisões: em carreira da 2ª
+        // divisão o id é procedural (cd2_*) e NÃO existe no snapshot oficial.
+        // Antes usávamos só snap.times.find { ... } ?: return — o return
+        // abortava o onCreate inteiro (tabs, observers, load), deixando a tela
+        // de elenco vazia apesar de o roster existir. Usar
+        // teamsForCurrentDivision cobre as duas divisões.
+        val team = GameRepository.teamsForCurrentDivision(applicationContext)
+            .find { it.id == gs.managerTeamId }
+        binding.toolbar.title = team?.nome?.let { getString(R.string.squad_title, it) }
+            ?: getString(R.string.squad_title, gs.managerTeamId)
+        binding.toolbar.setBackgroundColor(TeamColors.forTeam(gs.managerTeamId))
         binding.toolbar.setTitleTextColor(Color.WHITE)
         binding.recycler.layoutManager = LinearLayoutManager(this)
     }
@@ -231,7 +238,7 @@ class SquadActivity : AppCompatActivity() {
 
             val salary = p.contrato.salario_mensal_estimado_brl ?: 0L
             h.tvInfo.text = ctx.getString(R.string.squad_player_info,
-                p.stats_brutas.kda.toString(), p.stats_brutas.cs_min.toString(), "%,d".format(salary))
+                p.stats_brutas.kdaDisplay(), p.stats_brutas.csMinDisplay(), "%,d".format(salary))
             val ovr = p.overallRating()
             h.tvOvr.text = ovr.toString()
             h.tvOvr.setTextColor(ContextCompat.getColor(ctx, overallColorRes(ovr)))
