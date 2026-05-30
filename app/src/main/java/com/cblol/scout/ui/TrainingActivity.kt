@@ -1,6 +1,5 @@
 package com.cblol.scout.ui
 
-import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -8,7 +7,6 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.cblol.scout.R
@@ -17,44 +15,30 @@ import com.cblol.scout.data.TrainingSession
 import com.cblol.scout.data.TrainingType
 import com.cblol.scout.databinding.ActivityTrainingBinding
 import com.cblol.scout.domain.usecase.TrainingService
-import com.cblol.scout.game.GameEngine
+import com.cblol.scout.domain.usecase.TrainingUiState
 import com.cblol.scout.game.GameRepository
+import com.cblol.scout.ui.viewmodel.TrainingEvent
+import com.cblol.scout.ui.viewmodel.TrainingViewModel
 import com.cblol.scout.util.TeamColors
 import com.google.android.material.tabs.TabLayout
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import org.koin.androidx.viewmodel.ext.android.viewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 /**
- * Tela de Treinos.
+ * Tela de **Treinos**.
  *
- * Duas abas:
- *  - **TREINAR**: lista os 6 tipos de treino. Cada card mostra custo, duração,
- *    cooldown e botão TREINAR (desabilitado se em cooldown ou sem orçamento).
- *  - **HISTÓRICO**: lista as últimas sessões realizadas, com outcome colorido
- *    e narrativa do resultado.
- *
- * **Fluxo de execução de treino:**
- *  1. Usuário toca TREINAR num card
- *  2. Dialog de confirmação mostra duração + custo
- *  3. Avança o calendário (`GameEngine.advanceDays`) para que partidas pendentes
- *     e pagamentos rolem normalmente nos dias do treino
- *  4. Roda `TrainingService.runTraining` que aplica efeitos no roster
- *  5. Mostra dialog com o resultado sorteado (outcome + narrativa)
- *  6. Salva o save e re-renderiza a lista
- *
- * **SOLID:**
- *  - **SRP**: Activity orquestra; o adapter cuida do bind; o Service aplica regras.
- *  - **OCP**: novos tipos = adicionar no enum, sem mexer aqui.
- *  - **DIP**: depende de `TrainingService`, `GameEngine` e `GameRepository` —
- *    três fontes da verdade bem separadas.
+ * **MVVM**: observa [TrainingViewModel.state] (orçamento + disponibilidade
+ * por tipo + histórico) e [TrainingViewModel.running] para o "lock" da UI
+ * durante a operação. O VM cuida da coreografia "avançar dias + aplicar
+ * treino + salvar" dentro do [com.cblol.scout.domain.usecase.RunTrainingUseCase].
  */
 class TrainingActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityTrainingBinding
+    private val vm: TrainingViewModel by viewModel()
     private var currentTab = TAB_OPTIONS
+    private var lastState: TrainingUiState? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,21 +48,32 @@ class TrainingActivity : AppCompatActivity() {
         setupToolbar()
         setupTabs()
         binding.recycler.layoutManager = LinearLayoutManager(this)
-        renderState()
+
+        vm.state.observe(this) { state ->
+            lastState = state
+            render(state)
+        }
+        vm.running.observe(this) { isRunning ->
+            // Bloqueia interação durante o treino (era feito direto com alpha
+            // e isClickable na Activity antes — agora via LiveData).
+            binding.recycler.alpha = if (isRunning) 0.4f else 1f
+            binding.recycler.isClickable = !isRunning
+        }
+        vm.events.observe(this) { ev -> ev.consume()?.let(::handleEvent) }
+        vm.refresh()
     }
 
     override fun onResume() {
         super.onResume()
-        renderState()
+        vm.refresh()
     }
 
     // ── Setup ────────────────────────────────────────────────────────────
 
     private fun setupToolbar() {
-        val gs = GameRepository.current()
+        binding.toolbar.setBackgroundColor(TeamColors.forTeam(GameRepository.current().managerTeamId))
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        binding.toolbar.setBackgroundColor(TeamColors.forTeam(gs.managerTeamId))
         binding.toolbar.setNavigationOnClickListener { finish() }
     }
 
@@ -88,7 +83,7 @@ class TrainingActivity : AppCompatActivity() {
         binding.tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab) {
                 currentTab = tab.position
-                renderState()
+                lastState?.let(::render)
             }
             override fun onTabUnselected(tab: TabLayout.Tab) {}
             override fun onTabReselected(tab: TabLayout.Tab) {}
@@ -97,24 +92,20 @@ class TrainingActivity : AppCompatActivity() {
 
     // ── Render ───────────────────────────────────────────────────────────
 
-    private fun renderState() {
-        val gs = GameRepository.current()
-        binding.tvBudget.text = getString(R.string.training_cost_format, "%,d".format(gs.budget))
-
+    private fun render(state: TrainingUiState) {
+        binding.tvBudget.text = getString(R.string.training_cost_format, "%,d".format(state.budget))
         when (currentTab) {
-            TAB_OPTIONS -> renderOptions()
-            TAB_HISTORY -> renderHistory(gs.trainingHistory ?: emptyList())
+            TAB_OPTIONS -> renderOptions(state)
+            TAB_HISTORY -> renderHistory(state.history)
         }
     }
 
-    private fun renderOptions() {
-        val gs = GameRepository.current()
+    private fun renderOptions(state: TrainingUiState) {
         binding.recycler.visibility = View.VISIBLE
         binding.tvEmpty.visibility  = View.GONE
         binding.recycler.adapter = TrainingOptionsAdapter(
             types = TrainingType.values().toList(),
-            availabilityFor = { TrainingService.checkAvailability(gs, it) },
-            cooldownFor = { TrainingService.daysUntilAvailable(gs, it) },
+            availabilityFor = { state.availability[it] ?: TrainingService.Availability.Available },
             onTrainClick = ::confirmTraining
         )
     }
@@ -140,42 +131,14 @@ class TrainingActivity : AppCompatActivity() {
                 "${type.emoji} ${type.label}",
                 type.durationDays,
                 "%,d".format(type.cost)))
-            .setPositiveButton(R.string.btn_yes) { _, _ -> startTraining(type) }
+            .setPositiveButton(R.string.btn_yes) { _, _ -> vm.startTraining(type) }
             .setNegativeButton(R.string.btn_no, null)
             .show()
     }
 
-    /**
-     * Executa o treino: avança o calendário pelos dias necessários (rodando
-     * partidas/eventos do GameEngine no caminho) e em seguida aplica os
-     * efeitos do treino, salvando o save.
-     */
-    private fun startTraining(type: TrainingType) {
-        // Bloqueia UI rapidamente para evitar duplo-clique
-        binding.recycler.alpha = 0.4f
-        binding.recycler.isClickable = false
-
-        lifecycleScope.launch {
-            withContext(Dispatchers.IO) {
-                // 1. Avança os dias do treino (GameEngine cuida de partidas + pagamentos)
-                if (type.durationDays > 0) {
-                    GameEngine.advanceDays(applicationContext, type.durationDays)
-                }
-                // 2. Aplica efeitos do treino no ROSTER TITULAR (treino só conta para quem joga)
-                val gs = GameRepository.current()
-                val roster = GameRepository.rosterOf(applicationContext, gs.managerTeamId)
-                    .filter { it.titular }
-                TrainingService.runTraining(gs, type, roster)
-                GameRepository.save(applicationContext)
-            }
-
-            binding.recycler.alpha = 1f
-            binding.recycler.isClickable = true
-
-            // Pega a sessão mais recente (acabou de ser inserida no topo) e exibe
-            val lastSession = GameRepository.current().trainingHistory?.firstOrNull()
-            if (lastSession != null) showResultDialog(lastSession)
-            renderState()
+    private fun handleEvent(event: TrainingEvent) {
+        when (event) {
+            is TrainingEvent.TrainingDone -> showResultDialog(event.session)
         }
     }
 
@@ -196,11 +159,9 @@ class TrainingActivity : AppCompatActivity() {
 
     // ── Adapters ─────────────────────────────────────────────────────────
 
-    /** Lista de tipos de treino disponíveis. */
     private class TrainingOptionsAdapter(
         private val types: List<TrainingType>,
         private val availabilityFor: (TrainingType) -> TrainingService.Availability,
-        private val cooldownFor: (TrainingType) -> Int,
         private val onTrainClick: (TrainingType) -> Unit
     ) : RecyclerView.Adapter<TrainingOptionsAdapter.VH>() {
 
@@ -256,7 +217,6 @@ class TrainingActivity : AppCompatActivity() {
         }
     }
 
-    /** Lista do histórico de treinos. */
     private class TrainingHistoryAdapter(
         private val sessions: List<TrainingSession>
     ) : RecyclerView.Adapter<TrainingHistoryAdapter.VH>() {

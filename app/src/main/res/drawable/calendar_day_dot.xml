@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Ponto colorido usado nas células do calendário para indicar presença de
+  eventos por categoria. A cor é setada em código via `setBackgroundTintList`
+  para que o mesmo drawable sirva para todas as categorias.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="@color/color_on_surface"/>
+    <size android:width="5dp" android:height="5dp"/>
+</shape>

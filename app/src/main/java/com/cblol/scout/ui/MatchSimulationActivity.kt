@@ -1,69 +1,56 @@
 package com.cblol.scout.ui
 
-import android.content.Intent
-import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.Typeface
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.TextView
-import androidx.annotation.ColorRes
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
 import com.cblol.scout.R
 import com.cblol.scout.data.Match
 import com.cblol.scout.data.MatchEvent
-import com.cblol.scout.data.Side
 import com.cblol.scout.databinding.ActivityMatchSimulationBinding
 import com.cblol.scout.domain.GameConstants
-import com.cblol.scout.game.GameEngine
 import com.cblol.scout.game.GameRepository
 import com.cblol.scout.game.LiveMatchEngine
+import com.cblol.scout.ui.match.MatchEventRenderer
+import com.cblol.scout.ui.match.MatchFeedAdapter
+import com.cblol.scout.ui.match.MatchResultPublisher
+import com.cblol.scout.ui.match.MatchStatsAccumulator
 import com.cblol.scout.util.TeamColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
-import java.time.LocalDate
 
 /**
- * Player de partida acelerado.
+ * Player de partida acelerado: orquestra a simulação ao vivo de UM mapa.
  *
- * Lê o ID da partida via Intent extra, gera a timeline com LiveMatchEngine e
- * toca os eventos com delays definidos em [GameConstants.Simulation].
+ * Lê o ID da partida via Intent extra, gera a timeline com [LiveMatchEngine]
+ * e toca os eventos com delays definidos em [GameConstants.Simulation].
  *
- * Antes de iniciar a fase de jogo (após pick & ban), exibe o
- * [PreSimulationDialog] com sinergias e vantagens. Ao final aplica o resultado
- * no GameState e lança a [MatchResultActivity].
+ * **Arquitetura SOLID — colaboradores em `ui/match/`:**
+ *
+ *  - **[MatchStatsAccumulator]** — guarda os contadores do mapa (kills,
+ *    torres, dragões, baron, herald) e atualiza o scoreboard.
+ *  - **[MatchFeedAdapter]** — adapter standalone do feed de eventos.
+ *  - **[MatchEventRenderer]** — dispatch dos 13 tipos de evento na UI
+ *    (chips de pick/ban, scoreboard, linhas do feed, transições de fase).
+ *  - **[MatchResultPublisher]** — encerra o mapa/série, calcula prêmio,
+ *    avança calendário, publica notícia e lança a [MatchResultActivity].
+ *
+ * A Activity em si só coordena lifecycle + coroutine de tocagem dos eventos +
+ * controles (velocidade, pular).
  *
  * Suporta velocidades 1x / 2x / 4x via botão de acelerador.
- *
- * Princípios SOLID aplicados:
- * - **SRP**: cada método tem uma única responsabilidade
- *   ([renderEvent], [applyResult], [skipToResult], [updateScoreboard]).
- * - **OCP**: novos tipos de evento são adicionados em [renderEvent] sem
- *   tocar no resto do código.
- * - **DIP**: depende de [LiveMatchEngine] e [GameRepository] como abstrações
- *   de domínio. Strings/cores são lidas de recursos, não hardcoded.
  */
 class MatchSimulationActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMatchSimulationBinding
     private lateinit var match: Match
-    private lateinit var feedAdapter: FeedAdapter
-
-    // Contadores acumulados durante a simulação (resetados por mapa)
-    private var homeKills = 0;   private var awayKills = 0
-    private var homeTowers = 0;  private var awayTowers = 0
-    private var homeDragons = 0; private var awayDragons = 0
-    private var homeBarons = 0;  private var awayBarons = 0
-    private var homeHeralds = 0; private var awayHeralds = 0
+    private lateinit var feedAdapter: MatchFeedAdapter
+    private lateinit var stats: MatchStatsAccumulator
+    private lateinit var renderer: MatchEventRenderer
+    private lateinit var resultPublisher: MatchResultPublisher
 
     // Placar de mapas (acumulado entre mapas da série)
     private var homeMaps = 0
@@ -86,7 +73,7 @@ class MatchSimulationActivity : AppCompatActivity() {
         if (!resolveMatch()) return
 
         renderTeamHeader()
-        setupFeed()
+        setupCollaborators()
         binding.btnSpeed.setOnClickListener { cycleSpeed() }
         startSimulation()
     }
@@ -95,7 +82,6 @@ class MatchSimulationActivity : AppCompatActivity() {
 
     // ── Inicialização ────────────────────────────────────────────────────
 
-    /** Resolve a partida a partir do Intent. Retorna false se inválida (e finaliza a Activity). */
     private fun resolveMatch(): Boolean {
         val matchId = intent.getStringExtra(EXTRA_MATCH_ID)
         val target  = GameRepository.current().matches.find { it.id == matchId }
@@ -106,8 +92,7 @@ class MatchSimulationActivity : AppCompatActivity() {
 
     private fun renderTeamHeader() {
         // Times podem vir do snapshot (1ª div) ou de gs.secondDivisionTeams
-        // (modo começar de baixo). Usamos teamsForCurrentDivision para cobrir
-        // ambos sem ifs espalhados pela tela.
+        // (modo "começar de baixo"). teamsForCurrentDivision cobre os dois.
         val teams = GameRepository.teamsForCurrentDivision(applicationContext)
         val home = teams.find { it.id == match.homeTeamId } ?: return
         val away = teams.find { it.id == match.awayTeamId } ?: return
@@ -117,12 +102,30 @@ class MatchSimulationActivity : AppCompatActivity() {
         binding.viewAwayBar.setBackgroundColor(TeamColors.forTeam(away.id))
     }
 
-    private fun setupFeed() {
-        feedAdapter = FeedAdapter()
+    /** Cria os 4 colaboradores e conecta-os ao binding/match. */
+    private fun setupCollaborators() {
         binding.recyclerFeed.layoutManager = LinearLayoutManager(this).apply {
             reverseLayout = true; stackFromEnd = false
         }
-        binding.recyclerFeed.adapter = feedAdapter
+        feedAdapter = MatchFeedAdapter(binding.recyclerFeed).also {
+            binding.recyclerFeed.adapter = it
+        }
+        stats = MatchStatsAccumulator(binding, this)
+        renderer = MatchEventRenderer(
+            activity = this,
+            binding = binding,
+            stats = stats,
+            feed = feedAdapter,
+            currentGameNum = { homeMaps + awayMaps + 1 },
+            seriesScore = { homeMaps to awayMaps }
+        )
+        resultPublisher = MatchResultPublisher(
+            activity = this,
+            binding = binding,
+            match = match,
+            stats = stats,
+            seriesScore = { homeMaps to awayMaps }
+        )
     }
 
     // ── Controles ────────────────────────────────────────────────────────
@@ -184,8 +187,9 @@ class MatchSimulationActivity : AppCompatActivity() {
     }
 
     /**
-     * Versão silenciosa de [startSimulation] que pula a animação e vai direto ao resultado.
-     * Mantém os contadores para que a MatchResultActivity exiba stats reais.
+     * Versão silenciosa de [startSimulation] que pula a animação e vai direto
+     * ao resultado. Mantém os contadores para que a MatchResultActivity exiba
+     * stats reais.
      */
     private suspend fun skipToResult() {
         val partialHome = match.homeScore
@@ -195,23 +199,10 @@ class MatchSimulationActivity : AppCompatActivity() {
         val result = withContext(Dispatchers.Default) {
             LiveMatchEngine.generateSingleMap(applicationContext, match, gameNumber)
         }
-        for (e in result.events) accumulateStats(e)
+        for (e in result.events) stats.accumulateSilent(e)
         val finalHome = partialHome + if (result.homeWon) 1 else 0
         val finalAway = partialAway + if (!result.homeWon) 1 else 0
         withContext(Dispatchers.Main) { applyResult(finalHome, finalAway, result.homeWon) }
-    }
-
-    /** Acumula stats no estado interno sem renderizar nada. */
-    private fun accumulateStats(e: MatchEvent) {
-        when (e) {
-            is MatchEvent.GameStart -> resetMapCounters()
-            is MatchEvent.Kill      -> if (e.killerSide == Side.HOME) homeKills++ else awayKills++
-            is MatchEvent.TowerDown -> if (e.side == Side.HOME) homeTowers++ else awayTowers++
-            is MatchEvent.Dragon    -> if (e.side == Side.HOME) homeDragons++ else awayDragons++
-            is MatchEvent.Baron     -> if (e.side == Side.HOME) homeBarons++ else awayBarons++
-            is MatchEvent.Herald    -> if (e.side == Side.HOME) homeHeralds++ else awayHeralds++
-            else -> Unit
-        }
     }
 
     /** Suspende a coroutine até o usuário confirmar o PreSimulationDialog. */
@@ -226,7 +217,7 @@ class MatchSimulationActivity : AppCompatActivity() {
 
     private suspend fun playEvents(events: List<MatchEvent>) {
         for (e in events) {
-            withContext(Dispatchers.Main) { renderEvent(e) }
+            withContext(Dispatchers.Main) { renderer.render(e) }
             delay(delayFor(e))
         }
     }
@@ -247,408 +238,22 @@ class MatchSimulationActivity : AppCompatActivity() {
         return (base / speed).toLong()
     }
 
-    // ── Renderização de eventos ──────────────────────────────────────────
-
-    private fun renderEvent(event: MatchEvent) {
-        when (event) {
-            is MatchEvent.GameStart        -> onGameStart(event)
-            is MatchEvent.PhaseAnnouncement -> binding.tvPhase.text = event.text
-            is MatchEvent.Ban              -> onBan(event)
-            is MatchEvent.Pick             -> onPick(event)
-            is MatchEvent.GameTick         -> onGameTick(event)
-            is MatchEvent.Kill             -> onKill(event)
-            is MatchEvent.TowerDown        -> onTower(event)
-            is MatchEvent.Inhibitor        -> onInhibitor(event)
-            is MatchEvent.Dragon           -> onDragon(event)
-            is MatchEvent.Baron            -> onBaron(event)
-            is MatchEvent.Herald           -> onHerald(event)
-            is MatchEvent.Buff             -> onBuff(event)
-            is MatchEvent.GameEnd          -> onGameEnd(event)
-            is MatchEvent.SeriesEnd        -> binding.tvPhase.text = getString(
-                R.string.sim_series_winner, sideName(event.winnerSide),
-                event.mapScore.first, event.mapScore.second
-            )
-        }
-    }
-
-    private fun onGameStart(event: MatchEvent.GameStart) {
-        resetMapCounters()
-        binding.tvGameNumber.text = getString(R.string.sim_map_label, event.gameNumber)
-        binding.tvPhase.text      = getString(R.string.sim_phase_pickban)
-        binding.tvGameTimer.text  = getString(R.string.sim_timer_zero)
-        binding.layoutPickBan.visibility   = View.VISIBLE
-        binding.layoutGameStats.visibility = View.GONE
-        binding.containerHomeBans.removeAllViews()
-        binding.containerAwayBans.removeAllViews()
-        binding.containerHomePicks.removeAllViews()
-        binding.containerAwayPicks.removeAllViews()
-        feedAdapter.clear()
-    }
-
-    private fun onBan(event: MatchEvent.Ban) {
-        val container = if (event.side == Side.HOME) binding.containerHomeBans else binding.containerAwayBans
-        addPickBanChip(event.champion, isBan = true, container = container)
-    }
-
-    private fun onPick(event: MatchEvent.Pick) {
-        val container = if (event.side == Side.HOME) binding.containerHomePicks else binding.containerAwayPicks
-        addPickBanChip(
-            getString(R.string.event_role_champion, event.role, event.champion),
-            isBan = false, container = container
-        )
-        feedAdapter.add(FeedEntry(
-            icon = getString(R.string.icon_pick),
-            text = getString(R.string.event_pick, event.playerName, event.role, event.champion),
-            accentColor = sideAccent(event.side)
-        ))
-    }
-
-    private fun onGameTick(event: MatchEvent.GameTick) {
-        if (binding.layoutPickBan.visibility == View.VISIBLE) {
-            binding.layoutPickBan.visibility   = View.GONE
-            binding.layoutGameStats.visibility = View.VISIBLE
-            binding.tvPhase.text = getString(R.string.sim_phase_in_game, currentGameNum())
-        }
-        binding.tvGameTimer.text = TIMER_FORMAT.format(event.minute, event.second)
-    }
-
-    private fun onKill(event: MatchEvent.Kill) {
-        if (event.killerSide == Side.HOME) homeKills++ else awayKills++
-        updateScoreboard()
-        feedAdapter.add(FeedEntry(
-            icon = getString(R.string.icon_kill),
-            text = getString(R.string.event_kill, event.time,
-                event.killerName, event.killerChamp, event.victimName, event.victimChamp),
-            accentColor = sideAccent(event.killerSide)
-        ))
-    }
-
-    private fun onTower(event: MatchEvent.TowerDown) {
-        if (event.side == Side.HOME) homeTowers++ else awayTowers++
-        updateScoreboard()
-        feedAdapter.add(FeedEntry(
-            icon = getString(R.string.icon_tower),
-            text = getString(R.string.event_tower, event.time, event.location, sideName(event.side)),
-            accentColor = color(R.color.sim_tower_accent)
-        ))
-    }
-
-    private fun onInhibitor(event: MatchEvent.Inhibitor) {
-        feedAdapter.add(FeedEntry(
-            icon = getString(R.string.icon_inhibitor),
-            text = getString(R.string.event_inhibitor, event.time, event.location, sideName(event.side)),
-            accentColor = color(R.color.sim_inhibitor_accent)
-        ))
-    }
-
-    private fun onDragon(event: MatchEvent.Dragon) {
-        if (event.side == Side.HOME) homeDragons++ else awayDragons++
-        updateScoreboard()
-        feedAdapter.add(FeedEntry(
-            icon = getString(R.string.icon_dragon),
-            text = getString(R.string.event_dragon, event.time, event.type, sideName(event.side)),
-            accentColor = color(R.color.sim_dragon_accent)
-        ))
-    }
-
-    private fun onBaron(event: MatchEvent.Baron) {
-        if (event.side == Side.HOME) homeBarons++ else awayBarons++
-        updateScoreboard()
-        feedAdapter.add(FeedEntry(
-            icon = getString(R.string.icon_baron),
-            text = getString(R.string.event_baron, event.time, sideName(event.side)),
-            accentColor = color(R.color.sim_baron_accent)
-        ))
-    }
-
-    private fun onHerald(event: MatchEvent.Herald) {
-        if (event.side == Side.HOME) homeHeralds++ else awayHeralds++
-        updateScoreboard()
-        feedAdapter.add(FeedEntry(
-            icon = getString(R.string.icon_herald),
-            text = getString(R.string.event_herald, event.time, sideName(event.side)),
-            accentColor = color(R.color.sim_herald_accent)
-        ))
-    }
-
-    private fun onBuff(event: MatchEvent.Buff) {
-        val isRed = event.type == BUFF_TYPE_RED
-        feedAdapter.add(FeedEntry(
-            icon = getString(if (isRed) R.string.icon_buff_red else R.string.icon_buff_blue),
-            text = getString(R.string.event_buff, event.time, event.playerName, event.type),
-            accentColor = color(if (isRed) R.color.sim_buff_red else R.color.sim_buff_blue)
-        ))
-    }
-
-    private fun onGameEnd(event: MatchEvent.GameEnd) {
-        binding.tvSeriesScore.text = getString(R.string.result_score_format, homeMaps, awayMaps)
-        binding.tvPhase.text = getString(R.string.sim_map_ended,
-            event.gameNumber, sideName(event.winnerSide), event.durationMinutes)
-        feedAdapter.add(FeedEntry(
-            icon = getString(R.string.icon_match_end),
-            text = getString(R.string.sim_map_summary, event.gameNumber,
-                event.finalKills.first, event.finalKills.second, sideName(event.winnerSide)),
-            accentColor = color(R.color.sim_match_end_accent)
-        ))
-    }
-
-    // ── Helpers de UI ────────────────────────────────────────────────────
-
-    private fun resetMapCounters() {
-        homeKills = 0; awayKills = 0
-        homeTowers = 0; awayTowers = 0
-        homeDragons = 0; awayDragons = 0
-        homeBarons = 0; awayBarons = 0
-        homeHeralds = 0; awayHeralds = 0
-        updateScoreboard()
-    }
-
-    private fun updateScoreboard() {
-        binding.tvHomeKills.text = homeKills.toString()
-        binding.tvAwayKills.text = awayKills.toString()
-        binding.tvObjTowers.text  = getString(R.string.obj_towers_format,  homeTowers,  awayTowers)
-        binding.tvObjDragons.text = getString(R.string.obj_dragons_format, homeDragons, awayDragons)
-        binding.tvObjBarons.text  = getString(R.string.obj_barons_format,  homeBarons,  awayBarons)
-        binding.tvObjHeralds.text = getString(R.string.obj_heralds_format, homeHeralds, awayHeralds)
-    }
-
-    private fun currentGameNum(): Int = homeMaps + awayMaps + 1
-
-    /** Cria um chip visual no painel de pick/ban (banido = riscado, pick = dourado bold). */
-    private fun addPickBanChip(label: String, isBan: Boolean, container: ViewGroup) {
-        val tv = TextView(this).apply {
-            text = if (isBan) getString(R.string.event_ban_prefix, label) else label
-            textSize = resources.getDimension(R.dimen.sim_chip_text_size) /
-                       resources.displayMetrics.scaledDensity
-            val padH = resources.getDimensionPixelSize(R.dimen.sim_chip_padding_horizontal)
-            val padV = resources.getDimensionPixelSize(R.dimen.sim_chip_padding_vertical)
-            setPadding(padH, padV, padH, padV)
-            layoutParams = ViewGroup.MarginLayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT
-            ).apply {
-                val m = resources.getDimensionPixelSize(R.dimen.sim_chip_margin)
-                setMargins(m, m, m, m)
-            }
-            if (isBan) {
-                setTextColor(color(R.color.sim_pickban_chip_ban))
-                paintFlags = paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
-            } else {
-                setTextColor(color(R.color.sim_pickban_chip_pick))
-                setTypeface(null, Typeface.BOLD)
-            }
-            setBackgroundColor(color(R.color.sim_pickban_chip_bg))
-        }
-        container.addView(tv)
-    }
-
-    private fun sideName(side: Side): String =
-        if (side == Side.HOME) binding.tvHomeName.text.toString()
-        else binding.tvAwayName.text.toString()
-
-    private fun sideAccent(side: Side): Int =
-        if (side == Side.HOME) color(R.color.sim_home_accent) else color(R.color.sim_away_accent)
-
-    private fun color(@ColorRes res: Int): Int = ContextCompat.getColor(this, res)
-
-    // ── Aplicação do resultado ───────────────────────────────────────────
+    // ── Encerramento ─────────────────────────────────────────────────────
 
     /**
-     * Aplica o resultado do mapa recém-encerrado no estado e abre a
-     * [MatchResultActivity].
+     * Delega ao [resultPublisher] para persistir o resultado, calcular prêmio,
+     * avançar calendário, publicar notícia e abrir a tela de resultado.
+     * Idempotente via guard [resultApplied].
      *
-     * @param homeMapsFinal placar acumulado da série do lado home
-     * @param awayMapsFinal placar acumulado da série do lado away
-     * @param mapWonByHome quem venceu **este** mapa (não necessariamente quem
-     *   lidera a série). É essencial passar isto explicitamente, não derivar
-     *   de `homeMapsFinal > awayMapsFinal`: o placar pode estar EMPATADO
-     *   após um mapa (ex: 1-1) e aí a comparação não diria quem venceu o mapa
-     *   atual. Esse bug fazia a tela mostrar "VITÓRIA" para o lado away mesmo
-     *   quando o home tinha vencido o mapa que levou ao empate.
+     * @param mapWonByHome vencedor DESTE mapa (essencial — placar pode estar
+     *   empatado e a comparação `home > away` daria errado). Vem do
+     *   `result.homeWon` da última chamada de [LiveMatchEngine].
      */
     private fun applyResult(homeMapsFinal: Int, awayMapsFinal: Int, mapWonByHome: Boolean) {
         if (resultApplied) return
         resultApplied = true
-
-        val seriesFinished = homeMapsFinal >= GameConstants.Series.MAPS_TO_WIN ||
-                             awayMapsFinal >= GameConstants.Series.MAPS_TO_WIN
-
-        match.homeScore = homeMapsFinal
-        match.awayScore = awayMapsFinal
-        if (seriesFinished) {
-            match.played      = true
-            match.pickBanPlan = null
-        }
-
-        val gs     = GameRepository.current()
-        // Vencedor a reportar para a tela de resultado:
-        //  - Série terminada → quem fez 2 mapas (líder do placar)
-        //  - Mapa intermediário → quem venceu ESTE mapa (mapWonByHome)
-        // Sem essa distinção, um empate 1-1 após o 2º mapa fazia o código
-        // antigo (`homeMapsFinal > awayMapsFinal`) sempre escolher o lado away
-        // como vencedor, gerando "vitória" incorreta para times do lado direito.
-        val winner = if (seriesFinished) {
-            if (homeMapsFinal > awayMapsFinal) match.homeTeamId else match.awayTeamId
-        } else {
-            if (mapWonByHome) match.homeTeamId else match.awayTeamId
-        }
-        val isMine = match.homeTeamId == gs.managerTeamId || match.awayTeamId == gs.managerTeamId
-
-        val prize = if (seriesFinished && isMine) calculatePrize(winner, homeMapsFinal, awayMapsFinal, gs.managerTeamId) else 0L
-        if (prize > 0L) gs.budget += prize
-
-        // Avança o calendário até a data da partida processando TODOS os ticks
-        // diários dos dias intermediários (scouting, moral, economia, janelas de
-        // transferência). Antes a data era apenas atribuída, o que congelava o
-        // avanço do scouting. `advanceCalendarTo` é no-op se a data da partida
-        // não for posterior à data atual, então é seguro em qualquer caso.
-        //
-        // Ele também simula as partidas dos outros times dos dias intermediários.
-        if (seriesFinished) {
-            val today    = LocalDate.parse(gs.currentDate)
-            val matchDay = LocalDate.parse(match.date)
-            if (today.isBefore(matchDay)) {
-                GameEngine.advanceCalendarTo(applicationContext, match.date)
-            }
-            // Garante que as partidas dos OUTROS times do MESMO dia da partida
-            // do gerente também sejam simuladas — [advanceCalendarTo] só simula
-            // as partidas dos dias estritamente anteriores a `match.date`
-            // (o loop usa `isBefore`), então sem esta chamada extra a tabela
-            // mostraria os jogos do dia da partida do gerente ainda pendentes.
-            GameEngine.simulateOpponentMatchesToday(applicationContext)
-        }
-
-        if (seriesFinished) {
-            GameRepository.log("MATCH",
-                "Rodada ${match.round}: ${binding.tvHomeName.text} $homeMapsFinal-$awayMapsFinal ${binding.tvAwayName.text}")
-            // Cobertura jornalística: só para partidas do time do gerente.
-            if (isMine) publishMatchNews(gs, winner, homeMapsFinal, awayMapsFinal)
-        }
-        GameRepository.save(applicationContext)
-
-        launchResultActivity(homeMapsFinal, awayMapsFinal, winner, prize, seriesFinished, gs.managerTeamId)
+        resultPublisher.publish(homeMapsFinal, awayMapsFinal, mapWonByHome)
         finish()
-    }
-
-    /**
-     * Publica a notícia da série recém-encerrada no feed (NewsService). Detecta
-     * zebra comparando a força dos dois elencos — mesma heurística do
-     * [GameEngine] para partidas auto-simuladas, mantendo o tom consistente.
-     */
-    private fun publishMatchNews(
-        gs: com.cblol.scout.data.GameState,
-        winnerId: String,
-        homeMapsFinal: Int,
-        awayMapsFinal: Int
-    ) {
-        val managerIsHome = match.homeTeamId == gs.managerTeamId
-        val opponentId = if (managerIsHome) match.awayTeamId else match.homeTeamId
-        val managerMaps = if (managerIsHome) homeMapsFinal else awayMapsFinal
-        val opponentMaps = if (managerIsHome) awayMapsFinal else homeMapsFinal
-        val managerWon = winnerId == gs.managerTeamId
-
-        val managerStrength = com.cblol.scout.game.MatchSimulator.teamStrength(
-            GameRepository.rosterOf(applicationContext, gs.managerTeamId))
-        val opponentStrength = com.cblol.scout.game.MatchSimulator.teamStrength(
-            GameRepository.rosterOf(applicationContext, opponentId))
-        val wasUpset = if (managerWon) managerStrength + 5 <= opponentStrength
-                       else opponentStrength + 5 <= managerStrength
-
-        com.cblol.scout.domain.usecase.NewsService.reportMatchResult(
-            state = gs,
-            managerTeamName = if (managerIsHome) binding.tvHomeName.text.toString()
-                              else binding.tvAwayName.text.toString(),
-            opponentName = if (managerIsHome) binding.tvAwayName.text.toString()
-                           else binding.tvHomeName.text.toString(),
-            managerWon = managerWon,
-            managerMaps = managerMaps,
-            opponentMaps = opponentMaps,
-            wasUpset = wasUpset
-        )
-    }
-
-    private fun calculatePrize(winner: String, homeMaps: Int, awayMaps: Int, managerId: String): Long {
-        return if (winner == managerId) {
-            val mapsWon = maxOf(homeMaps, awayMaps)
-            GameConstants.Economy.PRIZE_PER_SERIES_WIN + GameConstants.Economy.PRIZE_PER_MAP_WIN * mapsWon
-        } else {
-            val myMaps = if (match.homeTeamId == managerId) homeMaps else awayMaps
-            GameConstants.Economy.PRIZE_PER_MAP_WIN * myMaps
-        }
-    }
-
-    private fun launchResultActivity(
-        homeMapsFinal: Int, awayMapsFinal: Int, winner: String,
-        prize: Long, seriesFinished: Boolean, managerId: String
-    ) {
-        val isPlayerHome   = match.homeTeamId == managerId
-        val opponentTeamId = if (isPlayerHome) match.awayTeamId else match.homeTeamId
-
-        startActivity(Intent(this, MatchResultActivity::class.java).apply {
-            putExtra(MatchResultActivity.EXTRA_HOME_NAME,        binding.tvHomeName.text.toString())
-            putExtra(MatchResultActivity.EXTRA_AWAY_NAME,        binding.tvAwayName.text.toString())
-            putExtra(MatchResultActivity.EXTRA_HOME_ID,          match.homeTeamId)
-            putExtra(MatchResultActivity.EXTRA_AWAY_ID,          match.awayTeamId)
-            putExtra(MatchResultActivity.EXTRA_HOME_SCORE,       homeMapsFinal)
-            putExtra(MatchResultActivity.EXTRA_AWAY_SCORE,       awayMapsFinal)
-            putExtra(MatchResultActivity.EXTRA_WINNER_ID,        winner)
-            putExtra(MatchResultActivity.EXTRA_MANAGER_ID,       managerId)
-            putExtra(MatchResultActivity.EXTRA_HOME_KILLS,       homeKills)
-            putExtra(MatchResultActivity.EXTRA_AWAY_KILLS,       awayKills)
-            putExtra(MatchResultActivity.EXTRA_HOME_TOWERS,      homeTowers)
-            putExtra(MatchResultActivity.EXTRA_AWAY_TOWERS,      awayTowers)
-            putExtra(MatchResultActivity.EXTRA_HOME_DRAGONS,     homeDragons)
-            putExtra(MatchResultActivity.EXTRA_AWAY_DRAGONS,     awayDragons)
-            putExtra(MatchResultActivity.EXTRA_HOME_BARONS,      homeBarons)
-            putExtra(MatchResultActivity.EXTRA_AWAY_BARONS,      awayBarons)
-            putExtra(MatchResultActivity.EXTRA_PRIZE,            prize)
-            putExtra(MatchResultActivity.EXTRA_MATCH_ID,         match.id)
-            putExtra(MatchResultActivity.EXTRA_MAP_NUMBER,       homeMaps + awayMaps)
-            putExtra(MatchResultActivity.EXTRA_PLAYER_TEAM_ID,   managerId)
-            putExtra(MatchResultActivity.EXTRA_OPPONENT_TEAM_ID, opponentTeamId)
-            putExtra(MatchResultActivity.EXTRA_SERIES_FINISHED,  seriesFinished)
-        })
-    }
-
-    // ── Feed adapter ─────────────────────────────────────────────────────
-
-    private data class FeedEntry(val icon: String, val text: String, val accentColor: Int)
-
-    private inner class FeedAdapter : RecyclerView.Adapter<FeedAdapter.VH>() {
-        private val items = mutableListOf<FeedEntry>()
-
-        fun add(e: FeedEntry) {
-            items.add(0, e)
-            if (items.size > GameConstants.Simulation.FEED_MAX_ITEMS) {
-                items.removeAt(items.size - 1)
-            }
-            notifyItemInserted(0)
-            binding.recyclerFeed.scrollToPosition(0)
-        }
-
-        fun clear() {
-            val c = items.size
-            items.clear()
-            notifyItemRangeRemoved(0, c)
-        }
-
-        inner class VH(v: View) : RecyclerView.ViewHolder(v) {
-            val tvIcon: TextView = v.findViewById(R.id.tv_feed_icon)
-            val tvText: TextView = v.findViewById(R.id.tv_feed_text)
-            val viewBar: View = v.findViewById(R.id.view_feed_accent)
-        }
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = VH(
-            LayoutInflater.from(parent.context).inflate(R.layout.item_match_feed, parent, false)
-        )
-
-        override fun getItemCount(): Int = items.size
-
-        override fun onBindViewHolder(h: VH, i: Int) {
-            val e = items[i]
-            h.tvIcon.text = e.icon
-            h.tvText.text = e.text
-            h.viewBar.setBackgroundColor(e.accentColor)
-        }
     }
 
     companion object {
@@ -657,8 +262,5 @@ class MatchSimulationActivity : AppCompatActivity() {
         private const val SPEED_1X = 1f
         private const val SPEED_2X = 2f
         private const val SPEED_4X = 4f
-
-        private const val BUFF_TYPE_RED = "Red"
-        private const val TIMER_FORMAT  = "%02d:%02d"
     }
 }

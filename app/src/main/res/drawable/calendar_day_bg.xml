@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Fundo de uma célula do calendário. Usa state_selected e state_activated para
+  diferenciar estados sem precisar trocar o drawable em código:
+
+   - state_selected=true → fundo dourado (dia selecionado pelo usuário)
+   - state_activated=true → borda dourada (dia "hoje" da carreira)
+   - default → fundo elevado discreto
+
+  A combinação selecionado+ativado (usuário escolheu o dia de hoje) cai no
+  primeiro item (selected vence). Isso casa com o padrão de calendários reais.
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Selecionado pelo usuário: fundo dourado preenchido -->
+    <item android:state_selected="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/color_primary"/>
+            <corners android:radius="4dp"/>
+        </shape>
+    </item>
+
+    <!-- Dia "hoje" (não selecionado): apenas borda dourada -->
+    <item android:state_activated="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/color_surface_elevated"/>
+            <stroke android:width="1.5dp" android:color="@color/color_primary"/>
+            <corners android:radius="4dp"/>
+        </shape>
+    </item>
+
+    <!-- Padrão -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/color_surface_elevated"/>
+            <corners android:radius="4dp"/>
+        </shape>
+    </item>
+</selector>

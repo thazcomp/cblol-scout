@@ -8,13 +8,16 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 
+/**
+ * Módulo Koin — registra UseCases e ViewModels.
+ *
+ * **Organização**: UseCases agrupados por bounded context, ViewModels no fim.
+ * Cada nova ViewModel implica adicionar (1) os UseCases que ela consome no
+ * bloco apropriado e (2) o `viewModel { ... }` aqui.
+ */
 val appModule = module {
 
     // ── Fonte de dados estáticos (Realm criptografado) ────────────────
-    // Singleton: abre o Realm uma vez e mantém os dados em cache. Também é
-    // instalado em StaticData no CBLOLApp para os repositórios `object` (que não
-    // recebem injeção) acessarem. Exposto aqui para use cases/ViewModels que
-    // queiram depender da abstração diretamente via DI.
     single<StaticDataSource> { RealmStaticDataSource(androidContext()) }
 
     // ── UseCases — Career ────────────────────────────────────────────────
@@ -38,6 +41,9 @@ val appModule = module {
     factory { UpdateSeriesStateUseCase(androidContext()) }
     factory { FinalizeMatchUseCase(androidContext()) }
 
+    // UseCases — Calendário (agrega eventos de TODOS os subsistemas)
+    factory { CalendarEventsAggregator(androidContext()) }
+
     // ── UseCases — Squad ─────────────────────────────────────────────────
     factory { GetRosterUseCase(androidContext()) }
     factory { GetStartersUseCase(androidContext()) }
@@ -51,6 +57,42 @@ val appModule = module {
     factory { BuyPlayerUseCase(androidContext()) }
     factory { GetMarketPriceUseCase() }
 
+    // ── UseCases — Academia ──────────────────────────────────────────────
+    factory { GetAcademyStateUseCase(androidContext()) }
+    factory { RecruitProspectUseCase(androidContext()) }
+    factory { EvaluateProspectUseCase(androidContext()) }
+    factory { PromoteProspectUseCase(androidContext()) }
+    factory { ReleaseProspectUseCase(androidContext()) }
+    factory { UpgradeAcademyUseCase(androidContext()) }
+
+    // ── UseCases — Banco ─────────────────────────────────────────────────
+    factory { GetBankStateUseCase(androidContext()) }
+    factory { TakeLoanUseCase(androidContext()) }
+    factory { PayOffLoanUseCase(androidContext()) }
+
+    // ── UseCases — Propostas recebidas ───────────────────────────────────
+    factory { GetIncomingOffersStateUseCase(androidContext()) }
+    factory { AcceptIncomingOfferUseCase(androidContext()) }
+    factory { RejectIncomingOfferUseCase(androidContext()) }
+
+    // ── UseCases — Notícias ──────────────────────────────────────────────
+    factory { GetNewsStateUseCase(androidContext()) }
+
+    // ── UseCases — Patrocínios ───────────────────────────────────────────
+    factory { GetSponsorsStateUseCase(androidContext()) }
+    factory { AcceptSponsorOfferUseCase(androidContext()) }
+    factory { RejectSponsorOfferUseCase(androidContext()) }
+    factory { CancelSponsorContractUseCase(androidContext()) }
+
+    // ── UseCases — Olheiros ──────────────────────────────────────────────
+    factory { GetScoutingStateUseCase(androidContext()) }
+    factory { CancelScoutingUseCase(androidContext()) }
+    factory { UpgradeScoutingUseCase(androidContext()) }
+
+    // ── UseCases — Treinos ───────────────────────────────────────────────
+    factory { GetTrainingStateUseCase(androidContext()) }
+    factory { RunTrainingUseCase(androidContext()) }
+
     // ── ViewModels ───────────────────────────────────────────────────────
     viewModel {
         ManagerHubViewModel(
@@ -62,11 +104,12 @@ val appModule = module {
 
     viewModel {
         ScheduleViewModel(
-            getAllMatches       = get(),
-            savePickBanPlan    = get(),
+            getAllMatches        = get(),
+            savePickBanPlan      = get(),
             simulateMapWithPicks = get(),
-            updateSeriesState  = get(),
-            finalizeMatch      = get()
+            updateSeriesState    = get(),
+            finalizeMatch        = get(),
+            calendarAggregator   = get()
         )
     }
 
@@ -93,10 +136,65 @@ val appModule = module {
 
     viewModel {
         TeamSelectViewModel(
-            hasSav      = get(),
-            loadCareer   = get(),
+            hasSav         = get(),
+            loadCareer     = get(),
             startNewCareer = get(),
-            clearCareer  = get()
+            clearCareer    = get()
+        )
+    }
+
+    viewModel {
+        AcademyViewModel(
+            getState = get(),
+            recruit  = get(),
+            evaluate = get(),
+            promote  = get(),
+            release  = get(),
+            upgrade  = get()
+        )
+    }
+
+    viewModel {
+        BankViewModel(
+            getState = get(),
+            takeLoan = get(),
+            payOff   = get()
+        )
+    }
+
+    viewModel {
+        IncomingOffersViewModel(
+            getState = get(),
+            accept   = get(),
+            reject   = get()
+        )
+    }
+
+    viewModel {
+        NewsViewModel(getState = get())
+    }
+
+    viewModel {
+        SponsorsViewModel(
+            getState       = get(),
+            acceptOffer    = get(),
+            rejectOffer    = get(),
+            cancelContract = get()
+        )
+    }
+
+    viewModel {
+        ScoutingViewModel(
+            getState       = get(),
+            cancelScouting = get(),
+            upgradeDept    = get()
+        )
+    }
+
+    viewModel {
+        TrainingViewModel(
+            getState    = get(),
+            runTraining = get()
         )
     }
 }

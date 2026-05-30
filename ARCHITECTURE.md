@@ -839,6 +839,391 @@ patrocínio e laços, todos baseados em `MatchResultData.playerWon`.
 
 ---
 
+## Decomposição de classes grandes (SRP em escala)
+
+Algumas classes-chave do app cresceram acima de ~500 linhas conforme novos
+sistemas foram plugados (moral, scouting, banco, base, notícias, 2ª divisão,
+etc.). Como manter tudo num arquivo só deixa SRP de fachada, o trabalho foi
+fatiado: a classe original virou uma **fachada fina** que delega para helpers
+especializados no mesmo pacote. A API pública em cada caso ficou
+**100% retro-compatível** — quem chama o motor não muda.
+
+O padrão é sempre o mesmo: identificar 3–5 responsabilidades isoláveis,
+criar um subpacote (`game/engine`, `game/repo`, `game/live`, `ui/hub`,
+`ui/match`), mover cada bloco para sua classe com KDoc explicando o porquê da
+separacão.
+
+### `GameEngine` (~700 → ~190 linhas)
+
+Fachada do motor de progressão do jogo. Subpacote `game/engine/`:
+
+- **`DailyTicksProcessor`** — orquestra os ticks "humanos" de cada dia (moral,
+  scouting, ofertas recebidas, laços, academia). Resolve nomes de jogadores em
+  scouting nas 4 fontes (snapshot, free agents, 2ª div, base).
+- **`EconomyProcessor`** — bloco de domingo (patrocínio + manutenções +
+  parcelas de empréstimo) + folha mensal + aviso de saúde financeira.
+- **`MatchDaySimulator`** — simula partidas (`simulateAllOn` para o modo
+  automático, `simulateOpponentsOn` para o modo manual do gerente), aplica
+  prêmios e gera a cobertura jornalística das partidas do gerente.
+- **`CareerStarter`** — `startNewCareer` + `resolveDivisionSetup` privado que
+  empacota orçamento/times/jogadores conforme a divisão escolhida.
+- **`TransferWindowDetector`** — detecta abertura/fechamento de janela entre
+  dois dias consecutivos e loga a transição.
+
+### `GameRepository` (~290 → ~140 linhas)
+
+Fachada de persistência + acesso unificado ao estado. Subpacote `game/repo/`:
+
+- **`GameStateMigrator`** — todas as blindagens defensivas para saves
+  anteriores aos campos novos (coachProfile, scoutingDepartment, transferWindows,
+  incomingOffers, playerBonds, academy, bank, division, news). Idempotente —
+  cada `migrate*()` checa se o campo já existe.
+- **`RosterResolver`** — `rosterOf` (une 4 fontes), `marketRoster` (filtra por
+  divisão), `teamsForCurrentDivision` (1ª vs 2ª div) e `applyOverride`.
+  Stateless: recebe `snapshot` e `state` como parâmetros, devolve listas puras.
+- **`PromotedPlayerFactory`** — materializa um `AcademyProspect` em `Player`
+  do elenco (distribuição de atributos com `jitter` em torno do overall +
+  contrato base com `fonte_salario="base"`).
+
+### `LiveMatchEngine` (~500 → ~260 linhas)
+
+Fachada do motor de simulação ao vivo. Subpacote `game/live/`:
+
+- **`SideNormalizer`** — traduz plano azul/vermelho ↔ home/away conforme o
+  número do mapa (jogador alterna lado a cada mapa).
+- **`PickBanGenerator`** — 5 bans + 5 picks por lado, com plano humano ou via
+  IA; devolve `playerName → campeão` para uso nos kills.
+- **`MapStrengthCalculator`** — força final dos lados (overall + moral +
+  off-match + composição + mains + laços − rota errada).
+- **`GameOutcomeCalculator`** — decisão probabilística do mapa (vencedor,
+  kills, duração). Constantes da heurística vivem aqui.
+- **`TimedEventGenerator`** — distribui kills/torres/dragões/baron/herald/
+  buffs/inibidor ao longo dos minutos do jogo.
+
+### `ManagerHubActivity` (~580 → ~290 linhas)
+
+Activity coordena lifecycle + observers + ações. Subpacote `ui/hub/`:
+
+- **`HubCardSummaryRenderer`** — renderiza os 9 badges/subtítulos dos cards
+  (mercado, técnico, sponsors, scouting, payroll, ofertas, base, banco,
+  notícias). Defensivo contra GameRepository não carregado.
+- **`HubLogAdapter`** — adapter standalone do log + mapa
+  `LOG_TYPE_ICON_RES` declarativo.
+
+### `MatchSimulationActivity` (~600 → ~210 linhas)
+
+Activity coordena lifecycle + coroutine de tocagem + controles. Subpacote
+`ui/match/`:
+
+- **`MatchStatsAccumulator`** — contadores do mapa (kills, torres, dragões,
+  baron, herald) + binding com o scoreboard. Reset por mapa num único
+  `reset()`.
+- **`MatchFeedAdapter`** — adapter standalone do feed de eventos (LIFO com
+  limite [GameConstants.Simulation.FEED_MAX_ITEMS]).
+- **`MatchEventRenderer`** — dispatcher dos 13 tipos de `MatchEvent`
+  (handlers `onKill/onTower/onDragon/onBaron/...` privados, cada um curto).
+- **`MatchResultPublisher`** — encerra mapa/série, calcula prêmio, avança
+  calendário, publica notícia e lança a `MatchResultActivity`.
+
+### Por que esse padrão vale a pena
+
+1. **Compreensão local.** Para entender "como funciona o pick & ban" basta
+   abrir `PickBanGenerator.kt`. Não é mais preciso navegar 500 linhas de
+   `LiveMatchEngine` procurando o trecho relevante.
+2. **Mudanças cirúrgicas.** Ajustar a probabilidade de baron toca apenas
+   `TimedEventGenerator`/`GameOutcomeCalculator`. O motor não se importa.
+3. **Testabilidade.** Helpers pequenos e focados são mais fáceis de testar
+   em isolamento (ex: `GameOutcomeCalculator.calculate(homeStr, awayStr)` não
+   precisa de Android nem do GameRepository).
+4. **Reuso por composição.** Outros motores futuros podem reutilizar pedaços
+   (`PickBanGenerator` para um simulador de scrim, por exemplo) sem arrastar
+   o motor inteiro.
+5. **Fachada preserva API.** Ninguém que chama o motor precisa mudar nada.
+   A refatoração é invisível de fora.
+
+---
+
+## Padrão Activity → ViewModel → UseCase + Event
+
+Todas as telas que executam regras de negócio seguem o **mesmo molde**, para
+ter coerência e testabilidade. O modelo nasceu pelas Activities maiores
+(`ManagerHubActivity`, `SquadActivity`, `TransferMarketActivity`) e foi
+uniformizado pelas demais (`AcademyActivity`, `BankActivity`,
+`IncomingOffersActivity`, `NewsActivity`, `SponsorsActivity`,
+`ScoutingActivity`, `TrainingActivity`).
+
+```
+   Activity (só UI)
+      ├── observa  vm.state    : LiveData<UiState>     → renderiza
+      ├── observa  vm.events   : LiveData<Event<X>>   → mostra diálogo
+      ├── observa  vm.running  : LiveData<Boolean>     → bloqueia UI (opcional)
+      └── delega   vm.acao()                          → dispara intent
+
+   ViewModel
+      ├── state    : LiveData<UiState>      (imutável para a Activity)
+      ├── events   : LiveData<Event<Sealed>> (one-shot)
+      └── métodos públicos para cada ação do usuário
+           └── chamam o UseCase em viewModelScope (Dispatchers.IO)
+
+   UseCase
+      └── Service (regra pura) + GameRepository (persist/log/notice)
+           └── retorna sealed class tipada (Ok / Erro1 / Erro2 / ...)
+```
+
+### Componentes-chave
+
+- **`Event<T>`** (`ui/viewmodel/Event.kt`) — wrapper one-shot para LiveData.
+  `Event.consume()` devolve o conteúdo na primeira chamada e null nas
+  seguintes; evita re-disparar diálogos em rotação de tela.
+- **`UiState`** (data class no UseCase) — snapshot pronto para a tela
+  consumir, sem precisar reler vários services.
+- **Sealed class de resultado** (em cada UseCase) — `Ok` + as falhas
+  possíveis com os campos que a Activity precisa para a mensagem (ex:
+  `InsufficientFunds(cost, budget)`). A Activity faz `when` exaustivo.
+- **Sealed class de evento** (no ViewModel) — carrega o input + o
+  resultado para a Activity decidir qual diálogo abrir sem reler o estado.
+
+### Regras do molde
+
+1. **Nenhuma Activity nova chama `GameRepository.current()`/`save()`/`log()`
+   diretamente.** Tudo passa por UseCase. Única exceção tolerada: leitura
+   pontual de `managerTeamId` para pintar a toolbar com a cor do time —
+   informação trivialmente estável durante a tela.
+2. **Activities não chamam `Service` direto** (sem `BankService.takeLoan(...)`
+   na Activity). Sempre via UseCase, que isola o conjunto
+   `Service + GameRepository.save + log + News`.
+3. **`viewModelScope` + `Dispatchers.IO`** para qualquer operação de UseCase.
+   Mesmo que hoje seja síncrona, mantemos a fronteira para o dia em que algo
+   virar suspend.
+4. **Activity dispara o diálogo de confirmação** (UI puro), mas só chama
+   `vm.xxx()` no positivo. O diálogo de **resultado** vem do `Event`.
+5. **O cabeçalho de cores/toolbar** é OK fazer in-line com `TeamColors`
+   porque é puramente visual. Não vale a pena empacotar isso no `UiState`.
+
+### Inventories
+
+**ViewModels** (em `ui/viewmodel/`):
+`ManagerHubViewModel`, `ScheduleViewModel`, `SquadViewModel`,
+`TransferMarketViewModel`, `StandingsViewModel`, `TeamSelectViewModel`,
+`AcademyViewModel`, `BankViewModel`, `IncomingOffersViewModel`,
+`NewsViewModel`, `SponsorsViewModel`, `ScoutingViewModel`,
+`TrainingViewModel`.
+
+**UseCases agrupados por bounded context** (em `domain/usecase/`):
+- `MoreUseCases.kt` — Academia, Banco, Propostas recebidas, Notícias
+- `HubFeatureUseCases.kt` — Patrocínios, Olheiros, Treinos
+
+### Activities ainda fora do padrão
+
+As Activities envolvendo **timing / coreografia** ainda guardam algum
+estado mutável mais complexo:
+`PickBanActivity`, `FullPickBanActivity`, `RoleAssignmentActivity`,
+`PickBanRouterActivity`, `MatchSimulationActivity`, `MatchResultActivity`,
+`OffMatchEventActivity`. A migração delas é viável mas exige uma extração
+de máquina de estado de pick & ban / coroutine de simulação para fora da
+Activity — deixadas para um próximo passo controlado.
+
+---
+
+## Persistência do save da carreira (Realm criptografado)
+
+O save da carreira NÃO fica mais em `SharedPreferences + Gson`. Agora vive no
+mesmo motor do catálogo estático: um **banco Realm criptografado** (AES-256,
+chave protegida pelo Android Keystore via [RealmKeyProvider]). A migração
+foi pensada para tratar o Realm como **API**: além de carregar/salvar o save
+inteiro, expomos métodos de consulta pontual que leem campos diretos da
+entidade sem reidratar o GameState completo.
+
+### Estrutura
+
+```
+data/realm/GameStateBlobEntity   (entidade Realm com slot único "current")
+    ├─ campos-chave consultáveis (managerName, currentDate, budget, division…)
+    └─ payloadJson  (resto do GameState serializado em JSON)
+
+data/realm/GameStatePersistence  (camada de IO)
+    ├─ hasSave() / load() / save() / clear()
+    ├─ currentBudget() / currentDate() / currentDivision()  (queries pontuais)
+    └─ migrateLegacySaveIfNeeded()  (importa save antigo da SharedPreferences)
+
+game/GameRepository                (fachada do domínio, inalterada por fora)
+    └─ delega tudo à GameStatePersistence, mantém cache em memória de sessão
+```
+
+### Design híbrido: campos diretos + payload JSON
+
+O [GameState] tem listas/mapas aninhados (matches, gameLog, playerOverrides,
+incomingOffers, academia, bonds…) que sempre são lidos e escritos em bloco a
+cada tick. Modelar tudo como entidades Realm normalizadas exigiria dezenas de
+classes auxiliares para representar dados que sempre andam juntos — sem
+ganho real.
+
+Então usamos um modelo híbrido:
+
+- **Campos diretos** na entidade para as propriedades-chave + contadores leves
+  (`managerName`, `managerTeamId`, `splitStartDate`, `splitEndDate`,
+  `currentDate`, `budget`, `sponsorshipPerWeek`, `division`,
+  `savedAtMillis`). São consultáveis sem desserializar o resto — permitem usar
+  o Realm como API ("o save existe?", "qual o orçamento atual?", "qual a data?").
+- **`payloadJson`** para o restante. É o que serializávamos antes em
+  SharedPreferences; o [GameStateMigrator] continua aplicando blindagem
+  defensiva em campos novos sobre o data class reidratado.
+
+### Por que Realm e não SharedPreferences
+
+1. **Criptografia transparente** — o arquivo `.realm` já é cifrado com a
+   mesma chave de 64 bytes guardada no Keystore. Sem dump em claro nas prefs.
+2. **Consistência de motor de persistência** — o app passa a ter UM banco
+   para tudo (dados estáticos + saves), em arquivos separados
+   (`cblol_static.realm` e `cblol_save.realm`) para isolar schemas.
+3. **Queries pontuais** — ler `budget` ou `currentDate` sem parsear o JSON
+   inteiro. Hoje aproveitado em badge/telas auxiliares; ganho real quando
+   futuras telas precisarem ler campos específicos antes do load completo
+   (ex: tela de "continuar carreira" com prévia do save).
+4. **Transações atômicas** — `writeBlocking` garante save íntegro mesmo se o
+   processo morrer no meio. O `apply()` da SharedPreferences é assíncrono e
+   menos garantido.
+
+### Migração automática de saves antigos
+
+Na primeira execução pós-update,
+[GameStatePersistence.migrateLegacySaveIfNeeded] roda automaticamente quando o
+[GameRepository.persistence] é acessado pela primeira vez:
+
+1. Se já há save no Realm → limpa as prefs legadas (`cblol_scout_game`) por
+   higiene e sai. O Realm é a fonte de verdade.
+2. Se não há save no Realm mas há JSON antigo nas prefs → desserializa,
+   aplica o [GameStateMigrator] e grava no Realm; depois apaga das prefs.
+3. Se não há nada → no-op.
+
+Idempotente. Carreiras em andamento sobrevivem ao update sem reset.
+
+### Cache em memória mantido
+
+O [GameRepository] continua mantendo o `GameState` carregado em memória
+durante a sessão, exatamente como antes. O Realm é tocado apenas em
+load/save/clear/queries pontuais explícitas — a performance percebida no
+ciclo de jogo (tick, partida, UI) não muda.
+
+### Regras
+
+- **`SharedPreferences` está BANIDO para dados de jogo.** Continua aceitável
+  apenas para flags de UX que existem antes do save (ex: `cblol_onboarding_prefs`
+  com a flag de onboarding visto, ou `cblol_realm_keys` que guarda o blob
+  cifrado da chave de 64 bytes do Realm).
+- **Acessar `cblol_scout_game` direto está PROIBIDO** em código novo. Toda
+  leitura/escrita do save vai por [GameRepository] (em memória) ou pelo
+  [GameStatePersistence] (consulta pontual ao Realm).
+- **Novos campos de estado** entram como propriedade do data class
+  [GameState] e vêm embalados no `payloadJson` automaticamente. Quando algum
+  campo merece ser consultável sem reidratar tudo, promover para coluna direta
+  na [GameStateBlobEntity] (e atualizar `save()`).
+- **Mudanças no schema da entidade Realm** (adicionar/remover campo direto)
+  usam `deleteRealmIfMigrationNeeded()` durante o desenvolvimento. Quando o
+  app for publicado e não pudermos mais derrubar o save dos usuários,
+  escrevemos `RealmMigration` específicos por versão.
+
+---
+
+## Calendário mensal (`ScheduleActivity`)
+
+A tela de calendário mostra uma **grade mensal real** (estilo Google Calendar)
+em vez de uma lista plana de partidas. Cada dia exibe pontos coloridos por
+categoria de evento; tocar num dia abre o painel inferior com os eventos
+daquele dia.
+
+### O que aparece no calendário
+
+Não só partidas — eventos de **todos os subsistemas**:
+
+1. **Partidas do gerente** (dourado) — com ação de pick & ban ou simular.
+2. **Partidas dos outros times** (azul) — opção de assistir.
+3. **Janelas de transferência** (lavanda) — abertura e fechamento.
+4. **Propostas recebidas expirando** (lavanda) — prazo limite para responder.
+5. **Ofertas de patrocínio expirando** (ciano) — prazo de aceitação.
+6. **Contratos de patrocínio terminando** (ciano) — última cobrança.
+7. **Folha salarial** (mint) — todo dia 1 do mês.
+8. **Patrocínio semanal** (mint) — todo domingo, valor estimado consolidado.
+9. **Marcos do split** (coral) — início e fim do campeonato.
+
+As categorias 7 e 8 são **derivadas** (não vivem em listas do save). O
+agregador as calcula iterando o intervalo do calendário.
+
+### Arquitetura
+
+```
+CalendarEvent (sealed)              ← modelo unificado polimórfico
+   ├─ ManagerMatch / OtherMatch
+   ├─ TransferWindowOpens / TransferWindowCloses / IncomingOfferExpires
+   ├─ SponsorOfferExpires / SponsorContractEnds
+   ├─ WeeklySponsorPayout / Payroll
+   └─ SplitStart / SplitEnd
+
+CalendarEventCategory               ← cor + emoji por subsistema
+
+CalendarMonthState                  ← grade pronta + eventos por dia
+CalendarDayCell                     ← célula com estado (today/selected/in-month/within-split)
+
+CalendarEventsAggregator (UseCase)  ← coleta de TODOS os subsistemas
+   invoke(month) → CalendarMonthState
+   eventsOn(date) → List<CalendarEvent>
+
+ScheduleViewModel
+   monthState        : LiveData<CalendarMonthState>
+   selectedDate      : LiveData<LocalDate>
+   selectedDayEvents : LiveData<List<CalendarEvent>>
+   showMonth() / nextMonth() / previousMonth() / selectDay()
+
+ScheduleActivity
+   2 RecyclerViews:
+     - recycler_grid    (GridLayoutManager spanCount=7) → MonthGridAdapter
+     - recycler_events  (Linear, vertical)              → DayEventsAdapter
+```
+
+### Decisões de design
+
+1. **Grade fechada em quadrado** (35–42 células, 5–6 semanas × 7 colunas).
+   Primeira coluna alinha com o domingo da semana que contém o dia 1, e a
+   última com o sábado da semana do último dia. Dias dos meses adjacentes
+   aparecem em cinza com alpha reduzido — clicáveis para navegar.
+2. **Sealed class polimórfica** para os eventos. A UI só sabe `title`,
+   `subtitle` e `category` — cada subclasse expõe estrutura própria só onde
+   precisar (ex: `matchId` em `ManagerMatch`). Adicionar tipo novo de evento
+   = uma `data class` + entrada no `collectAll`, sem mexer no resto.
+3. **Recorrentes derivadas** (não persistidas) — folha do dia 1 e patrocínio
+   do domingo são calculadas pelo agregador iterando o intervalo. Incluímos
+   só datas futuras ou hoje (passado polui sem agregar valor).
+4. **Atualização cirúrgica de seleção** no adapter da grade: `setSelected(date)`
+   notifica APENAS as 2 células afetadas (antiga e nova), preservando
+   animações e evitando piscar a grade inteira.
+5. **Dias cinzas navegam** — ao clicar num dia do mês adjacente, o
+   calendário salta para esse mês automáticamente (UX padrão de calendários
+   mobile).
+6. **Atalho "hoje"** — tocar no nome do mês no header retorna para o mês
+   atual da carreira + seleciona o dia atual. Útil para voltar depois de
+   navegar para meses distantes.
+7. **Cores das categorias** são resources nomeados (`cal_cat_*`), com mapeamento
+   centralizado em `ScheduleActivity.categoryColor(category)` — único lugar a
+   editar quando adicionar nova categoria.
+8. **Pick & ban / simulação** mantém exatamente o mesmo fluxo legado: tocar
+   numa partida do gerente abre diálogo perguntando se quer fazer pick & ban
+   ou simular direto, com `startActivityForResult` para a `PickBanActivity`.
+   A diferença é que agora o gatilho está dentro de um evento de calendário.
+
+### Por que o agregador não vive no Realm
+
+O Realm guarda **o estado**, não as **projeções derivadas**. Eventos como
+"folha do próximo dia 1" ou "patrocínio do próximo domingo" são cálculos
+feitos a partir das datas, não registros persistidos. Criá-los como entidades
+seria duplicar informação e introduzir necessidade de invalidar/recriar a
+cada tick — muito mais código, sem benefício.
+
+O agregador é puro: lê o estado em memória (já reidratado do Realm pelo
+`GameRepository`) e calcula. Em rotações de tela ou navegação de mês,
+recalcula — trivialmente barato.
+
+---
+
 ## Status da migração
 
 Todas as Activities foram migradas para o padrão SOLID + recursos:

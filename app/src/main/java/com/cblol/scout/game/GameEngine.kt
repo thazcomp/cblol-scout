@@ -2,32 +2,54 @@ package com.cblol.scout.game
 
 import android.content.Context
 import com.cblol.scout.data.GameState
+import com.cblol.scout.data.Match
 import com.cblol.scout.data.Player
 import com.cblol.scout.domain.GameConstants
-import com.cblol.scout.domain.usecase.BankService
-import com.cblol.scout.domain.usecase.MoraleService
-import com.cblol.scout.domain.usecase.ScoutingService
-import com.cblol.scout.domain.usecase.SponsorService
+import com.cblol.scout.game.engine.CareerStarter
+import com.cblol.scout.game.engine.DailyTicksProcessor
+import com.cblol.scout.game.engine.EconomyProcessor
+import com.cblol.scout.game.engine.MatchDaySimulator
 import java.time.LocalDate
 
 /**
- * Lógica de progressão do jogo: avançar dia, simular partidas pendentes, aplicar
- * receitas/despesas, atualizar contratos, etc.
+ * Fachada do motor de progressão do jogo — avança dias, simula partidas
+ * pendentes, inicia carreiras.
  *
- * Regras econômicas:
- *  - Patrocínio semanal: pago todo domingo (R$ definido em GameState.sponsorshipPerWeek)
- *  - Salários: pagos no dia 1 de cada mês (somatório dos salários do elenco titular + reserva)
+ * Esta classe é uma fachada fina: a lógica vive em helpers especializados
+ * dentro de `game/engine/`, cada um com uma responsabilidade clara:
+ *
+ *  - **[DailyTicksProcessor]** — moral, scouting, ofertas, laços, academia
+ *  - **[EconomyProcessor]** — bloco de domingo + folha mensal + aviso de saúde
+ *  - **[MatchDaySimulator]** — simulação de partidas + cobertura jornalística
+ *  - **[CareerStarter]** — criação de carreira nova
+ *  - **[com.cblol.scout.game.engine.TransferWindowDetector]** — abertura/fecho
+ *    de janelas (chamado internamente pelo DailyTicksProcessor)
+ *
+ * Regras econômicas chave (constantes em [GameConstants.Economy]):
+ *  - Patrocínio semanal: pago todo domingo (R$ definido em
+ *    [GameState.sponsorshipPerWeek])
+ *  - Salários: pagos no dia 1 de cada mês
  *  - Premiação: R$ 50.000 por mapa vencido + R$ 100.000 por série vencida
  */
 object GameEngine {
 
     /** @deprecated Use [GameConstants.Economy.PRIZE_PER_MAP_WIN]. */
+    @Deprecated("Use GameConstants.Economy.PRIZE_PER_MAP_WIN")
     const val PRIZE_PER_MAP_WIN = GameConstants.Economy.PRIZE_PER_MAP_WIN
 
     /** @deprecated Use [GameConstants.Economy.PRIZE_PER_SERIES_WIN]. */
+    @Deprecated("Use GameConstants.Economy.PRIZE_PER_SERIES_WIN")
     const val PRIZE_PER_SERIES_WIN = GameConstants.Economy.PRIZE_PER_SERIES_WIN
 
-    /** Avança a data corrente em N dias, processando todos os eventos. */
+    // ── API pública: avanço de tempo ─────────────────────────────────────
+
+    /**
+     * Avança a data corrente em [days] dias, processando ticks E simulando
+     * **todas** as partidas (inclusive a do gerente).
+     *
+     * Usado em modos automáticos / testes. O fluxo normal de jogo usa
+     * [advanceCalendarTo], que deixa as partidas do gerente pendentes.
+     */
     fun advanceDays(context: Context, days: Int): AdvanceReport {
         val gs = GameRepository.current()
         val report = AdvanceReport()
@@ -36,13 +58,8 @@ object GameEngine {
         repeat(days) {
             date = date.plusDays(1)
             val iso = date.toString()
-
-            // Processa todos os ticks diários (moral, scouting, economia, janelas).
             processDailyTicks(context, gs, date, report)
-
-            // Simula partidas do dia (apenas no avanço automático via advanceDays;
-            // o avanço ao jogar manualmente NÃO simula partidas — ver advanceCalendarTo).
-            simulateMatchesOn(context, gs, iso, report)
+            MatchDaySimulator.simulateAllOn(context, gs, iso, report)
         }
 
         GameRepository.save(context)
@@ -50,26 +67,13 @@ object GameEngine {
     }
 
     /**
-     * Avança o calendário do jogo até [targetDateIso] (inclusive), processando
-     * os ticks diários de CADA dia intermediário — moral, scouting, pagamentos
-     * semanais/mensais, janelas de transferência — E simulando as partidas
-     * **dos OUTROS times** que aconteceriam nesses dias.
+     * Avança o calendário até [targetDateIso] (inclusive), processando os
+     * ticks diários de CADA dia intermediário E simulando as partidas **dos
+     * OUTROS times** que aconteceriam nesses dias.
      *
-     * É usado quando o tempo avança porque o jogador jogou uma partida
-     * manualmente (o salto de data acontece na
-     * [com.cblol.scout.ui.MatchSimulationActivity]) ou usou "Avançar 1 dia" no
-     * Hub.
-     *
-     * **Partidas do gerente NÃO são auto-simuladas aqui** — ele precisa jogá-las
-     * manualmente. A Activity que chama esta função garante que avança apenas
-     * até depois de já ter jogado/resolvido a partida dele; o Hub bloqueia o
-     * avanço quando há partida do gerente no dia seguinte. Esta função apenas
-     * resolve as partidas dos demais times do split, garantindo que a
-     * classificação fique atualizada conforme o tempo passa.
-     *
-     * Histórico: antes desta versão, [advanceCalendarTo] só processava ticks e
-     * deixava as partidas dos outros times pendentes para sempre, o que
-     * mantinha a tabela de classificação congelada.
+     * **Partidas do gerente NÃO são auto-simuladas aqui** — ele precisa
+     * jogá-las manualmente. A Activity que chama esta função garante que
+     * avança apenas até depois de já ter jogado/resolvido a partida dele.
      *
      * Seguro contra datas no passado/iguais: se [targetDateIso] não for
      * posterior à data atual, não faz nada.
@@ -83,9 +87,7 @@ object GameEngine {
         while (date.isBefore(target)) {
             date = date.plusDays(1)
             processDailyTicks(context, gs, date, report)
-            // Simula partidas dos OUTROS times do dia (a do gerente, se houver,
-            // fica intacta — ver simulateOpponentMatchesOn).
-            simulateOpponentMatchesOn(context, gs, date.toString(), report)
+            MatchDaySimulator.simulateOpponentsOn(context, gs, date.toString(), report)
         }
 
         GameRepository.save(context)
@@ -93,275 +95,44 @@ object GameEngine {
     }
 
     /**
-     * Processa os eventos de UM dia: avança a data, detecta transição de janela,
-     * aplica decay de moral, tick de scouting, pagamentos semanais e mensais, e
-     * gera ofertas de patrocínio. NÃO simula partidas (isso é responsabilidade
-     * de quem chama, via [simulateMatchesOn] ou da Activity de simulação).
-     */
-    private fun processDailyTicks(
-        context: Context,
-        gs: GameState,
-        date: LocalDate,
-        report: AdvanceReport
-    ) {
-        val iso = date.toString()
-        val previousDate = gs.currentDate
-        gs.currentDate = iso
-
-        // Janela de transferência: detecta abertura/fechamento ao cruzar a data.
-        detectTransferWindowTransition(gs, previousDate, iso)
-
-        // 0. Decay temporal de moral + pedidos de transferência por insatisfação.
-        val roster = GameRepository.rosterOf(context, gs.managerTeamId)
-        val decayResult = MoraleService.applyDailyDecay(gs, roster)
-        decayResult.transferRequests.forEach { playerId ->
-            val player = roster.find { it.id == playerId } ?: return@forEach
-            report.transferRequests += player.nome_jogo
-            GameRepository.log(
-                "MOOD",
-                "${player.nome_jogo} pediu transferência por estar desmotivado."
-            )
-            // Cobertura de bastidores: pedido de transferência vira notícia.
-            com.cblol.scout.domain.usecase.NewsService.reportTransferRequest(
-                gs, player.nome_jogo, teamName(context, gs.managerTeamId)
-            )
-        }
-
-        // 0.5. Tick de scouting: avança os jogadores em scouting ativo.
-        val scoutTick = ScoutingService.tickDaily(gs)
-        scoutTick.levelUps.forEach { up ->
-            // Lookup em todas as fontes possíveis: snapshot (1ª div), free agents
-            // do CD, jogadores dos times da 2ª div (modo começar de baixo) e
-            // promovidos da academia. Sem cobrir todas, jogadores da 2ª div
-            // apareceriam como "id cru" no log.
-            val playerName = GameRepository.snapshot(context).jogadores.find { it.id == up.playerId }?.nome_jogo
-                ?: com.cblol.scout.util.SecondDivisionGenerator.generate().find { it.id == up.playerId }?.nome_jogo
-                ?: gs.secondDivisionPlayers.find { it.id == up.playerId }?.nome_jogo
-                ?: gs.promotedPlayers?.find { it.id == up.playerId }?.nome_jogo
-                ?: up.playerId
-            val msg = if (up.newLevel >= ScoutingService.MAX_LEVEL) {
-                "Scouting de $playerName concluído (nível ${up.newLevel})."
-            } else {
-                "Scouting de $playerName avançou para nível ${up.newLevel}."
-            }
-            GameRepository.log("SCOUT", msg)
-        }
-
-        // 0.7. Ofertas de compra de outros times (só com mercado aberto).
-        //      Expira as vencidas e sorteia novas a cada intervalo.
-        processIncomingOffers(context, gs, roster, report)
-
-        // 0.8. Evolução dos laços (química) entre os jogadores do elenco.
-        //      Considera tempo de convivência, humor médio e pedidos de
-        //      transferência. Marcos (parceria forte / rivalidade tóxica) são
-        //      logados para o gerente acompanhar o clima do vestiário.
-        processPlayerBonds(gs, roster)
-
-        // 0.9. Categoria de base: desenvolve os prospects e recruta novos
-        //      talentos periodicamente. Marcos (prospect pronto, novo recruta)
-        //      vão para o relatório + log.
-        processAcademy(gs, report)
-
-        // 1. Pagamento de patrocínio (domingo = day_of_week 7)
-        if (date.dayOfWeek.value == 7) {
-            gs.budget += gs.sponsorshipPerWeek
-            report.income += gs.sponsorshipPerWeek
-            GameRepository.log("ECONOMY",
-                "Patrocínio semanal recebido: R$ ${"%,d".format(gs.sponsorshipPerWeek)}")
-
-            val sponsorResult = SponsorService.paySponsorsWeekly(gs)
-            if (sponsorResult.totalPaid > 0) {
-                report.income += sponsorResult.totalPaid
-                GameRepository.log("ECONOMY",
-                    "Patrocínios: R$ ${"%,d".format(sponsorResult.totalPaid)} recebidos (${gs.activeSponsors?.size ?: 0} ativos)")
-            }
-            sponsorResult.expiredContracts.forEach { contract ->
-                GameRepository.log("ECONOMY",
-                    "Patrocínio com ${contract.sponsor.name} expirou. Total recebido: R$ ${"%,d".format(contract.totalReceived)}")
-            }
-
-            val scoutingFee = ScoutingService.weeklyMaintenanceCost(gs)
-            if (scoutingFee > 0) {
-                gs.budget -= scoutingFee
-                report.expense += scoutingFee
-                GameRepository.log("ECONOMY",
-                    "Manutenção do departamento de olheiros: R$ ${"%,d".format(scoutingFee)} (${ScoutingService.tier(gs).label})")
-            }
-
-            val academyFee = com.cblol.scout.domain.usecase.AcademyService.weeklyMaintenanceCost(gs)
-            if (academyFee > 0) {
-                gs.budget -= academyFee
-                report.expense += academyFee
-                GameRepository.log("ECONOMY",
-                    "Manutenção da categoria de base: R$ ${"%,d".format(academyFee)} (${com.cblol.scout.domain.usecase.AcademyService.tier(gs).label})")
-            }
-
-            // Parcelas de empréstimos bancários (uma por semana por empréstimo).
-            val loanResult = BankService.chargeWeeklyInstallments(gs)
-            if (loanResult.totalCharged > 0) {
-                report.expense += loanResult.totalCharged
-                GameRepository.log("ECONOMY",
-                    "Parcelas de empréstimo pagas: R$ ${"%,d".format(loanResult.totalCharged)}")
-            }
-            loanResult.loansPaidOff.forEach { loan ->
-                GameRepository.log("ECONOMY",
-                    "✅ Empréstimo \"${loan.label}\" quitado!")
-            }
-        }
-
-        // 1.5. Gera novas ofertas de patrocínio se passou o intervalo
-        SponsorService.generateOffersIfDue(gs)
-
-        // 2. Pagamento de salários (dia 1 de cada mês)
-        if (date.dayOfMonth == 1) {
-            val total = totalMonthlyPayroll(context)
-            gs.budget -= total
-            report.expense += total
-            GameRepository.log("ECONOMY",
-                "Folha salarial paga: R$ ${"%,d".format(total)}")
-        }
-
-        // 3. Aviso de saúde financeira: marca o relatório se o caixa entrou em
-        //    zona de atenção/crítica após os movimentos do dia, para o Hub poder
-        //    alertar o gerente e sugerir o Banco.
-        if (BankService.shouldWarn(gs)) {
-            report.financialHealthWarning = BankService.financialHealth(gs)
-        }
-    }
-
-    /**
-     * Simula todas as partidas pendentes da data [iso] e aplica prêmios. Usado
-     * apenas no avanço automático ([advanceDays]).
-     */
-    private fun simulateMatchesOn(
-        context: Context,
-        gs: GameState,
-        iso: String,
-        report: AdvanceReport
-    ) {
-        val todayMatches = gs.matches.filter { it.date == iso && !it.played }
-        if (todayMatches.isNotEmpty()) {
-            // Validação: garante que há 5 titulares antes de jogar
-            SquadManager.validateAndFixRoster(context)
-        }
-        todayMatches.forEach { m ->
-            MatchSimulator.simulate(context, m)
-            report.matchesPlayed += 1
-
-            val winnerId = m.winnerTeamId()
-            val isMyMatch = m.homeTeamId == gs.managerTeamId || m.awayTeamId == gs.managerTeamId
-
-            if (isMyMatch && winnerId == gs.managerTeamId) {
-                val prize = PRIZE_PER_SERIES_WIN +
-                    (PRIZE_PER_MAP_WIN * maxOf(m.homeScore, m.awayScore))
-                gs.budget += prize
-                report.income += prize
-                report.myWin = true
-            } else if (isMyMatch) {
-                val mapPrize = PRIZE_PER_MAP_WIN *
-                    (if (m.homeTeamId == gs.managerTeamId) m.homeScore else m.awayScore)
-                gs.budget += mapPrize
-                report.income += mapPrize
-                report.myLoss = true
-            }
-
-            val homeName = teamName(context, m.homeTeamId)
-            val awayName = teamName(context, m.awayTeamId)
-            GameRepository.log(
-                "MATCH",
-                "Rodada ${m.round}: $homeName ${m.homeScore}-${m.awayScore} $awayName"
-            )
-
-            // Cobertura jornalística: só para partidas do time do gerente (o
-            // feed é sobre a carreira dele, não sobre a liga inteira).
-            if (isMyMatch) publishMatchNews(context, gs, m)
-        }
-    }
-
-    /**
-     * Simula apenas as partidas **dos outros times** agendadas para [iso],
-     * deixando a do gerente (se houver) intacta para que ele a jogue
-     * manualmente. Usado por [advanceCalendarTo] para manter a classificação
-     * atualizada conforme o tempo passa, sem nunca auto-simular o time do
-     * gerente — o que tiraria do jogador a chance de jogar suas partidas.
-     *
-     * As partidas são resolvidas pelo mesmo motor da simulação automática
-     * ([MatchSimulator.simulate]) e logadas com um ícone neutro — sem entulhar
-     * o feed de notícias do gerente (esse é reservado para os jogos dele).
-     */
-    private fun simulateOpponentMatchesOn(
-        context: Context,
-        gs: GameState,
-        iso: String,
-        report: AdvanceReport
-    ) {
-        val todayMatches = gs.matches.filter {
-            it.date == iso && !it.played &&
-                it.homeTeamId != gs.managerTeamId &&
-                it.awayTeamId != gs.managerTeamId
-        }
-        todayMatches.forEach { m ->
-            MatchSimulator.simulate(context, m)
-            report.matchesPlayed += 1
-            val homeName = teamName(context, m.homeTeamId)
-            val awayName = teamName(context, m.awayTeamId)
-            GameRepository.log(
-                "MATCH",
-                "Rodada ${m.round}: $homeName ${m.homeScore}-${m.awayScore} $awayName"
-            )
-        }
-    }
-
-    /**
-     * Versão pública de [simulateOpponentMatchesOn] para a data ATUAL do jogo,
-     * usada pela [com.cblol.scout.ui.MatchSimulationActivity] logo após o
-     * jogador resolver a própria partida. Garante que as partidas dos demais
-     * times agendadas para o MESMO dia sejam simuladas, mantendo a
-     * classificação coerente. Idempotente: partidas já jogadas são ignoradas
-     * pelo filtro interno.
+     * Versão pública da simulação de outros times para a data ATUAL do jogo.
+     * Usada pela [com.cblol.scout.ui.MatchSimulationActivity] logo após o
+     * jogador resolver a própria partida, garantindo que as partidas dos
+     * demais times agendadas para o MESMO dia também sejam simuladas.
      */
     fun simulateOpponentMatchesToday(context: Context): AdvanceReport {
         val gs = GameRepository.current()
         val report = AdvanceReport()
-        simulateOpponentMatchesOn(context, gs, gs.currentDate, report)
+        MatchDaySimulator.simulateOpponentsOn(context, gs, gs.currentDate, report)
         GameRepository.save(context)
         return report
     }
 
+    // ── API pública: carreira ────────────────────────────────────────────
+
     /**
-     * Publica a notícia de uma partida do time do gerente no feed, detectando
-     * se o resultado foi uma "zebra" (favorito caiu) ao comparar a força dos
-     * dois elencos. A força vem do mesmo cálculo da simulação
-     * ([MatchSimulator.teamStrength]).
+     * Cria uma carreira nova: gera estado inicial + calendário.
+     *
+     * @param division divisão em que a carreira começa. Em
+     *   [com.cblol.scout.data.Division.FIRST], os adversários vêm do snapshot
+     *   e a economia segue o tier do time. Em
+     *   [com.cblol.scout.data.Division.SECOND], geramos 8 times procedurais
+     *   via [com.cblol.scout.util.SecondDivisionTeamsGenerator] e usamos
+     *   orçamento/patrocínio reduzidos da 2ª divisão.
+     * @param seed semente opcional para geração determinística da 2ª divisão.
      */
-    private fun publishMatchNews(context: Context, gs: GameState, m: com.cblol.scout.data.Match) {
-        val managerIsHome = m.homeTeamId == gs.managerTeamId
-        val opponentId = if (managerIsHome) m.awayTeamId else m.homeTeamId
-        val managerMaps = if (managerIsHome) m.homeScore else m.awayScore
-        val opponentMaps = if (managerIsHome) m.awayScore else m.homeScore
-        val managerWon = m.winnerTeamId() == gs.managerTeamId
+    fun startNewCareer(
+        context: Context,
+        managerName: String,
+        teamId: String,
+        division: com.cblol.scout.data.Division = com.cblol.scout.data.Division.FIRST,
+        seed: Long = System.currentTimeMillis()
+    ): GameState = CareerStarter.start(context, managerName, teamId, division, seed)
 
-        val managerStrength = MatchSimulator.teamStrength(
-            GameRepository.rosterOf(context, gs.managerTeamId))
-        val opponentStrength = MatchSimulator.teamStrength(
-            GameRepository.rosterOf(context, opponentId))
-        // Zebra = quem tinha desvantagem clara de força (>= 5 pontos) venceu.
-        val wasUpset = if (managerWon) managerStrength + 5 <= opponentStrength
-                       else opponentStrength + 5 <= managerStrength
-
-        com.cblol.scout.domain.usecase.NewsService.reportMatchResult(
-            state = gs,
-            managerTeamName = teamName(context, gs.managerTeamId),
-            opponentName = teamName(context, opponentId),
-            managerWon = managerWon,
-            managerMaps = managerMaps,
-            opponentMaps = opponentMaps,
-            wasUpset = wasUpset
-        )
-    }
+    // ── API pública: consultas e operações pontuais ─────────────────────
 
     /** Próxima partida do meu time (a partir da data atual, inclusive). */
-    fun nextMatchForManager(): com.cblol.scout.data.Match? {
+    fun nextMatchForManager(): Match? {
         val gs = GameRepository.current()
         return gs.matches
             .filter { !it.played }
@@ -370,6 +141,7 @@ object GameEngine {
             .minByOrNull { it.date }
     }
 
+    /** Soma dos salários mensais de todo o elenco (titulares + reservas). */
     fun totalMonthlyPayroll(context: Context): Long {
         val gs = GameRepository.current()
         val roster = GameRepository.rosterOf(context, gs.managerTeamId)
@@ -377,278 +149,20 @@ object GameEngine {
     }
 
     /**
-     * Detecta transição de janela de transferência entre dois dias consecutivos
-     * e loga a abertura/fechamento para o jogador.
-     *
-     * Compara o estado do mercado em [previousDate] com o de [today]:
-     *  - fechado → aberto: loga "mercado aberto" (com o tipo da janela)
-     *  - aberto → fechado: loga "mercado fechado"
-     *
-     * Delega a detecção ao [com.cblol.scout.domain.usecase.TransferWindowService]
-     * para não duplicar a regra de intervalos de janela.
+     * Registra o resultado de UM mapa da série (chamado pela
+     * MatchSimulationActivity quando o jogador termina cada mapa). Atualiza
+     * o placar do match e, se a série acabou (alguém chegou a 2 mapas),
+     * marca `played = true`.
      */
-    private fun detectTransferWindowTransition(
-        gs: GameState,
-        previousDate: String,
-        today: String
-    ) {
-        val service = com.cblol.scout.domain.usecase.TransferWindowService
-        val (transition, window) = service.detectTransition(gs, previousDate, today)
-        when (transition) {
-            com.cblol.scout.domain.usecase.TransferWindowService.WindowTransition.OPENED -> {
-                val label = window?.kind?.label ?: "Transferências"
-                GameRepository.log(
-                    "TRANSFER",
-                    "🟢 Janela de transferências ABERTA ($label). O mercado está disponível."
-                )
-            }
-            com.cblol.scout.domain.usecase.TransferWindowService.WindowTransition.CLOSED -> {
-                GameRepository.log(
-                    "TRANSFER",
-                    "🔴 Janela de transferências FECHADA. O mercado não aceita mais movimentações por enquanto."
-                )
-            }
-            com.cblol.scout.domain.usecase.TransferWindowService.WindowTransition.NONE -> Unit
-        }
-    }
-
-    /**
-     * Processa ofertas de compra de outros times num tick diário:
-     *  1. Expira ofertas vencidas (por data ou mercado fechado).
-     *  2. Gera novas ofertas se for dia de gerar e o mercado estiver aberto.
-     *
-     * As novas ofertas vão para o [AdvanceReport] (nomes dos jogadores) para o
-     * Hub poder notificar o gerente, e também são logadas.
-     */
-    private fun processIncomingOffers(
-        context: Context,
-        gs: GameState,
-        roster: List<Player>,
-        report: AdvanceReport
-    ) {
-        com.cblol.scout.domain.usecase.IncomingOfferService.expireOffers(gs)
-
-        val snapshot = GameRepository.snapshot(context)
-        // Em carreira na 2ª divisão, as ofertas devem vir dos OUTROS times da
-        // 2ª div (não de LOUD/paiN/etc, que ofereceriam valores absurdos para o
-        // orçamento do CD). teamsForCurrentDivision resolve isso.
-        val rivals = GameRepository.teamsForCurrentDivision(context)
-        val result = com.cblol.scout.domain.usecase.IncomingOfferService.generateOffersIfDue(
-            state = gs,
-            snapshot = snapshot,
-            roster = roster,
-            marketPriceOf = { TransferMarket.marketPriceOf(it) },
-            rivalTeams = rivals
-        )
-        result.newOffers.forEach { offer ->
-            report.incomingOffers += offer.playerName
-            GameRepository.log(
-                "TRANSFER",
-                "💰 ${offer.fromTeamName} ofereceu R$ ${"%,d".format(offer.amountBrl)} por ${offer.playerName}."
-            )
-        }
-    }
-
-    /**
-     * Processa a evolução diária dos laços entre os jogadores do elenco e loga
-     * marcos relevantes (formação de parceria forte ou rivalidade tóxica).
-     *
-     * O [com.cblol.scout.domain.usecase.PlayerBondService.tickDaily] é
-     * idempotente por data (usa [GameState.lastBondTickDate]), então é seguro
-     * chamá-lo a cada dia processado: cada chamada avança exatamente 1 dia de
-     * convivência.
-     */
-    private fun processPlayerBonds(gs: GameState, roster: List<Player>) {
-        val milestones = com.cblol.scout.domain.usecase.PlayerBondService.tickDaily(gs, roster)
-        milestones.forEach { m ->
-            val nameA = roster.find { it.id == m.playerAId }?.nome_jogo ?: m.playerAId
-            val nameB = roster.find { it.id == m.playerBId }?.nome_jogo ?: m.playerBId
-            when (m.tier) {
-                com.cblol.scout.data.BondTier.BONDED -> {
-                    GameRepository.log("MOOD",
-                        "🔥 $nameA e $nameB formaram uma parceria forte dentro e fora do jogo.")
-                    com.cblol.scout.domain.usecase.NewsService.reportStrongBond(gs, nameA, nameB)
-                }
-                com.cblol.scout.data.BondTier.TOXIC -> {
-                    GameRepository.log("MOOD",
-                        "☠️ A relação entre $nameA e $nameB azedou de vez — clima pesado no vestiário.")
-                    com.cblol.scout.domain.usecase.NewsService.reportLockerRoomCrisis(gs, nameA, nameB)
-                }
-                else -> return@forEach
-            }
-        }
-    }
-
-    /**
-     * Processa o desenvolvimento diário da categoria de base: evolui prospects e
-     * recruta novos talentos periodicamente. Loga marcos relevantes (prospect
-     * pronto para subir, novo talento recrutado).
-     *
-     * O [com.cblol.scout.domain.usecase.AcademyService.tickDaily] é idempotente
-     * por data (usa [GameState.lastAcademyTickDate]).
-     */
-    private fun processAcademy(gs: GameState, report: AdvanceReport) {
-        val result = com.cblol.scout.domain.usecase.AcademyService.tickDaily(gs)
-        result.readyNow.forEach { p ->
-            report.academyReady += p.nome
-            GameRepository.log(
-                "ACADEMY",
-                "🌟 ${p.nome} (${p.role}) atingiu o nível para subir ao elenco principal!"
-            )
-        }
-        result.recruited.forEach { p ->
-            GameRepository.log(
-                "ACADEMY",
-                "🌱 Novo talento na base: ${p.nome} (${p.role}, ${p.idade} anos)."
-            )
-        }
-    }
-
-    /**
-     * Resolve o nome de um time pelo id consultando AMBAS as fontes — snapshot
-     * (1ª divisão) e [GameState.secondDivisionTeams] (procedurais da 2ª).
-     * Necessário porque o motor loga partidas independente da divisão.
-     */
-    private fun teamName(context: Context, teamId: String): String {
-        GameRepository.snapshot(context).times.find { it.id == teamId }?.let { return it.nome }
-        val gs = runCatching { GameRepository.current() }.getOrNull() ?: return teamId
-        return gs.secondDivisionTeams.find { it.id == teamId }?.nome ?: teamId
-    }
-
-    /**
-     * Cria uma carreira nova: gera estado inicial + calendário.
-     *
-     * @param division divisão em que a carreira começa. Em [com.cblol.scout.data.Division.FIRST],
-     *   os adversários vêm do snapshot e a economia segue o tier do time. Em
-     *   [com.cblol.scout.data.Division.SECOND], geramos 8 times procedurais via
-     *   [com.cblol.scout.util.SecondDivisionTeamsGenerator] e usamos orçamento /
-     *   patrocínio reduzidos da 2ª divisão.
-     * @param seed semente opcional para geração determinística da 2ª divisão.
-     *   Permite que a tela de seleção mostre exatamente os mesmos times que
-     *   serão criados na carreira (consistência de UX).
-     */
-    fun startNewCareer(
-        context: Context,
-        managerName: String,
-        teamId: String,
-        division: com.cblol.scout.data.Division = com.cblol.scout.data.Division.FIRST,
-        seed: Long = System.currentTimeMillis()
-    ): GameState {
-        val splitStart = "2026-03-28"
-        val splitEnd   = "2026-06-06"
-        val gameStart  = com.cblol.scout.domain.usecase.TransferWindowService.gameStartFor(splitStart)
-
-        // Resolve time + economia + lista de adversários conforme a divisão.
-        // Em 2ª div, geramos times procedurais agora; em 1ª, usamos o snapshot.
-        val setup = resolveDivisionSetup(context, division, teamId, seed)
-
-        val gs = GameState(
-            managerName = managerName,
-            managerTeamId = teamId,
-            splitStartDate = splitStart,
-            splitEndDate = splitEnd,
-            currentDate = gameStart,
-            budget = setup.budget,
-            sponsorshipPerWeek = setup.sponsorship
-        )
-        gs.division = division
-        if (division == com.cblol.scout.data.Division.SECOND) {
-            gs.secondDivisionTeams = setup.teams.toMutableList()
-            gs.secondDivisionPlayers = setup.players.toMutableList()
-        }
-        gs.matches.addAll(ScheduleGenerator.generate(setup.teamIds, splitStart))
-        gs.transferWindows.addAll(
-            com.cblol.scout.domain.usecase.TransferWindowService
-                .buildWindowsForSplit(gameStart, splitStart)
-        )
-
-        // **Importante**: o GameRepository precisa do GameState salvo antes
-        // de chamar rosterOf, porque o roster da 2ª divisão vive em
-        // gs.secondDivisionPlayers. Sem isso, ensureBondsFor pegaria vazio.
-        GameRepository.save(context, gs)
-
-        val initialRoster = GameRepository.rosterOf(context, teamId)
-        com.cblol.scout.domain.usecase.PlayerBondService.ensureBondsFor(gs, initialRoster)
-        com.cblol.scout.domain.usecase.AcademyService.initializeForNewCareer(gs)
-
-        val divLabel = if (division == com.cblol.scout.data.Division.SECOND)
-            " (Circuito Desafiante)" else ""
-        gs.gameLog.add(
-            com.cblol.scout.data.LogEntry(
-                gs.currentDate, "CAREER",
-                "Pré-temporada iniciada$divLabel. Você é o novo técnico do ${setup.teamName}! Mercado de transferências aberto."
-            )
-        )
-        GameRepository.save(context, gs)
-        return gs
-    }
-
-    /**
-     * Resultado da resolução dos parâmetros iniciais da carreira conforme a
-     * divisão escolhida. Empacota tudo o que [startNewCareer] precisa para
-     * popular o [GameState] de forma uniforme.
-     */
-    private data class DivisionSetup(
-        val budget: Long,
-        val sponsorship: Long,
-        val teamName: String,
-        val teamIds: List<String>,
-        val teams: List<com.cblol.scout.data.Team>,
-        val players: List<Player>
-    )
-
-    private fun resolveDivisionSetup(
-        context: Context,
-        division: com.cblol.scout.data.Division,
-        teamId: String,
-        seed: Long
-    ): DivisionSetup = when (division) {
-        com.cblol.scout.data.Division.FIRST -> {
-            val snap = GameRepository.snapshot(context)
-            val team = snap.times.find { it.id == teamId }
-                ?: error("Time não encontrado na 1ª divisão: $teamId")
-            val (budget, sponsorship) = budgetForTier(team.tier_orcamento)
-            DivisionSetup(
-                budget = budget,
-                sponsorship = sponsorship,
-                teamName = team.nome,
-                teamIds = snap.times.map { it.id },
-                teams = emptyList(),
-                players = emptyList()
-            )
-        }
-        com.cblol.scout.data.Division.SECOND -> {
-            val gen = com.cblol.scout.util.SecondDivisionTeamsGenerator.generate(seed)
-            val team = gen.teams.find { it.id == teamId }
-                ?: error("Time não encontrado na 2ª divisão: $teamId (seed=$seed)")
-            DivisionSetup(
-                budget = GameConstants.Economy.STARTING_BUDGET_SECOND_DIV,
-                sponsorship = GameConstants.Economy.WEEKLY_SPONSOR_SECOND_DIV,
-                teamName = team.nome,
-                teamIds = gen.teams.map { it.id },
-                teams = gen.teams,
-                players = gen.players
-            )
-        }
-    }
-
-    /** Devolve (orçamento_inicial, patrocínio_semanal) por tier do time (1ª divisão). */
-    private fun budgetForTier(tier: String): Pair<Long, Long> = when (tier) {
-        "S" -> GameConstants.Economy.STARTING_BUDGET_TIER_S to GameConstants.Economy.WEEKLY_SPONSOR_TIER_S
-        "A" -> GameConstants.Economy.STARTING_BUDGET_TIER_A to GameConstants.Economy.WEEKLY_SPONSOR_TIER_A
-        else -> GameConstants.Economy.STARTING_BUDGET_TIER_B to GameConstants.Economy.WEEKLY_SPONSOR_TIER_B
-    }
-
     fun recordMatchResult(context: Context, matchId: String, mapNumber: Int, winnerTeamId: String) {
         val gs = GameRepository.current()
-        val match = gs.matches.find { it.id == matchId } ?: error("Partida não encontrada: $matchId")
+        val match = gs.matches.find { it.id == matchId }
+            ?: error("Partida não encontrada: $matchId")
 
-        if (mapNumber == 1) {
-            if (winnerTeamId == match.homeTeamId) match.homeScore = 1 else match.awayScore = 1
-        } else if (mapNumber == 2) {
-            if (winnerTeamId == match.homeTeamId) match.homeScore = 2 else match.awayScore = 2
-        } else {
-            error("Número de mapa inválido: $mapNumber")
+        when (mapNumber) {
+            1 -> if (winnerTeamId == match.homeTeamId) match.homeScore = 1 else match.awayScore = 1
+            2 -> if (winnerTeamId == match.homeTeamId) match.homeScore = 2 else match.awayScore = 2
+            else -> error("Número de mapa inválido: $mapNumber")
         }
 
         val series = gs.seriesState[matchId]
@@ -658,9 +172,30 @@ object GameEngine {
             GameRepository.save(context)
         }
     }
+
+    // ── Coordenação interna ─────────────────────────────────────────────
+
+    /**
+     * Processa todos os eventos NÃO-partida de UM dia: avança a data, detecta
+     * transição de janela, aplica decay de moral, tick de scouting, ofertas,
+     * laços, academia, e pagamentos semanais/mensais. A simulação de partidas
+     * é responsabilidade do [MatchDaySimulator].
+     *
+     * Quem chama (advanceDays / advanceCalendarTo) decide depois quais
+     * partidas simular para o dia: todas ou só as dos outros times.
+     */
+    private fun processDailyTicks(
+        context: Context,
+        gs: GameState,
+        date: LocalDate,
+        report: AdvanceReport
+    ) {
+        DailyTicksProcessor.process(context, gs, date, report)
+        EconomyProcessor.process(context, gs, date, report)
+    }
 }
 
-/** Relatório consolidado do `advanceDays`. */
+/** Relatório consolidado retornado por [GameEngine.advanceDays]/[GameEngine.advanceCalendarTo]. */
 data class AdvanceReport(
     var matchesPlayed: Int = 0,
     var myWin: Boolean = false,

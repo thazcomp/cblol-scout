@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Linha de um evento do calendário na lista inferior.
+
+  Estrutura:
+   - Barra vertical colorida à esquerda (cor da categoria — ManagerMatch é
+     dourado, OtherMatch é azulado, Sponsor é roxo etc.)
+   - Emoji da categoria
+   - Coluna com título (negrito) + subtítulo (opcional)
+   - Indicação à direita de evento clicável quando aplicável (ManagerMatch tem
+     ação de pick & ban / simular; demais são informativos)
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="12dp"
+    android:gravity="center_vertical"
+    android:background="?attr/selectableItemBackground">
+
+    <View
+        android:id="@+id/view_category_bar"
+        android:layout_width="4dp"
+        android:layout_height="40dp"
+        android:layout_marginEnd="10dp"
+        android:background="@color/color_primary"/>
+
+    <TextView
+        android:id="@+id/tv_event_emoji"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="22sp"
+        android:layout_marginEnd="10dp"
+        tools:ignore="MissingDefaultResource"/>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tv_event_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/color_on_surface"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            tools:ignore="MissingDefaultResource"/>
+
+        <TextView
+            android:id="@+id/tv_event_subtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/color_on_surface_variant"
+            android:textSize="12sp"
+            android:layout_marginTop="2dp"
+            android:visibility="gone"
+            tools:ignore="MissingDefaultResource"/>
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/iv_action_chevron"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_marginStart="8dp"
+        android:src="@android:drawable/ic_media_play"
+        android:contentDescription="@string/schedule_event_actionable"
+        android:visibility="gone"
+        app:tint="@color/color_primary"/>
+</LinearLayout>

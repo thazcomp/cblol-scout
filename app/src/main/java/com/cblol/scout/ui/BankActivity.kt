@@ -18,33 +18,34 @@ import com.cblol.scout.data.FinancialHealth
 import com.cblol.scout.data.LoanOffer
 import com.cblol.scout.databinding.ActivityBankBinding
 import com.cblol.scout.domain.usecase.BankService
+import com.cblol.scout.domain.usecase.BankUiState
+import com.cblol.scout.domain.usecase.PayOffLoanUseCase
+import com.cblol.scout.domain.usecase.TakeLoanUseCase
 import com.cblol.scout.game.GameRepository
+import com.cblol.scout.ui.viewmodel.BankEvent
+import com.cblol.scout.ui.viewmodel.BankViewModel
 import com.cblol.scout.util.TeamColors
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.tabs.TabLayout
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 /**
  * Tela do **Banco** — empréstimos emergenciais + visão de saúde financeira.
  *
- * Duas abas:
- *  - **EMPRÉSTIMOS**: linhas de crédito disponíveis (filtradas por crédito
- *    disponível e reputação). Toque CONTRATAR para tomar o empréstimo.
- *  - **MINHAS DÍVIDAS**: empréstimos ativos com barra de quitação, saldo
- *    devedor e botão QUITAR (paga o saldo todo de uma vez).
+ * **MVVM**: Activity observa [BankViewModel.state] (banner de saúde,
+ * orçamento, crédito, ofertas, dívidas) e responde a [BankEvent]s para
+ * mostrar diálogos de resultado.
  *
- * Header mostra um **banner colorido** com a saúde financeira atual
- * (🟢/🟡/🔴 + dica de ação), o orçamento atual e o crédito disponível.
- *
- * **SOLID:**
- *  - **SRP**: Activity só orquestra UI; regras no [BankService].
- *  - **OCP**: novas linhas de crédito entram no catálogo do service sem mexer
- *    aqui (a UI itera o que receber).
- *  - **DIP**: depende de [BankService] + [GameRepository].
+ * Regras de juros, parcelas, limite de crédito vivem no [BankService]; a
+ * sequência "regra → log → save" nos UseCases. A Activity só dispara
+ * diálogos e renderiza o estado.
  */
 class BankActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityBankBinding
+    private val vm: BankViewModel by viewModel()
     private var currentTab = TAB_OFFERS
+    private var lastState: BankUiState? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,21 +55,24 @@ class BankActivity : AppCompatActivity() {
         setupToolbar()
         setupTabs()
         binding.recycler.layoutManager = LinearLayoutManager(this)
-        renderState()
+
+        vm.state.observe(this) { state ->
+            lastState = state
+            render(state)
+        }
+        vm.events.observe(this) { ev -> ev.consume()?.let(::handleEvent) }
+        vm.refresh()
     }
 
     override fun onResume() {
         super.onResume()
-        renderState()
+        vm.refresh()
     }
 
-    // ── Setup ────────────────────────────────────────────────────────────
-
     private fun setupToolbar() {
-        val gs = GameRepository.current()
+        binding.toolbar.setBackgroundColor(TeamColors.forTeam(GameRepository.current().managerTeamId))
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        binding.toolbar.setBackgroundColor(TeamColors.forTeam(gs.managerTeamId))
         binding.toolbar.setNavigationOnClickListener { finish() }
     }
 
@@ -78,7 +82,7 @@ class BankActivity : AppCompatActivity() {
         binding.tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab) {
                 currentTab = tab.position
-                renderState()
+                lastState?.let(::render)
             }
             override fun onTabUnselected(tab: TabLayout.Tab) {}
             override fun onTabReselected(tab: TabLayout.Tab) {}
@@ -87,53 +91,42 @@ class BankActivity : AppCompatActivity() {
 
     // ── Render ───────────────────────────────────────────────────────────
 
-    private fun renderState() {
-        val gs = GameRepository.current()
-        renderHealthBanner(BankService.financialHealth(gs))
+    private fun render(state: BankUiState) {
+        renderHealthBanner(state)
 
-        // Orçamento atual (vermelho se negativo)
-        binding.tvBankBudget.text = getString(R.string.bank_budget_value, "%,d".format(gs.budget))
-        val budgetColorRes = if (gs.budget < 0) R.color.hub_budget_negative
+        // Orçamento (vermelho se negativo)
+        binding.tvBankBudget.text = getString(R.string.bank_budget_value, "%,d".format(state.budget))
+        val budgetColorRes = if (state.budget < 0) R.color.hub_budget_negative
                              else R.color.hub_budget_positive
         binding.tvBankBudget.setTextColor(ContextCompat.getColor(this, budgetColorRes))
 
         // Crédito disponível
-        val available = BankService.availableCredit(gs)
-        binding.tvBankCredit.text = getString(R.string.bank_credit_value, "%,d".format(available))
+        binding.tvBankCredit.text = getString(R.string.bank_credit_value, "%,d".format(state.availableCredit))
 
         // Resumo de dívida (só se houver)
-        val totalDebt = BankService.totalDebt(gs)
-        if (totalDebt > 0) {
+        if (state.totalDebt > 0) {
             binding.tvBankDebtSummary.visibility = View.VISIBLE
-            val weekly = BankService.weeklyInstallmentsTotal(gs)
-            binding.tvBankDebtSummary.text = getString(
-                R.string.bank_debt_summary_format,
-                "%,d".format(totalDebt), "%,d".format(weekly)
-            )
+            binding.tvBankDebtSummary.text = getString(R.string.bank_debt_summary_format,
+                "%,d".format(state.totalDebt), "%,d".format(state.weeklyInstallments))
         } else {
             binding.tvBankDebtSummary.visibility = View.GONE
         }
 
         when (currentTab) {
-            TAB_OFFERS -> renderOffers(BankService.offersFor(gs))
-            TAB_LOANS  -> renderActiveLoans(BankService.activeLoans(gs))
+            TAB_OFFERS -> renderOffers(state.offers)
+            TAB_LOANS  -> renderActiveLoans(state.activeLoans)
         }
     }
 
-    /**
-     * Pinta o banner de saúde financeira com cor + emoji + dica acionável.
-     * Verde, amarelo ou vermelho — espelhando o [FinancialHealth].
-     */
-    private fun renderHealthBanner(health: FinancialHealth) {
-        val gs = GameRepository.current()
-        val (bgRes, fgRes) = when (health) {
+    private fun renderHealthBanner(state: BankUiState) {
+        val (bgRes, fgRes) = when (state.health) {
             FinancialHealth.HEALTHY  -> R.color.state_success to R.color.pick_ban_bg
             FinancialHealth.WARNING  -> R.color.state_warning to R.color.pick_ban_bg
             FinancialHealth.CRITICAL -> R.color.state_danger  to android.R.color.white
         }
         binding.tvHealthBanner.setBackgroundColor(ContextCompat.getColor(this, bgRes))
         binding.tvHealthBanner.setTextColor(ContextCompat.getColor(this, fgRes))
-        binding.tvHealthBanner.text = "${health.emoji} ${health.label} · ${BankService.healthAdvice(gs)}"
+        binding.tvHealthBanner.text = "${state.health.emoji} ${state.health.label} · ${state.healthAdvice}"
     }
 
     private fun renderOffers(offers: List<LoanOffer>) {
@@ -145,7 +138,7 @@ class BankActivity : AppCompatActivity() {
         }
         binding.recycler.visibility = View.VISIBLE
         binding.tvEmpty.visibility  = View.GONE
-        binding.recycler.adapter = OfferAdapter(offers, ::onTakeLoan)
+        binding.recycler.adapter = OfferAdapter(offers, ::confirmTakeLoan)
     }
 
     private fun renderActiveLoans(loans: List<BankLoan>) {
@@ -157,85 +150,86 @@ class BankActivity : AppCompatActivity() {
         }
         binding.recycler.visibility = View.VISIBLE
         binding.tvEmpty.visibility  = View.GONE
-        binding.recycler.adapter = ActiveLoanAdapter(loans, ::onPayOffLoan)
+        binding.recycler.adapter = ActiveLoanAdapter(loans, ::confirmPayOff)
     }
 
-    // ── Ações ────────────────────────────────────────────────────────────
+    // ── Diálogos de confirmação ──────────────────────────────────────────
 
-    private fun onTakeLoan(offer: LoanOffer) {
-        val gs = GameRepository.current()
+    private fun confirmTakeLoan(offer: LoanOffer) {
         val installment = BankService.installmentFor(offer)
         val total = installment * offer.weeks
         stylizedDialog(this)
             .setTitle(R.string.bank_take_confirm_title)
-            .setMessage(getString(
-                R.string.bank_take_confirm_msg,
+            .setMessage(getString(R.string.bank_take_confirm_msg,
                 offer.label,
                 "%,d".format(offer.principal),
                 "%,d".format(installment),
                 offer.weeks,
                 "%,d".format(total),
-                (offer.interestRate * 100).toInt()
-            ))
-            .setPositiveButton(R.string.btn_yes) { _, _ ->
-                when (val result = BankService.takeLoan(gs, offer)) {
-                    is BankService.TakeResult.Ok -> {
-                        GameRepository.log(
-                            "BANK",
-                            "💰 Empréstimo \"${offer.label}\" contratado: R$ ${"%,d".format(offer.principal)} creditados."
-                        )
-                        GameRepository.save(applicationContext)
-                        stylizedDialog(this)
-                            .setTitle(R.string.bank_taken_title)
-                            .setMessage(getString(R.string.bank_taken_msg,
-                                "%,d".format(offer.principal),
-                                "%,d".format(installment), offer.weeks))
-                            .setPositiveButton(R.string.btn_ok, null)
-                            .show()
-                        renderState()
-                    }
-                    is BankService.TakeResult.ExceedsCredit ->
-                        showError(getString(R.string.bank_error_exceeds_credit,
-                            "%,d".format(offer.principal), "%,d".format(result.available)))
-                    BankService.TakeResult.LowReputation ->
-                        showError(getString(R.string.bank_error_low_reputation,
-                            offer.minReputation, gs.coachProfile.reputation))
-                }
-            }
+                (offer.interestRate * 100).toInt()))
+            .setPositiveButton(R.string.btn_yes) { _, _ -> vm.contractLoan(offer) }
             .setNegativeButton(R.string.btn_no, null)
             .show()
     }
 
-    private fun onPayOffLoan(loan: BankLoan) {
-        val gs = GameRepository.current()
+    private fun confirmPayOff(loan: BankLoan) {
         val balance = loan.outstandingBalance
+        val budget = lastState?.budget ?: 0L
         stylizedDialog(this)
             .setTitle(R.string.bank_payoff_confirm_title)
             .setMessage(getString(R.string.bank_payoff_confirm_msg,
-                loan.label, "%,d".format(balance), "%,d".format(gs.budget)))
-            .setPositiveButton(R.string.btn_yes) { _, _ ->
-                when (val result = BankService.payOffEarly(gs, loan.id)) {
-                    is BankService.PayoffResult.Ok -> {
-                        GameRepository.log(
-                            "BANK",
-                            "✅ Empréstimo \"${loan.label}\" quitado antecipadamente (R$ ${"%,d".format(result.amountPaid)})."
-                        )
-                        GameRepository.save(applicationContext)
-                        stylizedDialog(this)
-                            .setMessage(getString(R.string.bank_payoff_done,
-                                loan.label, "%,d".format(result.amountPaid)))
-                            .setPositiveButton(R.string.btn_ok, null)
-                            .show()
-                        renderState()
-                    }
-                    is BankService.PayoffResult.InsufficientFunds ->
-                        showError(getString(R.string.bank_payoff_insufficient,
-                            "%,d".format(result.needed), "%,d".format(gs.budget)))
-                    BankService.PayoffResult.NotFound -> renderState()
-                }
-            }
+                loan.label, "%,d".format(balance), "%,d".format(budget)))
+            .setPositiveButton(R.string.btn_yes) { _, _ -> vm.payOffLoan(loan) }
             .setNegativeButton(R.string.btn_no, null)
             .show()
+    }
+
+    // ── Tratamento dos eventos do VM ─────────────────────────────────────
+
+    private fun handleEvent(event: BankEvent) {
+        when (event) {
+            is BankEvent.TakeLoanDone -> handleTakeLoanResult(event.offer, event.result)
+            is BankEvent.PayOffDone   -> handlePayOffResult(event.loan, event.result)
+        }
+    }
+
+    private fun handleTakeLoanResult(offer: LoanOffer, result: TakeLoanUseCase.Result) {
+        when (result) {
+            is TakeLoanUseCase.Result.Ok -> {
+                stylizedDialog(this)
+                    .setTitle(R.string.bank_taken_title)
+                    .setMessage(getString(R.string.bank_taken_msg,
+                        "%,d".format(offer.principal),
+                        "%,d".format(result.installment), offer.weeks))
+                    .setPositiveButton(R.string.btn_ok, null)
+                    .show()
+            }
+            is TakeLoanUseCase.Result.ExceedsCredit -> {
+                showError(getString(R.string.bank_error_exceeds_credit,
+                    "%,d".format(result.requested), "%,d".format(result.available)))
+            }
+            is TakeLoanUseCase.Result.LowReputation -> {
+                showError(getString(R.string.bank_error_low_reputation,
+                    result.required, result.current))
+            }
+        }
+    }
+
+    private fun handlePayOffResult(loan: BankLoan, result: PayOffLoanUseCase.Result) {
+        when (result) {
+            is PayOffLoanUseCase.Result.Ok -> {
+                stylizedDialog(this)
+                    .setMessage(getString(R.string.bank_payoff_done,
+                        result.loanLabel, "%,d".format(result.amountPaid)))
+                    .setPositiveButton(R.string.btn_ok, null)
+                    .show()
+            }
+            is PayOffLoanUseCase.Result.InsufficientFunds -> {
+                showError(getString(R.string.bank_payoff_insufficient,
+                    "%,d".format(result.needed), "%,d".format(result.budget)))
+            }
+            PayOffLoanUseCase.Result.NotFound -> Unit
+        }
     }
 
     private fun showError(msg: String) {
@@ -271,8 +265,7 @@ class BankActivity : AppCompatActivity() {
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = VH(
-            LayoutInflater.from(parent.context)
-                .inflate(R.layout.item_loan_offer, parent, false)
+            LayoutInflater.from(parent.context).inflate(R.layout.item_loan_offer, parent, false)
         )
 
         override fun getItemCount() = items.size
@@ -291,10 +284,8 @@ class BankActivity : AppCompatActivity() {
             h.tvInstallment.text = "R$ ${"%,d".format(installment)}"
             h.tvTotal.text       = "R$ ${"%,d".format(total)}"
 
-            h.tvTerms.text = ctx.getString(
-                R.string.bank_loan_terms_format,
-                offer.weeks, (offer.interestRate * 100).toInt()
-            )
+            h.tvTerms.text = ctx.getString(R.string.bank_loan_terms_format,
+                offer.weeks, (offer.interestRate * 100).toInt())
 
             h.btnTake.setOnClickListener { onTake(offer) }
         }
@@ -319,8 +310,7 @@ class BankActivity : AppCompatActivity() {
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = VH(
-            LayoutInflater.from(parent.context)
-                .inflate(R.layout.item_active_loan, parent, false)
+            LayoutInflater.from(parent.context).inflate(R.layout.item_active_loan, parent, false)
         )
 
         override fun getItemCount() = items.size
@@ -329,19 +319,13 @@ class BankActivity : AppCompatActivity() {
             val loan = items[position]
             val ctx  = h.itemView.context
 
-            // Emoji baseado no id da linha (sem persistir o emoji no BankLoan
-            // para manter o save enxuto).
             h.tvEmoji.text = emojiForLoanId(loan.id, loan.label)
             h.tvName.text  = loan.label
 
-            h.tvProgress.text = ctx.getString(
-                R.string.bank_active_loan_progress,
-                loan.installmentsPaid, loan.totalInstallments
-            )
+            h.tvProgress.text = ctx.getString(R.string.bank_active_loan_progress,
+                loan.installmentsPaid, loan.totalInstallments)
             h.pb.progress = loan.repaymentPercent()
 
-            // Cor da barra lateral: verde se passou de 70% (quase quitado),
-            // amarelo entre 30-70%, vermelho < 30%.
             val accentRes = when {
                 loan.repaymentPercent() >= 70 -> R.color.state_success
                 loan.repaymentPercent() >= 30 -> R.color.state_warning
@@ -355,15 +339,11 @@ class BankActivity : AppCompatActivity() {
             h.btnPayoff.setOnClickListener { onPayOff(loan) }
         }
 
-        /**
-         * Inferência simples de emoji a partir do id/label da linha. Mantém a
-         * UI viva sem ter de salvar o emoji junto do empréstimo.
-         */
         private fun emojiForLoanId(id: String, label: String): String = when {
-            id.contains("micro")       -> "💸"
-            id.contains("emergency")   -> "🆘"
-            id.contains("investment")  -> "📈"
-            id.contains("mega")        -> "🏦"
+            id.contains("micro")      -> "💸"
+            id.contains("emergency")  -> "🆘"
+            id.contains("investment") -> "📈"
+            id.contains("mega")       -> "🏦"
             label.contains("Emergencial", ignoreCase = true) -> "🆘"
             else -> "🏦"
         }

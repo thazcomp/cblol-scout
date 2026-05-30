@@ -783,4 +783,41 @@
     <string name="news_header_subtitle">A imprensa de esports cobrindo a sua trajetória</string>
     <string name="news_empty">Ainda não há notícias. Jogue partidas e movimente o elenco para a imprensa começar a cobrir o seu time.</string>
 
+    <!-- ══════════════════════════════════════════════════════════════════
+         CALENDÁRIO MENSAL (ScheduleActivity — redesign)
+         ══════════════════════════════════════════════════════════════════ -->
+    <string name="schedule_title">Calendário</string>
+    <string name="schedule_prev_month">Mês anterior</string>
+    <string name="schedule_next_month">Próximo mês</string>
+    <string name="schedule_today_action">Hoje</string>
+    <string name="schedule_month_year_format">%1$s %2$d</string>
+    <string name="schedule_selected_date_format">%1$s · %2$d evento(s)</string>
+    <string name="schedule_selected_date_empty">%1$s</string>
+    <string name="schedule_empty_day">Nenhum evento agendado para este dia.\nPasse para outro dia ou navegue pelos meses.</string>
+    <string name="schedule_event_actionable">Ação disponível</string>
+
+    <!-- Rótulos dos dias da semana (abrev., começando por DOMINGO). -->
+    <string name="cal_weekday_sun">D</string>
+    <string name="cal_weekday_mon">S</string>
+    <string name="cal_weekday_tue">T</string>
+    <string name="cal_weekday_wed">Q</string>
+    <string name="cal_weekday_thu">Q</string>
+    <string name="cal_weekday_fri">S</string>
+    <string name="cal_weekday_sat">S</string>
+
+    <!-- Nomes dos meses (1=jan..12=dez). Mantém sob nosso controle para o
+         tema do app, em vez de depender do locale do dispositivo. -->
+    <string name="cal_month_1">Janeiro</string>
+    <string name="cal_month_2">Fevereiro</string>
+    <string name="cal_month_3">Março</string>
+    <string name="cal_month_4">Abril</string>
+    <string name="cal_month_5">Maio</string>
+    <string name="cal_month_6">Junho</string>
+    <string name="cal_month_7">Julho</string>
+    <string name="cal_month_8">Agosto</string>
+    <string name="cal_month_9">Setembro</string>
+    <string name="cal_month_10">Outubro</string>
+    <string name="cal_month_11">Novembro</string>
+    <string name="cal_month_12">Dezembro</string>
+
 </resources>

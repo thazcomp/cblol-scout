@@ -153,4 +153,30 @@
         <item name="android:background">@drawable/bg_ban_slot_red</item>
     </style>
 
+    <!-- ═══════════════════════════════════════════════════════
+         CALENDÁRIO MENSAL (ScheduleActivity)
+         ═══════════════════════════════════════════════════════ -->
+
+    <!-- Rótulo de uma coluna do cabeçalho dos dias da semana (D S T Q Q S S). -->
+    <style name="CalendarWeekdayLabel">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">@color/color_on_surface_variant</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.08</item>
+    </style>
+
+    <!-- Ponto indicador de evento numa célula do dia. A cor é setada em código
+         conforme a categoria do evento (ManagerMatch, OtherMatch, Transfer, etc.). -->
+    <style name="CalendarDayDot">
+        <item name="android:layout_width">5dp</item>
+        <item name="android:layout_height">5dp</item>
+        <item name="android:layout_marginHorizontal">1dp</item>
+        <item name="android:background">@drawable/calendar_day_dot</item>
+        <item name="android:visibility">gone</item>
+    </style>
+
 </resources>

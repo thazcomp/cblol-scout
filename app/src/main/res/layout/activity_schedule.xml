@@ -1,6 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Calendário mensal completo (substitui a antiga lista de partidas).
+
+  Estrutura:
+   - Toolbar
+   - Header do mês com setas ◀ ▶ e nome (clique no nome volta pro mês de "hoje")
+   - Cabeçalho dos 7 dias da semana
+   - Grade do mês (RecyclerView com GridLayoutManager spanCount=7)
+   - Banner da data selecionada
+   - Lista de eventos do dia selecionado (RecyclerView vertical)
+
+  As duas listas estão num LinearLayout vertical com pesos: a grade ocupa o
+  espaço necessário (wrap_content) e a lista de eventos fica abaixo. Isso casa
+  com a UX padrão de apps de calendário mobile (Google Calendar, Samsung).
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -10,14 +26,113 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        app:title="Calendário"
+        app:title="@string/schedule_title"
         app:titleTextColor="@color/color_on_surface"
-        android:background="@color/color_surface"/>
+        android:background="@color/color_surface"
+        app:navigationIcon="?attr/homeAsUpIndicator"/>
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recycler"
+    <!-- Header de navegação entre meses -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:clipToPadding="false"
-        android:paddingVertical="6dp"/>
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="10dp"
+        android:background="@color/color_surface_elevated">
+
+        <ImageButton
+            android:id="@+id/btn_prev_month"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_media_previous"
+            android:contentDescription="@string/schedule_prev_month"
+            app:tint="@color/color_primary"/>
+
+        <TextView
+            android:id="@+id/tv_month_label"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:textColor="@color/color_on_surface"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:background="?attr/selectableItemBackground"
+            android:paddingVertical="8dp"
+            tools:ignore="MissingDefaultResource"/>
+
+        <ImageButton
+            android:id="@+id/btn_next_month"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_media_next"
+            android:contentDescription="@string/schedule_next_month"
+            app:tint="@color/color_primary"/>
+    </LinearLayout>
+
+    <!-- Cabeçalho dos dias da semana -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingHorizontal="4dp"
+        android:paddingVertical="6dp"
+        android:background="@color/color_surface">
+
+        <TextView style="@style/CalendarWeekdayLabel" android:text="@string/cal_weekday_sun"/>
+        <TextView style="@style/CalendarWeekdayLabel" android:text="@string/cal_weekday_mon"/>
+        <TextView style="@style/CalendarWeekdayLabel" android:text="@string/cal_weekday_tue"/>
+        <TextView style="@style/CalendarWeekdayLabel" android:text="@string/cal_weekday_wed"/>
+        <TextView style="@style/CalendarWeekdayLabel" android:text="@string/cal_weekday_thu"/>
+        <TextView style="@style/CalendarWeekdayLabel" android:text="@string/cal_weekday_fri"/>
+        <TextView style="@style/CalendarWeekdayLabel" android:text="@string/cal_weekday_sat"/>
+    </LinearLayout>
+
+    <!-- Grade do mês (GridLayoutManager spanCount=7) -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recycler_grid"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="4dp"
+        android:overScrollMode="never"/>
+
+    <!-- Banner do dia selecionado -->
+    <TextView
+        android:id="@+id/tv_selected_date"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="12dp"
+        android:textColor="@color/color_on_surface"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        android:background="@color/color_surface_elevated"
+        tools:ignore="MissingDefaultResource"/>
+
+    <!-- Lista de eventos do dia (ou estado vazio) -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recycler_events"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingVertical="6dp"/>
+
+        <TextView
+            android:id="@+id/tv_empty"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:padding="24dp"
+            android:textColor="@color/color_on_surface_variant"
+            android:text="@string/schedule_empty_day"
+            android:visibility="gone"/>
+    </FrameLayout>
+
 </LinearLayout>

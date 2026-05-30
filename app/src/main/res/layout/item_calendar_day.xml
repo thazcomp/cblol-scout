@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Célula de um dia da grade do calendário.
+
+  Estrutura:
+   - Container clicável com fundo que muda conforme estado (selecionado / hoje
+     / dentro do split / fora do mês).
+   - Número do dia no centro-topo.
+   - Linha de até 4 pontos coloridos (categorias presentes) embaixo.
+
+  As dimensões são fixas em dp para a grade ficar uniforme; o RecyclerView
+  pai usa GridLayoutManager com spanCount=7 e os itens preenchem horizontalmente.
+
+  Estados visuais (definidos em código no adapter):
+   - inDisplayedMonth=false → alpha 0.35 (dia "cinza" do mês adjacente)
+   - isToday=true           → contorno dourado
+   - isSelected=true        → fundo destacado
+   - isWithinSplit=true     → fundo levemente diferenciado
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="56dp"
+    android:padding="2dp">
+
+    <LinearLayout
+        android:id="@+id/cal_cell_root"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="@drawable/calendar_day_bg"
+        android:padding="2dp">
+
+        <TextView
+            android:id="@+id/tv_day_number"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/color_on_surface"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            tools:ignore="MissingDefaultResource"/>
+
+        <!--
+          Linha horizontal com até 4 pontos (categorias presentes no dia).
+          O adapter mostra/esconde cada um e seta a cor. Se houver mais que 4
+          categorias o último vira "…" — improvável na prática.
+        -->
+        <LinearLayout
+            android:id="@+id/ll_dots"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <View
+                android:id="@+id/dot_1"
+                style="@style/CalendarDayDot"/>
+
+            <View
+                android:id="@+id/dot_2"
+                style="@style/CalendarDayDot"/>
+
+            <View
+                android:id="@+id/dot_3"
+                style="@style/CalendarDayDot"/>
+
+            <View
+                android:id="@+id/dot_4"
+                style="@style/CalendarDayDot"/>
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

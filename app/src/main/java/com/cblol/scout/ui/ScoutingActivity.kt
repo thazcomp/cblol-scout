@@ -14,33 +14,32 @@ import com.cblol.scout.data.Player
 import com.cblol.scout.data.ScoutingDepartmentTier
 import com.cblol.scout.databinding.ActivityScoutingBinding
 import com.cblol.scout.domain.usecase.ScoutingService
+import com.cblol.scout.domain.usecase.ScoutingUiState
+import com.cblol.scout.domain.usecase.UpgradeScoutingUseCase
 import com.cblol.scout.game.GameRepository
+import com.cblol.scout.ui.viewmodel.ScoutingEvent
+import com.cblol.scout.ui.viewmodel.ScoutingViewModel
 import com.cblol.scout.util.TeamColors
 import com.google.android.material.tabs.TabLayout
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 /**
- * Tela de Olheiros.
+ * Tela de **Olheiros**.
  *
- * Duas abas:
- *  - **ATIVOS**: jogadores em scouting agora, com barra de progresso até o
- *    próximo nível + botão CANCELAR
- *  - **DEPARTAMENTO**: tier atual (BASIC/PRO/ELITE), slots usados/disponíveis,
- *    custo semanal, botão UPGRADE
+ * **MVVM**: observa [ScoutingViewModel.state] (tier do departamento + lista
+ * de scoutings ativos com players já resolvidos) e responde a
+ * [ScoutingEvent] para mostrar diálogos de upgrade.
  *
- * O **start** de novos scoutings acontece pelos cards do mercado de
- * transferências (`TransferMarketActivity` ganha um botão "Escotear" quando
- * o jogador clica em qualquer card de jogador externo). Esta tela gerencia
- * apenas os já iniciados.
- *
- * **SOLID:**
- *  - **SRP**: Activity orquestra UI; o `ScoutingService` cuida das regras.
- *  - **OCP**: novos tiers = entry no enum, layout reflete automaticamente.
- *  - **DIP**: depende apenas de `ScoutingService` e `GameRepository`.
+ * A resolução de "playerId → Player" (que precisava olhar snapshot E gerador
+ * procedural da 2ª divisão) vive no [com.cblol.scout.domain.usecase.GetScoutingStateUseCase] —
+ * a Activity recebe a lista pronta.
  */
 class ScoutingActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityScoutingBinding
+    private val vm: ScoutingViewModel by viewModel()
     private var currentTab = TAB_ACTIVE
+    private var lastState: ScoutingUiState? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,21 +49,24 @@ class ScoutingActivity : AppCompatActivity() {
         setupToolbar()
         setupTabs()
         binding.recycler.layoutManager = LinearLayoutManager(this)
-        renderState()
+
+        vm.state.observe(this) { state ->
+            lastState = state
+            render(state)
+        }
+        vm.events.observe(this) { ev -> ev.consume()?.let(::handleEvent) }
+        vm.refresh()
     }
 
     override fun onResume() {
         super.onResume()
-        renderState()
+        vm.refresh()
     }
 
-    // ── Setup ────────────────────────────────────────────────────────────
-
     private fun setupToolbar() {
-        val gs = GameRepository.current()
+        binding.toolbar.setBackgroundColor(TeamColors.forTeam(GameRepository.current().managerTeamId))
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        binding.toolbar.setBackgroundColor(TeamColors.forTeam(gs.managerTeamId))
         binding.toolbar.setNavigationOnClickListener { finish() }
     }
 
@@ -74,7 +76,7 @@ class ScoutingActivity : AppCompatActivity() {
         binding.tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab) {
                 currentTab = tab.position
-                renderState()
+                lastState?.let(::render)
             }
             override fun onTabUnselected(tab: TabLayout.Tab) {}
             override fun onTabReselected(tab: TabLayout.Tab) {}
@@ -83,24 +85,20 @@ class ScoutingActivity : AppCompatActivity() {
 
     // ── Render ───────────────────────────────────────────────────────────
 
-    private fun renderState() {
-        val gs = GameRepository.current()
-        val tier = ScoutingService.tier(gs)
-        val active = ScoutingService.activeScouts(gs)
+    private fun render(state: ScoutingUiState) {
         binding.tvDeptSubtitle.text = getString(
             R.string.scouting_dept_subtitle_format,
-            tier.label,
-            active.size, tier.maxConcurrentScouts
+            state.tier.label,
+            state.activeScouts.size, state.maxConcurrent
         )
-
         when (currentTab) {
-            TAB_ACTIVE     -> renderActive(active)
-            TAB_DEPARTMENT -> renderDepartment()
+            TAB_ACTIVE     -> renderActive(state.activeScouts)
+            TAB_DEPARTMENT -> renderDepartment(state.tier)
         }
     }
 
-    private fun renderActive(activePlayerIds: List<String>) {
-        if (activePlayerIds.isEmpty()) {
+    private fun renderActive(players: List<Player>) {
+        if (players.isEmpty()) {
             binding.recycler.visibility = View.GONE
             binding.tvEmpty.visibility  = View.VISIBLE
             binding.tvEmpty.setText(R.string.scouting_empty_active)
@@ -108,94 +106,79 @@ class ScoutingActivity : AppCompatActivity() {
         }
         binding.recycler.visibility = View.VISIBLE
         binding.tvEmpty.visibility  = View.GONE
-
-        // Resolve cada playerId para um Player real (1ª divisão OU 2ª divisão)
-        val players = activePlayerIds.mapNotNull { resolvePlayer(it) }
         binding.recycler.adapter = ActiveScoutAdapter(
             items = players,
-            onCancel = ::onCancelScouting,
-            onClick = ::openPlayerDetail
+            onCancel = ::confirmCancel,
+            onClick  = ::openPlayerDetail
         )
     }
 
-    private fun renderDepartment() {
+    private fun renderDepartment(currentTier: ScoutingDepartmentTier) {
         binding.recycler.visibility = View.VISIBLE
         binding.tvEmpty.visibility  = View.GONE
-        val tiers = ScoutingDepartmentTier.values().toList()
         binding.recycler.adapter = DepartmentAdapter(
-            tiers = tiers,
-            currentTier = ScoutingService.tier(GameRepository.current()),
-            onUpgrade = ::onUpgrade
+            tiers = ScoutingDepartmentTier.values().toList(),
+            currentTier = currentTier,
+            onUpgrade = { vm.upgrade() }
         )
     }
 
     /**
-     * Resolve um playerId para o `Player` correspondente. Procura primeiro no
-     * snapshot da 1ª divisão; se não achar, tenta a 2ª divisão procedural.
-     */
-    private fun resolvePlayer(playerId: String): Player? {
-        val fromSnap = GameRepository.snapshot(applicationContext).jogadores.find { it.id == playerId }
-        if (fromSnap != null) return fromSnap
-        return com.cblol.scout.util.SecondDivisionGenerator.generate().find { it.id == playerId }
-    }
-
-    // ── Ações ────────────────────────────────────────────────────────────
-
-    /**
-     * Abre a visualização detalhada do jogador escotado. Como o jogador NÃO
-     * pertence ao elenco do gerente, o [PlayerDetailDialog] cai no modo somente
-     * visualização (sem ações de gerência nem de mercado). Os atributos exibidos
-     * respeitam o nível de scouting atual via `applyScoutingVisibility`.
+     * Abre o detalhe do jogador escotado. Como o jogador NÃO pertence ao
+     * elenco, o dialog cai em modo somente visualização. Visibility dos
+     * atributos respeita o nível de scouting atual.
      */
     private fun openPlayerDetail(player: Player) {
-        PlayerDetailDialog.show(this, player) { renderState() }
+        PlayerDetailDialog.show(this, player) { vm.refresh() }
     }
 
-    private fun onCancelScouting(player: Player) {
+    // ── Diálogos de confirmação ──────────────────────────────────────────
+
+    private fun confirmCancel(player: Player) {
         stylizedDialog(this)
             .setTitle(R.string.scouting_cancel_confirm_title)
             .setMessage(getString(R.string.scouting_cancel_confirm_msg, player.nome_jogo))
-            .setPositiveButton(R.string.btn_yes) { _, _ ->
-                ScoutingService.cancelScouting(GameRepository.current(), player.id)
-                GameRepository.save(applicationContext)
-                renderState()
-            }
+            .setPositiveButton(R.string.btn_yes) { _, _ -> vm.cancel(player) }
             .setNegativeButton(R.string.btn_no, null)
             .show()
     }
 
-    private fun onUpgrade(target: ScoutingDepartmentTier) {
-        val gs = GameRepository.current()
-        when (val result = ScoutingService.upgradeDepartment(gs)) {
-            ScoutingService.UpgradeResult.OK -> {
-                GameRepository.save(applicationContext)
+    private fun handleEvent(event: ScoutingEvent) {
+        when (event) {
+            is ScoutingEvent.CancelDone -> Unit  // refresh já cuida do render
+            is ScoutingEvent.UpgradeDone -> handleUpgradeResult(event.result)
+        }
+    }
+
+    private fun handleUpgradeResult(result: UpgradeScoutingUseCase.Result) {
+        when (result) {
+            is UpgradeScoutingUseCase.Result.Ok -> {
                 stylizedDialog(this)
                     .setTitle(R.string.scouting_upgraded_title)
-                    .setMessage(getString(R.string.scouting_upgraded_msg, target.label))
+                    .setMessage(getString(R.string.scouting_upgraded_msg, result.newTier.label))
                     .setPositiveButton(R.string.btn_ok, null)
                     .show()
-                renderState()
             }
-            ScoutingService.UpgradeResult.ALREADY_MAX -> {
+            UpgradeScoutingUseCase.Result.AlreadyMax -> {
                 stylizedDialog(this)
                     .setTitle(R.string.scouting_upgrade_error_title)
                     .setMessage(R.string.scouting_upgrade_error_max)
                     .setPositiveButton(R.string.btn_ok, null)
                     .show()
             }
-            ScoutingService.UpgradeResult.LOW_REPUTATION -> {
+            is UpgradeScoutingUseCase.Result.LowReputation -> {
                 stylizedDialog(this)
                     .setTitle(R.string.scouting_upgrade_error_title)
                     .setMessage(getString(R.string.scouting_upgrade_error_reputation,
-                        target.minReputation, gs.coachProfile.reputation))
+                        result.required, result.current))
                     .setPositiveButton(R.string.btn_ok, null)
                     .show()
             }
-            ScoutingService.UpgradeResult.INSUFFICIENT_FUNDS -> {
+            is UpgradeScoutingUseCase.Result.InsufficientFunds -> {
                 stylizedDialog(this)
                     .setTitle(R.string.scouting_upgrade_error_title)
                     .setMessage(getString(R.string.scouting_upgrade_error_funds,
-                        "%,d".format(target.upgradeCost), "%,d".format(gs.budget)))
+                        "%,d".format(result.cost), "%,d".format(result.budget)))
                     .setPositiveButton(R.string.btn_ok, null)
                     .show()
             }
@@ -235,6 +218,10 @@ class ScoutingActivity : AppCompatActivity() {
         override fun onBindViewHolder(h: VH, position: Int) {
             val player = items[position]
             val ctx    = h.itemView.context
+            // O nível atual + progresso do scouting são por-jogador e podem
+            // mudar a cada tick; lê on-the-fly do GameRepository em vez de
+            // empurrar tudo para o state (que ficaria pesado pra uma info
+            // muito específica de bind de célula).
             val gs     = GameRepository.current()
             val level  = ScoutingService.scoutLevelOf(gs, player.id)
             val ov     = gs.playerOverrides[player.id]
@@ -296,19 +283,16 @@ class ScoutingActivity : AppCompatActivity() {
             val thisOrdinal = tier.ordinal
             when {
                 thisOrdinal < currentOrdinal -> {
-                    // Tier abaixo do atual — já adquirido
                     h.tvStatus.text = ctx.getString(R.string.scouting_dept_status_owned)
                     h.tvUpgrade.visibility = View.GONE
                     h.btnUpgrade.visibility = View.GONE
                 }
                 thisOrdinal == currentOrdinal -> {
-                    // Tier atual
                     h.tvStatus.text = ctx.getString(R.string.scouting_dept_status_current)
                     h.tvUpgrade.visibility = View.GONE
                     h.btnUpgrade.visibility = View.GONE
                 }
                 thisOrdinal == currentOrdinal + 1 -> {
-                    // Próximo tier — upgrade disponível
                     h.tvStatus.text = ctx.getString(R.string.scouting_dept_status_next)
                     h.tvUpgrade.visibility = View.VISIBLE
                     h.tvUpgrade.text = ctx.getString(R.string.scouting_dept_upgrade_format,
@@ -317,7 +301,6 @@ class ScoutingActivity : AppCompatActivity() {
                     h.btnUpgrade.setOnClickListener { onUpgrade(tier) }
                 }
                 else -> {
-                    // Tier futuro mas requer upgrade do anterior primeiro
                     h.tvStatus.text = ctx.getString(R.string.scouting_dept_status_locked)
                     h.tvUpgrade.visibility = View.GONE
                     h.btnUpgrade.visibility = View.GONE

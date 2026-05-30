@@ -17,10 +17,15 @@ import com.cblol.scout.data.SponsorContract
 import com.cblol.scout.data.SponsorOffer
 import com.cblol.scout.data.SponsorTier
 import com.cblol.scout.databinding.ActivitySponsorsBinding
+import com.cblol.scout.domain.usecase.AcceptSponsorOfferUseCase
 import com.cblol.scout.domain.usecase.SponsorService
+import com.cblol.scout.domain.usecase.SponsorsUiState
 import com.cblol.scout.game.GameRepository
+import com.cblol.scout.ui.viewmodel.SponsorsEvent
+import com.cblol.scout.ui.viewmodel.SponsorsViewModel
 import com.cblol.scout.util.TeamColors
 import com.google.android.material.tabs.TabLayout
+import org.koin.androidx.viewmodel.ext.android.viewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
@@ -28,26 +33,17 @@ import java.time.temporal.ChronoUnit
 /**
  * Tela de gerenciamento de patrocínios.
  *
- * Tem duas abas:
- *  - **ATIVOS**: contratos vigentes do time. Para cada um, mostra semanas
- *    restantes, total recebido, e botão CANCELAR (com confirmação de multa).
- *  - **MERCADO**: ofertas disponíveis. Para cada uma, mostra o valor proposto,
- *    duração e botões ACEITAR/RECUSAR. As ofertas têm validade limitada.
- *
- * Header fixo mostra a receita semanal total dos patrocínios ativos e a
- * contagem (ex: "2/4 ativos"), respeitando o limite [SponsorService.MAX_ACTIVE_SPONSORS].
- *
- * **SOLID:**
- *  - **SRP**: Activity orquestra; o [SponsorAdapter] cuida do bind de items
- *    e [SponsorService] cuida da lógica de aceitar/cancelar.
- *  - **OCP**: novos tipos de ação (ex: renegociar valor) viram novos métodos
- *    no adapter sem mexer no resto.
- *  - **DIP**: depende só de [GameRepository] e [SponsorService] (puros).
+ * **MVVM**: a Activity observa [SponsorsViewModel.state] (contratos ativos +
+ * ofertas + total semanal) e responde a [SponsorsEvent] para diálogos de
+ * resultado. Toda a regra (aceitar/recusar/cancelar) vive no SponsorService
+ * via UseCases — a Activity só dispara as confirmações.
  */
 class SponsorsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivitySponsorsBinding
+    private val vm: SponsorsViewModel by viewModel()
     private var currentTab = TAB_ACTIVE
+    private var lastState: SponsorsUiState? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,26 +54,23 @@ class SponsorsActivity : AppCompatActivity() {
         setupTabs()
         binding.recycler.layoutManager = LinearLayoutManager(this)
 
-        // Pode ser que o player abra a tela MUITO cedo (split começando, antes do
-        // primeiro ciclo de geração). Tenta gerar agora se já está em data válida.
-        SponsorService.generateOffersIfDue(GameRepository.current())
-        GameRepository.save(applicationContext)
-
-        renderState()
+        vm.state.observe(this) { state ->
+            lastState = state
+            render(state)
+        }
+        vm.events.observe(this) { ev -> ev.consume()?.let(::handleEvent) }
+        vm.refresh()
     }
 
     override fun onResume() {
         super.onResume()
-        renderState()
+        vm.refresh()
     }
 
-    // ── Setup ────────────────────────────────────────────────────────────
-
     private fun setupToolbar() {
-        val gs = GameRepository.current()
+        binding.toolbar.setBackgroundColor(TeamColors.forTeam(GameRepository.current().managerTeamId))
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        binding.toolbar.setBackgroundColor(TeamColors.forTeam(gs.managerTeamId))
         binding.toolbar.setNavigationOnClickListener { finish() }
     }
 
@@ -87,7 +80,7 @@ class SponsorsActivity : AppCompatActivity() {
         binding.tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab) {
                 currentTab = tab.position
-                renderState()
+                lastState?.let(::render)
             }
             override fun onTabUnselected(tab: TabLayout.Tab) {}
             override fun onTabReselected(tab: TabLayout.Tab) {}
@@ -96,16 +89,15 @@ class SponsorsActivity : AppCompatActivity() {
 
     // ── Render ───────────────────────────────────────────────────────────
 
-    private fun renderState() {
-        val gs = GameRepository.current()
-        val totalWeekly = SponsorService.totalWeeklyIncomeFromSponsors(gs)
-        binding.tvTotalWeekly.text  = getString(R.string.sponsors_weekly_format, "%,d".format(totalWeekly))
-        binding.tvActiveCount.text  = getString(R.string.sponsors_active_count_format,
-            gs.activeSponsors?.size ?: 0, SponsorService.MAX_ACTIVE_SPONSORS)
+    private fun render(state: SponsorsUiState) {
+        binding.tvTotalWeekly.text = getString(R.string.sponsors_weekly_format,
+            "%,d".format(state.totalWeeklyIncome))
+        binding.tvActiveCount.text = getString(R.string.sponsors_active_count_format,
+            state.activeCount, state.maxActive)
 
         when (currentTab) {
-            TAB_ACTIVE -> renderActive(gs.activeSponsors ?: emptyList())
-            TAB_MARKET -> renderMarket(gs.availableSponsorOffers ?: emptyList())
+            TAB_ACTIVE -> renderActive(state.activeContracts)
+            TAB_MARKET -> renderMarket(state.availableOffers)
         }
     }
 
@@ -141,70 +133,31 @@ class SponsorsActivity : AppCompatActivity() {
         }
     }
 
-    // ── Actions ──────────────────────────────────────────────────────────
+    // ── Ações ────────────────────────────────────────────────────────────
 
     private fun handlePrimary(item: SponsorItem) {
-        val gs = GameRepository.current()
         when (item) {
-            is SponsorItem.OfferItem -> {
-                val result = SponsorService.acceptOffer(gs, item.offer.sponsor.id)
-                when (result) {
-                    SponsorService.AcceptResult.OK -> {
-                        GameRepository.save(applicationContext)
-                        stylizedDialog(this)
-                            .setTitle(R.string.sponsors_accepted_title)
-                            .setMessage(getString(R.string.sponsors_accepted_msg,
-                                item.offer.sponsor.name,
-                                "%,d".format(item.offer.sponsor.weeklyAmount),
-                                item.offer.sponsor.durationWeeks))
-                            .setPositiveButton(R.string.btn_ok, null)
-                            .show()
-                        renderState()
-                    }
-                    SponsorService.AcceptResult.LIMIT_REACHED -> {
-                        stylizedDialog(this)
-                            .setTitle(R.string.sponsors_limit_reached_title)
-                            .setMessage(getString(R.string.sponsors_limit_reached_msg,
-                                SponsorService.MAX_ACTIVE_SPONSORS))
-                            .setPositiveButton(R.string.btn_ok, null)
-                            .show()
-                    }
-                    else -> { /* ignorar — race condition */ }
-                }
-            }
-            is SponsorItem.Active -> showDetailsDialog(item.contract.sponsor)
+            is SponsorItem.OfferItem -> vm.accept(item.offer)
+            is SponsorItem.Active    -> showDetailsDialog(item.contract.sponsor)
         }
     }
 
     private fun handleSecondary(item: SponsorItem) {
-        val gs = GameRepository.current()
         when (item) {
-            is SponsorItem.OfferItem -> {
-                SponsorService.rejectOffer(gs, item.offer.sponsor.id)
-                GameRepository.save(applicationContext)
-                renderState()
-            }
-            is SponsorItem.Active -> {
-                val penalty = item.contract.sponsor.weeklyAmount * SponsorService.CANCELLATION_FEE_WEEKS
-                stylizedDialog(this)
-                    .setTitle(R.string.sponsors_cancel_confirm_title)
-                    .setMessage(getString(R.string.sponsors_cancel_confirm_msg,
-                        item.contract.sponsor.name, "%,d".format(penalty)))
-                    .setPositiveButton(R.string.btn_yes) { _, _ ->
-                        val actualPenalty = SponsorService.cancelContract(gs, item.contract.sponsor.id)
-                        GameRepository.save(applicationContext)
-                        stylizedDialog(this)
-                            .setTitle(R.string.sponsors_cancel_confirm_title)
-                            .setMessage(getString(R.string.sponsors_cancelled_msg,
-                                "%,d".format(actualPenalty)))
-                            .setPositiveButton(R.string.btn_ok, null)
-                            .show()
-                        renderState()
-                    }
-                    .setNegativeButton(R.string.btn_no, null)
-                    .show()
-            }
+            is SponsorItem.OfferItem -> vm.reject(item.offer)
+            is SponsorItem.Active    -> confirmCancel(item.contract)
         }
+    }
+
+    private fun confirmCancel(contract: SponsorContract) {
+        val penalty = contract.sponsor.weeklyAmount * SponsorService.CANCELLATION_FEE_WEEKS
+        stylizedDialog(this)
+            .setTitle(R.string.sponsors_cancel_confirm_title)
+            .setMessage(getString(R.string.sponsors_cancel_confirm_msg,
+                contract.sponsor.name, "%,d".format(penalty)))
+            .setPositiveButton(R.string.btn_yes) { _, _ -> vm.cancel(contract) }
+            .setNegativeButton(R.string.btn_no, null)
+            .show()
     }
 
     private fun showDetailsDialog(sponsor: Sponsor) {
@@ -221,6 +174,44 @@ class SponsorsActivity : AppCompatActivity() {
             .show()
     }
 
+    private fun handleEvent(event: SponsorsEvent) {
+        when (event) {
+            is SponsorsEvent.AcceptDone -> handleAcceptResult(event.offer, event.result)
+            is SponsorsEvent.CancelDone -> {
+                stylizedDialog(this)
+                    .setTitle(R.string.sponsors_cancel_confirm_title)
+                    .setMessage(getString(R.string.sponsors_cancelled_msg,
+                        "%,d".format(event.result.penaltyPaid)))
+                    .setPositiveButton(R.string.btn_ok, null)
+                    .show()
+            }
+        }
+    }
+
+    private fun handleAcceptResult(offer: SponsorOffer, result: AcceptSponsorOfferUseCase.Result) {
+        when (result) {
+            is AcceptSponsorOfferUseCase.Result.Ok -> {
+                stylizedDialog(this)
+                    .setTitle(R.string.sponsors_accepted_title)
+                    .setMessage(getString(R.string.sponsors_accepted_msg,
+                        result.sponsor.name,
+                        "%,d".format(result.sponsor.weeklyAmount),
+                        result.sponsor.durationWeeks))
+                    .setPositiveButton(R.string.btn_ok, null)
+                    .show()
+            }
+            AcceptSponsorOfferUseCase.Result.LimitReached -> {
+                stylizedDialog(this)
+                    .setTitle(R.string.sponsors_limit_reached_title)
+                    .setMessage(getString(R.string.sponsors_limit_reached_msg,
+                        SponsorService.MAX_ACTIVE_SPONSORS))
+                    .setPositiveButton(R.string.btn_ok, null)
+                    .show()
+            }
+            AcceptSponsorOfferUseCase.Result.NotAvailable -> Unit
+        }
+    }
+
     companion object {
         private const val TAB_ACTIVE = 0
         private const val TAB_MARKET = 1
@@ -228,7 +219,6 @@ class SponsorsActivity : AppCompatActivity() {
 
     // ── Modelos de UI ────────────────────────────────────────────────────
 
-    /** Adapta tanto contratos ativos quanto ofertas no mesmo adapter. */
     private sealed class SponsorItem {
         data class Active(val contract: SponsorContract) : SponsorItem()
         data class OfferItem(val offer: SponsorOffer) : SponsorItem()
@@ -268,23 +258,19 @@ class SponsorsActivity : AppCompatActivity() {
         override fun onBindViewHolder(h: VH, position: Int) {
             val item = items[position]
             val ctx  = h.itemView.context
-
             val sponsor = when (item) {
                 is SponsorItem.Active    -> item.contract.sponsor
                 is SponsorItem.OfferItem -> item.offer.sponsor
             }
 
-            // Cabeçalho comum
             h.tvCategoryIcon.text = sponsor.category.emoji
             h.tvName.text         = sponsor.name
             bindTierBadge(h, sponsor.tier)
             h.tvWeekly.text = ctx.getString(R.string.sponsors_weekly_format,
                 "%,d".format(sponsor.weeklyAmount))
 
-            // Bônus / penalidade chips
             bindBonuses(h, sponsor, ctx)
 
-            // Subtítulo + ações específicas por tipo
             when (item) {
                 is SponsorItem.Active -> {
                     val remaining = remainingWeeks(item.contract)
@@ -358,14 +344,20 @@ class SponsorsActivity : AppCompatActivity() {
             SponsorTier.DIAMOND -> Color.parseColor("#5BD0E8")
         }
 
+        /**
+         * Cálculo de semanas restantes feito aqui no adapter por simplicidade
+         * — depende da data ATUAL do jogo, que pode mudar com avanços fora desta
+         * tela. Manter aqui evita ter que reemitir o state só pra refletir esse
+         * número (que muda de 7 em 7 dias).
+         */
         private fun remainingWeeks(contract: SponsorContract): Int {
             val today = runCatching {
                 LocalDate.parse(GameRepository.current().currentDate)
             }.getOrNull() ?: return contract.sponsor.durationWeeks
-            val end   = runCatching { LocalDate.parse(contract.endDate) }.getOrNull()
+            val end = runCatching { LocalDate.parse(contract.endDate) }.getOrNull()
                 ?: return contract.sponsor.durationWeeks
             val days = ChronoUnit.DAYS.between(today, end).toInt()
-            return ((days + 6) / 7).coerceAtLeast(0)  // arredonda para cima
+            return ((days + 6) / 7).coerceAtLeast(0)
         }
     }
 }

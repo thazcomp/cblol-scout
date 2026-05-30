@@ -125,4 +125,19 @@
     <color name="comp_tier_a">#F0B638</color>   <!-- Tier A: dourado (sólidas) -->
     <color name="comp_tier_b">#5BB5FF</color>   <!-- Tier B: azul (situacionais) -->
 
+    <!-- ═══ Calendário mensal (categorias de evento + estados da célula) ═══ -->
+    <!-- Cor do ponto/barra de cada categoria de evento. Reusa palette existente. -->
+    <color name="cal_cat_match_manager">#F0B638</color>    <!-- dourado: minha partida -->
+    <color name="cal_cat_match_other">#5BB5FF</color>       <!-- azul: outras partidas -->
+    <color name="cal_cat_transfer">#C994FF</color>          <!-- lavanda: mercado -->
+    <color name="cal_cat_sponsor">#1FE0CC</color>           <!-- ciano: patrocínio -->
+    <color name="cal_cat_finance">#00E0A0</color>           <!-- mint: finanças -->
+    <color name="cal_cat_split">#FF4B6E</color>             <!-- coral: marcos do split -->
+
+    <!-- Estados da célula do calendário (número do dia muda conforme estado). -->
+    <color name="cal_day_text_in_month">#F5EDD8</color>      <!-- dia do mês atual -->
+    <color name="cal_day_text_out_month">#4A4970</color>     <!-- dia do mês adjacente -->
+    <color name="cal_day_text_selected">#0A0B1A</color>      <!-- texto preto sobre o dourado -->
+    <color name="cal_day_within_split_tint">#222759</color>  <!-- destaque sutil pra dias dentro do split -->
+
 </resources>

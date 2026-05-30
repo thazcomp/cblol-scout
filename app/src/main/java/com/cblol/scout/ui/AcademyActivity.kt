@@ -17,35 +17,35 @@ import com.cblol.scout.data.AcademyProspect
 import com.cblol.scout.data.AcademyTier
 import com.cblol.scout.databinding.ActivityAcademyBinding
 import com.cblol.scout.domain.usecase.AcademyService
+import com.cblol.scout.domain.usecase.AcademyUiState
+import com.cblol.scout.domain.usecase.EvaluateProspectUseCase
+import com.cblol.scout.domain.usecase.PromoteProspectUseCase
+import com.cblol.scout.domain.usecase.RecruitProspectUseCase
+import com.cblol.scout.domain.usecase.UpgradeAcademyUseCase
 import com.cblol.scout.game.GameRepository
-import com.cblol.scout.game.SquadManager
+import com.cblol.scout.ui.viewmodel.AcademyEvent
+import com.cblol.scout.ui.viewmodel.AcademyViewModel
 import com.cblol.scout.util.TeamColors
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.tabs.TabLayout
+import org.koin.androidx.viewmodel.ext.android.viewModel
 
 /**
  * Tela da **categoria de base (academia)**.
  *
- * Duas abas:
- *  - **PROSPECTS**: jovens da base, com overall atual, potencial (oculto até
- *    avaliação), barra de desenvolvimento e ações (Avaliar / Promover / Liberar).
- *    Um botão no header recruta um novo talento manualmente.
- *  - **ACADEMIA**: tiers (BASIC/PRO/ELITE) com capacidade, velocidade de
- *    desenvolvimento, potencial máximo, custo semanal e botão de upgrade.
+ * **MVVM**: Activity observa [AcademyViewModel.state] (tier + prospects +
+ * orçamento + reputação) e dispara diálogos a partir dos [AcademyEvent]s
+ * emitidos pelos UseCases.
  *
- * Toda a regra vive no [AcademyService] (JVM-puro); a promoção materializa o
- * prospect como [com.cblol.scout.data.Player] via
- * [GameRepository.addPromotedProspect] e roda a validação de elenco.
- *
- * **SOLID:**
- *  - **SRP**: Activity só orquestra UI; regras no AcademyService.
- *  - **OCP**: novos tiers entram no enum; a UI reflete automaticamente.
- *  - **DIP**: depende de AcademyService + GameRepository.
+ * Toda regra (recrutar, avaliar, promover, liberar, upgrade) vive no
+ * [AcademyService] + nos UseCases que cuidam de log/save/notícia.
  */
 class AcademyActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityAcademyBinding
+    private val vm: AcademyViewModel by viewModel()
     private var currentTab = TAB_PROSPECTS
+    private var lastState: AcademyUiState? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,22 +55,27 @@ class AcademyActivity : AppCompatActivity() {
         setupToolbar()
         setupTabs()
         binding.recycler.layoutManager = LinearLayoutManager(this)
-        binding.btnRecruit.setOnClickListener { onRecruit() }
-        renderState()
+        binding.btnRecruit.setOnClickListener { vm.recruitProspect() }
+
+        vm.state.observe(this) { state ->
+            lastState = state
+            render(state)
+        }
+        vm.events.observe(this) { ev -> ev.consume()?.let(::handleEvent) }
+        vm.refresh()
     }
 
     override fun onResume() {
         super.onResume()
-        renderState()
+        vm.refresh()
     }
 
     // ── Setup ────────────────────────────────────────────────────────────
 
     private fun setupToolbar() {
-        val gs = GameRepository.current()
+        binding.toolbar.setBackgroundColor(TeamColors.forTeam(GameRepository.current().managerTeamId))
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
-        binding.toolbar.setBackgroundColor(TeamColors.forTeam(gs.managerTeamId))
         binding.toolbar.setNavigationOnClickListener { finish() }
     }
 
@@ -80,7 +85,7 @@ class AcademyActivity : AppCompatActivity() {
         binding.tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab) {
                 currentTab = tab.position
-                renderState()
+                lastState?.let(::render)
             }
             override fun onTabUnselected(tab: TabLayout.Tab) {}
             override fun onTabReselected(tab: TabLayout.Tab) {}
@@ -89,19 +94,15 @@ class AcademyActivity : AppCompatActivity() {
 
     // ── Render ───────────────────────────────────────────────────────────
 
-    private fun renderState() {
-        val gs = GameRepository.current()
-        val tier = AcademyService.tier(gs)
-        val prospects = AcademyService.prospects(gs)
+    private fun render(state: AcademyUiState) {
         binding.tvAcademySubtitle.text = getString(
             R.string.academy_subtitle_format,
-            "${tier.emoji} ${tier.label}",
-            prospects.size, tier.capacity
+            "${state.tier.emoji} ${state.tier.label}",
+            state.prospects.size, state.tier.capacity
         )
-
         when (currentTab) {
-            TAB_PROSPECTS -> renderProspects(prospects)
-            TAB_FACILITY  -> renderFacility()
+            TAB_PROSPECTS -> renderProspects(state.prospects)
+            TAB_FACILITY  -> renderFacility(state.tier)
         }
     }
 
@@ -115,87 +116,42 @@ class AcademyActivity : AppCompatActivity() {
         }
         binding.recycler.visibility = View.VISIBLE
         binding.tvEmpty.visibility  = View.GONE
-        // Ordena: prontos primeiro, depois por potencial (avaliados) / overall.
         val sorted = prospects.sortedWith(
             compareByDescending<AcademyProspect> { it.isReady() }
                 .thenByDescending { it.currentOverall }
         )
         binding.recycler.adapter = ProspectAdapter(
             items = sorted,
-            onEvaluate = ::onEvaluate,
-            onPromote = ::onPromote,
-            onRelease = ::onRelease
+            onEvaluate = ::confirmEvaluate,
+            onPromote = ::confirmPromote,
+            onRelease = ::confirmRelease
         )
     }
 
-    private fun renderFacility() {
+    private fun renderFacility(currentTier: AcademyTier) {
         binding.btnRecruit.visibility = View.GONE
         binding.recycler.visibility = View.VISIBLE
         binding.tvEmpty.visibility  = View.GONE
         binding.recycler.adapter = TierAdapter(
             tiers = AcademyTier.values().toList(),
-            currentTier = AcademyService.tier(GameRepository.current()),
-            onUpgrade = ::onUpgrade
+            currentTier = currentTier,
+            onUpgrade = { vm.upgradeAcademy(it) }
         )
     }
 
-    // ── Ações ────────────────────────────────────────────────────────────
+    // ── Diálogos de confirmação ──────────────────────────────────────────
 
-    private fun onRecruit() {
-        val gs = GameRepository.current()
-        val (result, prospect) = AcademyService.recruitManually(gs)
-        when (result) {
-            AcademyService.RecruitResult.OK -> {
-                GameRepository.save(applicationContext)
-                stylizedDialog(this)
-                    .setTitle(R.string.academy_recruited_title)
-                    .setMessage(getString(R.string.academy_recruited_msg,
-                        prospect!!.nome, prospect.role, prospect.idade,
-                        "%,d".format(AcademyService.MANUAL_RECRUIT_COST)))
-                    .setPositiveButton(R.string.btn_ok, null)
-                    .show()
-                renderState()
-            }
-            AcademyService.RecruitResult.CAPACITY_FULL ->
-                showError(getString(R.string.academy_error_capacity))
-            AcademyService.RecruitResult.INSUFFICIENT_FUNDS ->
-                showError(getString(R.string.academy_error_funds_recruit,
-                    "%,d".format(AcademyService.MANUAL_RECRUIT_COST), "%,d".format(gs.budget)))
-        }
-    }
-
-    private fun onEvaluate(prospect: AcademyProspect) {
-        val gs = GameRepository.current()
+    private fun confirmEvaluate(prospect: AcademyProspect) {
         stylizedDialog(this)
             .setTitle(R.string.academy_evaluate_confirm_title)
             .setMessage(getString(R.string.academy_evaluate_confirm_msg,
                 prospect.nome, "%,d".format(AcademyService.EVALUATION_COST)))
-            .setPositiveButton(R.string.btn_yes) { _, _ ->
-                when (AcademyService.evaluateProspect(gs, prospect.id)) {
-                    AcademyService.EvaluateResult.OK -> {
-                        GameRepository.save(applicationContext)
-                        stylizedDialog(this)
-                            .setTitle(R.string.academy_evaluated_title)
-                            .setMessage(getString(R.string.academy_evaluated_msg,
-                                prospect.nome, prospect.potential, prospect.potentialBand()))
-                            .setPositiveButton(R.string.btn_ok, null)
-                            .show()
-                        renderState()
-                    }
-                    AcademyService.EvaluateResult.INSUFFICIENT_FUNDS ->
-                        showError(getString(R.string.academy_error_funds_evaluate,
-                            "%,d".format(AcademyService.EVALUATION_COST), "%,d".format(gs.budget)))
-                    AcademyService.EvaluateResult.ALREADY_EVALUATED ->
-                        showError(getString(R.string.academy_error_already_evaluated))
-                    AcademyService.EvaluateResult.NOT_FOUND -> renderState()
-                }
-            }
+            .setPositiveButton(R.string.btn_yes) { _, _ -> vm.evaluateProspect(prospect) }
             .setNegativeButton(R.string.btn_no, null)
             .show()
     }
 
-    private fun onPromote(prospect: AcademyProspect) {
-        val gs = GameRepository.current()
+    private fun confirmPromote(prospect: AcademyProspect) {
         val salary = AcademyService.suggestedSalaryFor(prospect)
         val readyNote = if (!prospect.isReady())
             getString(R.string.academy_promote_not_ready_note) else ""
@@ -204,68 +160,99 @@ class AcademyActivity : AppCompatActivity() {
             .setMessage(getString(R.string.academy_promote_confirm_msg,
                 prospect.nome, prospect.role, prospect.currentOverall,
                 "%,d".format(salary)) + readyNote)
-            .setPositiveButton(R.string.btn_yes) { _, _ ->
-                val promotion = AcademyService.promoteProspect(gs, prospect.id)
-                if (promotion == null) { renderState(); return@setPositiveButton }
-                val teamName = GameRepository.snapshot(applicationContext)
-                    .times.find { it.id == gs.managerTeamId }?.nome ?: gs.managerTeamId
-                GameRepository.addPromotedProspect(
-                    applicationContext, promotion.prospect, promotion.suggestedSalary, teamName
-                )
-                GameRepository.log(
-                    "ACADEMY",
-                    "${prospect.nome} subiu da base para o elenco principal (overall ${prospect.currentOverall})."
-                )
-                // Cobertura jornalística da promoção (joia revelada).
-                com.cblol.scout.domain.usecase.NewsService.reportAcademyPromotion(
-                    gs, prospect.nome, teamName, prospect.currentOverall
-                )
-                GameRepository.save(applicationContext)
-                SquadManager.validateAndFixRoster(applicationContext)
-                stylizedDialog(this)
-                    .setTitle(R.string.academy_promoted_title)
-                    .setMessage(getString(R.string.academy_promoted_msg, prospect.nome))
-                    .setPositiveButton(R.string.btn_ok, null)
-                    .show()
-                renderState()
-            }
+            .setPositiveButton(R.string.btn_yes) { _, _ -> vm.promoteProspect(prospect) }
             .setNegativeButton(R.string.btn_no, null)
             .show()
     }
 
-    private fun onRelease(prospect: AcademyProspect) {
+    private fun confirmRelease(prospect: AcademyProspect) {
         stylizedDialog(this)
             .setTitle(R.string.academy_release_confirm_title)
             .setMessage(getString(R.string.academy_release_confirm_msg, prospect.nome))
-            .setPositiveButton(R.string.btn_yes) { _, _ ->
-                AcademyService.releaseProspect(GameRepository.current(), prospect.id)
-                GameRepository.save(applicationContext)
-                renderState()
-            }
+            .setPositiveButton(R.string.btn_yes) { _, _ -> vm.releaseProspect(prospect) }
             .setNegativeButton(R.string.btn_no, null)
             .show()
     }
 
-    private fun onUpgrade(target: AcademyTier) {
-        val gs = GameRepository.current()
-        when (AcademyService.upgrade(gs)) {
-            AcademyService.UpgradeResult.OK -> {
-                GameRepository.save(applicationContext)
+    // ── Tratamento dos eventos do VM ─────────────────────────────────────
+
+    private fun handleEvent(event: AcademyEvent) {
+        when (event) {
+            is AcademyEvent.RecruitDone  -> handleRecruitResult(event.result)
+            is AcademyEvent.EvaluateDone -> handleEvaluateResult(event.prospect, event.result)
+            is AcademyEvent.PromoteDone  -> handlePromoteResult(event.prospect, event.result)
+            is AcademyEvent.UpgradeDone  -> handleUpgradeResult(event.target, event.result)
+        }
+    }
+
+    private fun handleRecruitResult(result: RecruitProspectUseCase.Result) {
+        when (result) {
+            is RecruitProspectUseCase.Result.Ok -> {
                 stylizedDialog(this)
-                    .setTitle(R.string.academy_upgraded_title)
-                    .setMessage(getString(R.string.academy_upgraded_msg, target.label))
+                    .setTitle(R.string.academy_recruited_title)
+                    .setMessage(getString(R.string.academy_recruited_msg,
+                        result.prospect.nome, result.prospect.role, result.prospect.idade,
+                        "%,d".format(result.cost)))
                     .setPositiveButton(R.string.btn_ok, null)
                     .show()
-                renderState()
             }
-            AcademyService.UpgradeResult.ALREADY_MAX ->
+            RecruitProspectUseCase.Result.CapacityFull ->
+                showError(getString(R.string.academy_error_capacity))
+            is RecruitProspectUseCase.Result.InsufficientFunds ->
+                showError(getString(R.string.academy_error_funds_recruit,
+                    "%,d".format(result.cost), "%,d".format(result.budget)))
+        }
+    }
+
+    private fun handleEvaluateResult(prospect: AcademyProspect, result: EvaluateProspectUseCase.Result) {
+        when (result) {
+            is EvaluateProspectUseCase.Result.Ok -> {
+                stylizedDialog(this)
+                    .setTitle(R.string.academy_evaluated_title)
+                    .setMessage(getString(R.string.academy_evaluated_msg,
+                        result.prospect.nome, result.prospect.potential, result.prospect.potentialBand()))
+                    .setPositiveButton(R.string.btn_ok, null)
+                    .show()
+            }
+            is EvaluateProspectUseCase.Result.InsufficientFunds ->
+                showError(getString(R.string.academy_error_funds_evaluate,
+                    "%,d".format(result.cost), "%,d".format(result.budget)))
+            EvaluateProspectUseCase.Result.AlreadyEvaluated ->
+                showError(getString(R.string.academy_error_already_evaluated))
+            EvaluateProspectUseCase.Result.NotFound -> Unit
+        }
+    }
+
+    private fun handlePromoteResult(prospect: AcademyProspect, result: PromoteProspectUseCase.Result) {
+        when (result) {
+            is PromoteProspectUseCase.Result.Ok -> {
+                stylizedDialog(this)
+                    .setTitle(R.string.academy_promoted_title)
+                    .setMessage(getString(R.string.academy_promoted_msg, result.prospectName))
+                    .setPositiveButton(R.string.btn_ok, null)
+                    .show()
+            }
+            PromoteProspectUseCase.Result.NotFound -> Unit
+        }
+    }
+
+    private fun handleUpgradeResult(target: AcademyTier, result: UpgradeAcademyUseCase.Result) {
+        when (result) {
+            is UpgradeAcademyUseCase.Result.Ok -> {
+                stylizedDialog(this)
+                    .setTitle(R.string.academy_upgraded_title)
+                    .setMessage(getString(R.string.academy_upgraded_msg, result.newTier.label))
+                    .setPositiveButton(R.string.btn_ok, null)
+                    .show()
+            }
+            UpgradeAcademyUseCase.Result.AlreadyMax ->
                 showError(getString(R.string.academy_upgrade_error_max))
-            AcademyService.UpgradeResult.LOW_REPUTATION ->
+            is UpgradeAcademyUseCase.Result.LowReputation ->
                 showError(getString(R.string.academy_upgrade_error_reputation,
-                    target.minReputation, gs.coachProfile.reputation))
-            AcademyService.UpgradeResult.INSUFFICIENT_FUNDS ->
+                    result.required, result.current))
+            is UpgradeAcademyUseCase.Result.InsufficientFunds ->
                 showError(getString(R.string.academy_upgrade_error_funds,
-                    "%,d".format(target.upgradeCost), "%,d".format(gs.budget)))
+                    "%,d".format(result.cost), "%,d".format(result.budget)))
         }
     }
 
@@ -307,8 +294,7 @@ class AcademyActivity : AppCompatActivity() {
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = VH(
-            LayoutInflater.from(parent.context)
-                .inflate(R.layout.item_academy_prospect, parent, false)
+            LayoutInflater.from(parent.context).inflate(R.layout.item_academy_prospect, parent, false)
         )
 
         override fun getItemCount() = items.size
@@ -322,26 +308,22 @@ class AcademyActivity : AppCompatActivity() {
             h.tvOverall.text = ctx.getString(R.string.academy_overall_format, p.currentOverall)
             h.tvRealname.text = p.nomeReal
 
-            // Potencial: número exato se avaliado, faixa qualitativa se não.
             if (p.evaluated) {
-                h.tvPotential.text = ctx.getString(
-                    R.string.academy_potential_evaluated, p.potential, p.potentialBand())
+                h.tvPotential.text = ctx.getString(R.string.academy_potential_evaluated,
+                    p.potential, p.potentialBand())
                 h.tvPotential.setTextColor(ContextCompat.getColor(ctx, R.color.champion_gold))
             } else {
-                h.tvPotential.text = ctx.getString(
-                    R.string.academy_potential_hidden, p.potentialBand())
+                h.tvPotential.text = ctx.getString(R.string.academy_potential_hidden, p.potentialBand())
                 h.tvPotential.setTextColor(ContextCompat.getColor(ctx, R.color.color_on_surface_variant))
             }
 
             h.pbDev.progress = p.developmentPercent()
             h.tvDevLabel.text = ctx.getString(R.string.academy_dev_format, p.developmentPercent())
 
-            // Barra lateral verde quando pronto para subir.
             val ready = p.isReady()
             h.accentBar.setBackgroundColor(ContextCompat.getColor(
                 ctx, if (ready) R.color.state_success else R.color.color_outline_variant))
 
-            // Botão avaliar some quando já avaliado.
             h.btnEvaluate.visibility = if (p.evaluated) View.GONE else View.VISIBLE
 
             h.btnEvaluate.setOnClickListener { onEvaluate(p) }
@@ -359,19 +341,18 @@ class AcademyActivity : AppCompatActivity() {
     ) : RecyclerView.Adapter<TierAdapter.VH>() {
 
         class VH(v: View) : RecyclerView.ViewHolder(v) {
-            val tvName: TextView    = v.findViewById(R.id.tv_tier_name)
-            val tvStatus: TextView  = v.findViewById(R.id.tv_tier_status)
-            val tvCapacity: TextView = v.findViewById(R.id.tv_tier_capacity)
-            val tvGrowth: TextView  = v.findViewById(R.id.tv_tier_growth)
+            val tvName: TextView      = v.findViewById(R.id.tv_tier_name)
+            val tvStatus: TextView    = v.findViewById(R.id.tv_tier_status)
+            val tvCapacity: TextView  = v.findViewById(R.id.tv_tier_capacity)
+            val tvGrowth: TextView    = v.findViewById(R.id.tv_tier_growth)
             val tvPotential: TextView = v.findViewById(R.id.tv_tier_potential)
-            val tvWeekly: TextView  = v.findViewById(R.id.tv_tier_weekly)
-            val tvUpgrade: TextView = v.findViewById(R.id.tv_tier_upgrade_cost)
+            val tvWeekly: TextView    = v.findViewById(R.id.tv_tier_weekly)
+            val tvUpgrade: TextView   = v.findViewById(R.id.tv_tier_upgrade_cost)
             val btnUpgrade: MaterialButton = v.findViewById(R.id.btn_tier_upgrade)
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = VH(
-            LayoutInflater.from(parent.context)
-                .inflate(R.layout.item_academy_tier, parent, false)
+            LayoutInflater.from(parent.context).inflate(R.layout.item_academy_tier, parent, false)
         )
 
         override fun getItemCount() = tiers.size
