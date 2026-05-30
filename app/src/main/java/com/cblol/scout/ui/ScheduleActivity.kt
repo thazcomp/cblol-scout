@@ -70,6 +70,17 @@ class ScheduleActivity : AppCompatActivity() {
     private val monthLabelFmt = DateTimeFormatter.ofPattern("dd 'de' MMMM 'de' yyyy",
         java.util.Locale("pt", "BR"))
 
+    /**
+     * Data atual da carreira (do `GameState.currentDate`). Única referência
+     * para decidir se uma partida pode ser jogada/assistida — partidas de
+     * outros dias só podem ser visualizadas (informativo).
+     *
+     * Recalculada em `onCreate` e em `onResume` porque o calendário pode ter
+     * avançado em outra tela (Hub, MatchSimulation) enquanto a Schedule
+     * estava em background.
+     */
+    private var today: LocalDate = LocalDate.now()
+
     // ── Lifecycle ────────────────────────────────────────────────────────
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -85,15 +96,23 @@ class ScheduleActivity : AppCompatActivity() {
 
         observeViewModel()
 
-        val today = runCatching { LocalDate.parse(GameRepository.current().currentDate) }
-            .getOrDefault(LocalDate.now())
+        today = currentDateFromState()
+        eventsAdapter.setToday(today)
         vm.initCalendar(today)
     }
 
     override fun onResume() {
         super.onResume()
+        // O calendário do jogo pode ter avançado em outra tela — reler hoje.
+        today = currentDateFromState()
+        eventsAdapter.setToday(today)
         vm.refreshMatches()
     }
+
+    /** Resolve a data atual da carreira; fallback para hoje real se algo deu errado. */
+    private fun currentDateFromState(): LocalDate =
+        runCatching { LocalDate.parse(GameRepository.current().currentDate) }
+            .getOrDefault(LocalDate.now())
 
     override fun onSupportNavigateUp(): Boolean { finish(); return true }
 
@@ -216,7 +235,9 @@ class ScheduleActivity : AppCompatActivity() {
     /**
      * Clique numa partida do gerente:
      *  - Já jogada → mostra o placar.
-     *  - Pendente → abre o fluxo de pick & ban / simulação direta.
+     *  - Pendente E HOJE → abre o fluxo de pick & ban / simulação direta.
+     *  - Pendente em OUTRO DIA → informativo (não dá pra jogar partida que
+     *    não é hoje, e também não dá pra rejogar partida passada).
      */
     private fun handleManagerMatchClick(event: CalendarEvent.ManagerMatch) {
         if (event.played) {
@@ -224,6 +245,12 @@ class ScheduleActivity : AppCompatActivity() {
                 .setTitle(R.string.icon_match)
                 .setMessage("${event.title}\n${event.homeScore} - ${event.awayScore}")
                 .setPositiveButton(R.string.btn_ok, null).show()
+            return
+        }
+        if (!isToday(event.date)) {
+            // Partida não jogada que não é hoje (futura, ou eventualmente um
+            // gap raro do passado). Só visualizar — sem fluxo interativo.
+            showEventInfoDialog(event)
             return
         }
         stylizedDialog(this)
@@ -237,6 +264,13 @@ class ScheduleActivity : AppCompatActivity() {
             }.show()
     }
 
+    /**
+     * Clique numa partida de outros times:
+     *  - Já jogada → placar.
+     *  - Pendente E HOJE → oferece assistir (LiveMatchEngine simula).
+     *  - Pendente em OUTRO DIA → informativo (sem assistir partida que ainda
+     *    não aconteceu na linha do tempo do jogo, nem rever a posteriori).
+     */
     private fun handleOtherMatchClick(event: CalendarEvent.OtherMatch) {
         if (event.played) {
             stylizedDialog(this)
@@ -245,12 +279,20 @@ class ScheduleActivity : AppCompatActivity() {
                 .setPositiveButton(R.string.btn_ok, null).show()
             return
         }
+        if (!isToday(event.date)) {
+            showEventInfoDialog(event)
+            return
+        }
         stylizedDialog(this)
             .setTitle(event.title)
             .setMessage(R.string.dialog_watch_match_message)
             .setPositiveButton(R.string.btn_watch) { _, _ -> launchSimulation(event.matchId) }
             .setNegativeButton(R.string.btn_cancel, null).show()
     }
+
+    /** True se a data ISO do evento bate com [today] (data corrente da carreira). */
+    private fun isToday(eventDateIso: String): Boolean =
+        runCatching { LocalDate.parse(eventDateIso) == today }.getOrDefault(false)
 
     /** Eventos informativos (não-partida) só abrem um diálogo simples. */
     private fun showEventInfoDialog(event: CalendarEvent) {
@@ -415,15 +457,37 @@ class ScheduleActivity : AppCompatActivity() {
         }
     }
 
-    /** Adapter da lista de eventos do dia selecionado. */
+    /**
+     * Adapter da lista de eventos do dia selecionado.
+     *
+     * Conhece a data atual da carreira ([todayIso]) porque o **chevron de
+     * ação** só aparece para partidas pendentes do DIA DE HOJE. Partidas
+     * pendentes de outros dias (futuras ou eventuais gaps do passado) são
+     * apenas informativas — não se pode jogar/assistir adiantado nem rejogar.
+     */
     private class DayEventsAdapter(
         private val onClick: (CalendarEvent) -> Unit
     ) : RecyclerView.Adapter<DayEventsAdapter.VH>() {
 
         private var items: List<CalendarEvent> = emptyList()
+        private var todayIso: String = ""
 
         fun submit(newItems: List<CalendarEvent>) {
             items = newItems
+            notifyDataSetChanged()
+        }
+
+        /**
+         * Atualiza a referência de "hoje" usada para decidir a visibilidade
+         * do chevron. Quando a data corrente muda (ex: usuário avançou um dia
+         * em outra tela), a Activity chama este método para que partidas
+         * que ANTES eram "hoje" parem de mostrar chevron, e a do novo dia
+         * passe a mostrar.
+         */
+        fun setToday(today: LocalDate) {
+            val newIso = today.toString()
+            if (newIso == todayIso) return
+            todayIso = newIso
             notifyDataSetChanged()
         }
 
@@ -451,11 +515,12 @@ class ScheduleActivity : AppCompatActivity() {
             h.tvSub.visibility = if (event.subtitle.isNullOrBlank()) View.GONE else View.VISIBLE
             h.bar.setBackgroundColor(ContextCompat.getColor(ctx, categoryColor(event.category)))
 
-            // Chevron de "ação" só aparece pra eventos onde há fluxo: partidas
-            // (do gerente ou de outros) que ainda não foram jogadas.
+            // Chevron de "ação" só aparece para partidas NÃO JOGADAS DO DIA ATUAL.
+            // Restringe o fluxo de pick&ban / assistir à janela correta da linha
+            // do tempo do jogo — não adianta o próximo BO3 nem rejoga o passado.
             val actionable = when (event) {
-                is CalendarEvent.ManagerMatch -> !event.played
-                is CalendarEvent.OtherMatch   -> !event.played
+                is CalendarEvent.ManagerMatch -> !event.played && event.date == todayIso
+                is CalendarEvent.OtherMatch   -> !event.played && event.date == todayIso
                 else -> false
             }
             h.ivAction.visibility = if (actionable) View.VISIBLE else View.GONE

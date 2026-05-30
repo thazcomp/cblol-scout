@@ -44,6 +44,9 @@ val appModule = module {
     // UseCases — Calendário (agrega eventos de TODOS os subsistemas)
     factory { CalendarEventsAggregator(androidContext()) }
 
+    // UseCases — Histórico recente completo (agrega eventos PASSADOS de TODOS os subsistemas)
+    factory { RecentHistoryAggregator(androidContext()) }
+
     // ── UseCases — Squad ─────────────────────────────────────────────────
     factory { GetRosterUseCase(androidContext()) }
     factory { GetStartersUseCase(androidContext()) }

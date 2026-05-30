@@ -193,6 +193,12 @@ class ManagerHubActivity : AppCompatActivity() {
         findViewById<View>(R.id.card_news).setOnClickListener {
             startActivity(NewsActivity.intent(this))
         }
+        findViewById<View>(R.id.card_history).setOnClickListener {
+            RecentHistoryDialog.show(this)
+        }
+        findViewById<View>(R.id.btn_history_see_all).setOnClickListener {
+            RecentHistoryDialog.show(this)
+        }
         binding.btnQuit.setOnClickListener { confirmQuit() }
     }
 

@@ -140,4 +140,21 @@
     <color name="cal_day_text_selected">#0A0B1A</color>      <!-- texto preto sobre o dourado -->
     <color name="cal_day_within_split_tint">#222759</color>  <!-- destaque sutil pra dias dentro do split -->
 
+    <!-- ═══ Histórico recente (categorias) ═══ -->
+    <!-- Reaproveita as cores do calendário onde há paralelo (match/transfer/sponsor/finance);
+         adiciona categorias próprias do histórico (mood/bond/training/academy/scouting/coach/news/system). -->
+    <color name="hist_cat_match">#F0B638</color>      <!-- dourado: partidas -->
+    <color name="hist_cat_transfer">#C994FF</color>   <!-- lavanda: mercado -->
+    <color name="hist_cat_sponsor">#1FE0CC</color>    <!-- ciano: patrocínio -->
+    <color name="hist_cat_finance">#00E0A0</color>    <!-- mint: finanças -->
+    <color name="hist_cat_academy">#7BD389</color>    <!-- verde sage: base -->
+    <color name="hist_cat_scouting">#5BB5FF</color>   <!-- azul: olheiros -->
+    <color name="hist_cat_training">#FFA94D</color>   <!-- laranja: treinos -->
+    <color name="hist_cat_off_match">#FF8FA3</color>  <!-- rosa: fora de jogo -->
+    <color name="hist_cat_mood">#FFD876</color>       <!-- amarelo: moral -->
+    <color name="hist_cat_bond">#B488FF</color>       <!-- roxo: química -->
+    <color name="hist_cat_news">#A8A2BD</color>       <!-- cinza-violeta: notícias -->
+    <color name="hist_cat_coach">#F0B638</color>      <!-- dourado: técnico -->
+    <color name="hist_cat_system">#6B6890</color>     <!-- cinza neutro: sistema -->
+
 </resources>

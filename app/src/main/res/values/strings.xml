@@ -820,4 +820,16 @@
     <string name="cal_month_11">Novembro</string>
     <string name="cal_month_12">Dezembro</string>
 
+    <!-- ════════════════════════════════════════════════════════════════════
+         HISTÓRICO RECENTE COMPLETO (RecentHistoryDialog)
+         ════════════════════════════════════════════════════════════════════ -->
+    <string name="recent_history_dialog_title">📜 HISTÓRICO COMPLETO</string>
+    <string name="recent_history_card_title">Histórico</string>
+    <string name="recent_history_card_subtitle">Toda a carreira</string>
+    <string name="recent_history_clear_filters">Limpar filtros</string>
+    <string name="recent_history_empty">Nenhum evento encontrado.\nTente trocar os filtros ou avance no jogo para gerar eventos.</string>
+    <string name="recent_history_filter_chip_format">%1$s %2$s</string>
+    <string name="recent_history_filter_chip_with_count">%1$s %2$s (%3$d)</string>
+    <string name="recent_history_see_all">Ver tudo →</string>
+
 </resources>

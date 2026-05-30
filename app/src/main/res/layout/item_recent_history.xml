@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Linha de um evento no histórico recente completo.
+
+  Estrutura:
+    - Barra vertical colorida à esquerda (cor da categoria)
+    - Coluna principal: emoji da categoria + título + subtítulo (opcional)
+    - Coluna direita: data formatada + chip de delta (mood/bond)
+
+  O chip de delta só fica visível para eventos Mood/Bond/Training (que têm
+  semântica de "ganho/perda"). Para LogBased fica oculto.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:paddingHorizontal="12dp"
+    android:paddingVertical="10dp"
+    android:gravity="center_vertical">
+
+    <View
+        android:id="@+id/view_history_bar"
+        android:layout_width="3dp"
+        android:layout_height="40dp"
+        android:layout_marginEnd="10dp"
+        android:background="@color/color_primary"/>
+
+    <TextView
+        android:id="@+id/tv_history_emoji"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="10dp"
+        android:textSize="18sp"
+        tools:text="🏆"/>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tv_history_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/color_on_surface"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            tools:text="Vitória contra LOUD"/>
+
+        <TextView
+            android:id="@+id/tv_history_subtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/color_on_surface_variant"
+            android:textSize="11sp"
+            android:visibility="gone"
+            tools:text="Detalhe extra"
+            tools:visibility="visible"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:gravity="end"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tv_history_date"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/color_on_surface_variant"
+            android:textSize="10sp"
+            tools:text="15/04"/>
+
+        <TextView
+            android:id="@+id/tv_history_delta"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            tools:text="+5"
+            tools:visibility="visible"/>
+    </LinearLayout>
+</LinearLayout>

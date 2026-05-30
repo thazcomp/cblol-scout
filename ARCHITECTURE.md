@@ -1224,6 +1224,92 @@ recalcula — trivialmente barato.
 
 ---
 
+## Histórico recente completo (`RecentHistoryDialog`)
+
+Dialog global acessível pelo card **📜 Histórico** no Hub ou pelo botão
+"Ver tudo →" abaixo do mini-log. Mostra TODOS os eventos passados da carreira,
+agregados de TODOS os subsistemas, com filtros por categoria e scroll
+infinito (sem limite de itens).
+
+### O que entra no histórico
+
+Fontes agregadas pelo `RecentHistoryAggregator`:
+
+1. **`GameState.gameLog`** — fonte principal. O motor já escreve nele em
+   cada momento relevante (partidas, transferências, patrocínios, banco,
+   academia, scouting, off-match events). 90% das categorias vem daqui.
+2. **`GameState.trainingHistory`** — sessões de treino com outcome enum
+   (vira subclasse própria `Training` para a UI mostrar o emoji do outcome).
+3. **`GameState.news`** — manchetes do feed editorial.
+4. **`PlayerOverride.moodHistory`** (de todos os jogadores) — mood events
+   com delta numérico.
+5. **`PlayerBond.history`** (de todos os pares) — bond events com delta.
+
+**Por que combinar gameLog + fontes estruturadas?** O gameLog é texto cru
+sem estrutura semantica (delta, outcome, etc). Para categorias onde a UI
+se beneficia desses campos (mostrar cores de ganho/perda, emojis de outcome),
+vamos direto na fonte primária. Para o resto, o gameLog basta.
+
+### Arquitetura
+
+```
+RecentHistoryEvent (sealed)         ← modelo unificado polimórfico
+   ├─ LogBased                       ← 90% dos casos (do gameLog)
+   ├─ Training                       ← outcome enum exposto
+   ├─ News                           ← fonte editorial exposta
+   ├─ Mood                           ← delta numérico exposto
+   └─ Bond                           ← delta numérico exposto
+
+RecentHistoryCategory (enum)        ← 13 categorias com emoji + cor
+   MATCH, TRANSFER, SPONSOR, FINANCE, ACADEMY, SCOUTING, TRAINING,
+   OFF_MATCH, MOOD, BOND, NEWS, COACH, SYSTEM
+
+RecentHistoryAggregator (UseCase)
+   invoke(filtros?) → List<RecentHistoryEvent>  (ordenado por data desc)
+
+RecentHistoryDialog
+   - Chips de filtro (HorizontalScrollView com geração dinâmica)
+   - RecyclerView vertical com scroll, sem limite
+   - Estado vazio quando filtros zeram a lista
+
+Pontos de entrada no Hub:
+   - card_history (no GridLayout)
+   - btn_history_see_all (abaixo do mini-log)
+```
+
+### Decisões de design
+
+1. **Sem limite, com scroll** — escolha do usuário. Carreira longa pode ter
+   centenas de eventos; melhor confiar no scroll do RecyclerView que truncar.
+   Performance OK porque o agregador roda em memória sobre listas modestas.
+2. **Mapeamento `gameLog.type` → categoria** centralizado em
+   `categoryFromLogType`. Tipos desconhecidos caem em `SYSTEM` (visível mas
+   sem cor especial) para não serem esquecidos.
+3. **Chips de categorias sem eventos são escondidos** para não poluir.
+   Carreira nova mostra só as categorias que já têm algo.
+4. **Estado de filtros vive no Dialog** (não em ViewModel). É efeito local e
+   efêmero; o ViewModel só valeria com persistência entre aberturas, que não
+   é necessidade aqui.
+5. **Re-agrega a cada toggle** em vez de filtrar em memória. Como o cálculo
+   é leve e a lista total cabe em RAM, isto mantém o código simples sem custo
+   perceptível. Se virar gargalo, fazemos cache.
+6. **`MoodHistoryDialog` continua existindo** — ele é por-jogador (só moral
+   daquele jogador). O novo dialog é GLOBAL. Os dois coexistem com finalidades
+   distintas.
+7. **Dois pontos de entrada** — card no grid (descoberta) e botão "Ver tudo"
+   (continuidade do feed do Hub). Cada um cobre um caminho mental do usuário.
+
+### Por que reusa o `gameLog` em vez de criar uma tabela específica
+
+O `gameLog` já é escrito pelo motor a cada evento relevante — patrocínio
+aceito, empréstimo contratado, jogador vendido, treino realizado, etc. Criar
+uma entidade `CareerHistoryEvent` separada seria duplicar essas escritas em
+dois lugares (com risco de drift). Em vez disso, ler do log + complementar
+com as fontes estruturadas onde precisa de mais detalhe atinge a mesma
+funcionalidade com zero mudanças no motor.
+
+---
+
 ## Status da migração
 
 Todas as Activities foram migradas para o padrão SOLID + recursos:
