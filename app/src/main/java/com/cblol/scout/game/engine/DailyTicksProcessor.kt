@@ -116,7 +116,8 @@ internal object DailyTicksProcessor {
 
     /**
      * Processa ofertas de compra de outros times num tick diário:
-     *  1. Expira ofertas vencidas (por data ou mercado fechado).
+     *  1. Marca como EXPIRED ofertas vencidas (por data ou mercado fechado).
+     *     NÃO remove da lista — elas ficam para o gerente revisar no histórico.
      *  2. Gera novas ofertas se for dia de gerar e o mercado estiver aberto.
      */
     private fun processIncomingOffers(
@@ -125,7 +126,13 @@ internal object DailyTicksProcessor {
         roster: List<Player>,
         report: AdvanceReport
     ) {
-        IncomingOfferService.expireOffers(gs)
+        val expired = IncomingOfferService.expireOffers(gs)
+        expired.forEach { offer ->
+            GameRepository.log(
+                "TRANSFER",
+                "⏰ Proposta de ${offer.fromTeamName} por ${offer.playerName} expirou sem resposta."
+            )
+        }
 
         val snapshot = GameRepository.snapshot(context)
         // Em carreira na 2ª divisão, as ofertas devem vir dos OUTROS times da

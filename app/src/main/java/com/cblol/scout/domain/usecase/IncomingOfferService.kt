@@ -2,6 +2,7 @@ package com.cblol.scout.domain.usecase
 
 import com.cblol.scout.data.GameState
 import com.cblol.scout.data.IncomingTransferOffer
+import com.cblol.scout.data.OfferStatus
 import com.cblol.scout.data.Player
 import com.cblol.scout.data.SnapshotData
 import java.time.LocalDate
@@ -18,24 +19,26 @@ import kotlin.random.Random
  * sair** ([MoraleService.hasRequestedTransfer]) atraem propostas com mais
  * frequência e por valores mais agressivos.
  *
+ * **HISTÓRICO PRESERVADO:** propostas NUNCA saem da lista. Cada proposta
+ * percorre [OfferStatus.PENDING] → uma das resoluções ([OfferStatus.ACCEPTED],
+ * [OfferStatus.REJECTED] ou [OfferStatus.EXPIRED]) e fica para sempre. Isso
+ * permite ao gerente revisar decisões e prazos perdidos. Filtros/contagens
+ * usam [IncomingTransferOffer.isPending] para distinguir propostas ativas das
+ * arquivadas.
+ *
  * **Fluxo:**
  *  1. [generateOffersIfDue] roda nos ticks diários (só com mercado aberto).
  *     A cada [OFFER_INTERVAL_DAYS] dias sorteia 0-N novas ofertas.
- *  2. As ofertas ficam em [GameState.incomingOffers] até o gerente responder.
- *  3. [acceptOffer] vende o jogador para o time proponente (recebe o valor);
- *     [rejectOffer] descarta e, se o jogador queria sair, afeta a moral.
- *  4. [expireOffers] remove ofertas vencidas (por data ou janela fechada).
- *
- * **Por que separado do [com.cblol.scout.game.TransferMarket]?** O TransferMarket
- * cuida de transações iniciadas pelo GERENTE (comprar/vender). Aqui o fluxo é
- * inverso — a iniciativa é da IA. Manter separado respeita SRP e deixa a regra
- * de geração/expiração isolada e testável.
+ *  2. As ofertas ficam em [GameState.incomingOffers] com status PENDING.
+ *  3. [markAccepted] / [markRejected] aplicam a resolução do gerente.
+ *  4. [expireOffers] muda PENDINGs vencidas para EXPIRED.
+ *  5. Nada disso REMOVE entradas — só muta o [IncomingTransferOffer.status].
  *
  * **SOLID:**
- *  - **SRP**: só gera/avalia/expira ofertas recebidas. A venda em si reaproveita
- *    a mesma mutação de override que o TransferMarket faz (via [applyAcceptedOffer]).
- *  - **OCP**: novos gatilhos de oferta (ex: jogador em destaque) entram em
- *    [shouldTargetPlayer]/[offerAmountFor] sem mexer no resto.
+ *  - **SRP**: gera e marca o ciclo de vida; o efeito de venda em si vive em
+ *    [com.cblol.scout.game.TransferMarket.acceptIncomingOffer].
+ *  - **OCP**: novos gatilhos de oferta entram em [shouldTargetPlayer]/[offerAmountFor];
+ *    novos estados (ex: COUNTER_OFFERED) entram no enum [OfferStatus].
  *  - **DIP**: JVM-puro; recebe [GameState] e [SnapshotData], não toca Android.
  */
 object IncomingOfferService {
@@ -46,7 +49,11 @@ object IncomingOfferService {
     /** Validade (dias) de cada oferta antes de expirar sozinha. */
     private const val OFFER_VALIDITY_DAYS = 5L
 
-    /** Máximo de ofertas ativas simultâneas (evita poluir a UI). */
+    /**
+     * Máximo de ofertas **pendentes** simultâneas (evita poluir a UI). Ofertas
+     * resolvidas (aceitas/recusadas/expiradas) NÃO contam para este limite —
+     * elas ficam apenas no histórico.
+     */
     private const val MAX_ACTIVE_OFFERS = 5
 
     /** Máximo de novas ofertas geradas por rodada. */
@@ -78,11 +85,14 @@ object IncomingOfferService {
      * Gera novas ofertas se (a) o mercado está aberto e (b) já passou o
      * intervalo desde a última geração. Idempotente dentro do mesmo intervalo.
      *
+     * Só ofertas PENDING contam para o teto de [MAX_ACTIVE_OFFERS] e para
+     * "jogador já tem oferta" — propostas arquivadas (resolvidas) não bloqueiam
+     * novas tentativas em cima do mesmo jogador.
+     *
      * @param rivalTeams times que podem oferecer propostas. Em carreira de 1ª
      *   divisão, vem do snapshot oficial; em 2ª divisão, vem dos times
      *   procedurais do CD (sem isso, times da elite ofereceriam valores
-     *   desproporcionais ao orçamento da 2ª div). Se preferir manter o
-     *   comportamento antigo, passe `snapshot.times`.
+     *   desproporcionais ao orçamento da 2ª div).
      * @param marketPriceOf função que calcula o valor de mercado de um jogador
      *   (injetada para reaproveitar a regra do TransferMarket sem acoplar a
      *   camada de jogo ao domínio).
@@ -112,17 +122,19 @@ object IncomingOfferService {
             state.incomingOffers = it
         }
 
-        // Não estoura o teto de ofertas ativas.
-        val freeSlots = (MAX_ACTIVE_OFFERS - offers.size).coerceAtLeast(0)
+        // Conta só PENDINGs para o teto — propostas arquivadas não ocupam slot.
+        val pendingCount = offers.count { it.isPending }
+        val freeSlots = (MAX_ACTIVE_OFFERS - pendingCount).coerceAtLeast(0)
         if (freeSlots == 0) return GenerationResult(emptyList())
 
         val otherTeams = rivalTeams.filter { it.id != state.managerTeamId }
         if (otherTeams.isEmpty()) return GenerationResult(emptyList())
 
-        // Candidatos: jogadores do elenco que ainda não têm oferta ativa.
-        val alreadyTargeted = offers.map { it.playerId }.toSet()
+        // Evita disparar nova oferta para um jogador que JÁ tem proposta pendente.
+        // Jogadores com propostas só arquivadas voltam a ser alvos elegíveis.
+        val alreadyPending = offers.filter { it.isPending }.map { it.playerId }.toSet()
         val candidates = roster
-            .filter { it.id !in alreadyTargeted }
+            .filter { it.id !in alreadyPending }
             .filter { shouldTargetPlayer(state, it) }
             .shuffled()
             .take(minOf(freeSlots, MAX_OFFERS_PER_ROUND))
@@ -141,7 +153,8 @@ object IncomingOfferService {
                 amountBrl = amount,
                 offeredOn = state.currentDate,
                 expiresOn = today.plusDays(OFFER_VALIDITY_DAYS).toString(),
-                motivatedByRequest = requested
+                motivatedByRequest = requested,
+                status = OfferStatus.PENDING
             )
         }
 
@@ -174,8 +187,12 @@ object IncomingOfferService {
     // ── Expiração ───────────────────────────────────────────────────────
 
     /**
-     * Remove ofertas que expiraram por data OU porque o mercado fechou.
-     * Retorna a lista de ofertas removidas (para log, se desejado).
+     * Marca como [OfferStatus.EXPIRED] as ofertas PENDING que expiraram por
+     * data OU porque o mercado fechou. NÃO remove ninguém da lista — apenas
+     * muda o status. Idempotente: já-expiradas são ignoradas.
+     *
+     * @return lista das ofertas que foram expiradas nesta passagem (para o
+     *   motor logar/avisar, se desejar).
      */
     fun expireOffers(state: GameState): List<IncomingTransferOffer> {
         val offers = state.incomingOffers ?: return emptyList()
@@ -185,38 +202,69 @@ object IncomingOfferService {
             ?: return emptyList()
         val marketOpen = TransferWindowService.isMarketOpen(state)
 
-        val expired = offers.filter { offer ->
+        val newlyExpired = offers.filter { offer ->
+            if (!offer.isPending) return@filter false
             if (!marketOpen) return@filter true
             val exp = runCatching { LocalDate.parse(offer.expiresOn) }.getOrNull()
             exp == null || today.isAfter(exp)
         }
-        if (expired.isNotEmpty()) offers.removeAll(expired)
-        return expired
+        newlyExpired.forEach { offer ->
+            offer.status = OfferStatus.EXPIRED
+            offer.resolvedOn = state.currentDate
+        }
+        return newlyExpired
     }
 
     // ── Resposta do gerente ─────────────────────────────────────────────
 
-    /** Oferta ativa pelo id, ou null. */
+    /** Oferta da lista pelo id (qualquer status). */
     fun offerById(state: GameState, offerId: String): IncomingTransferOffer? =
         state.incomingOffers?.find { it.id == offerId }
 
-    /** Lista (não-nula) de ofertas ativas, ordenadas por valor desc. */
-    fun activeOffers(state: GameState): List<IncomingTransferOffer> =
-        (state.incomingOffers ?: emptyList()).sortedByDescending { it.amountBrl }
+    /**
+     * TODAS as ofertas da lista, ordenadas: pendentes primeiro (mais antigas no
+     * topo dentro de pendentes), depois resolvidas mais recentes primeiro.
+     *
+     * Mantém o nome [activeOffers] por compatibilidade com chamadores antigos —
+     * apesar do nome sugerir "ativas", a UI quer ver TUDO. Quem precisa apenas
+     * das pendentes usa [pendingOffers].
+     */
+    fun activeOffers(state: GameState): List<IncomingTransferOffer> {
+        val all = state.incomingOffers ?: return emptyList()
+        return all.sortedWith(
+            compareByDescending<IncomingTransferOffer> { it.isPending }
+                .thenByDescending { it.resolvedOn ?: it.offeredOn }
+                .thenByDescending { it.amountBrl }
+        )
+    }
 
-    /** Remove uma oferta da lista (após aceitar/recusar). */
-    fun removeOffer(state: GameState, offerId: String) {
-        state.incomingOffers?.removeAll { it.id == offerId }
+    /** Filtra só as propostas que ainda aguardam resposta do gerente. */
+    fun pendingOffers(state: GameState): List<IncomingTransferOffer> =
+        (state.incomingOffers ?: emptyList()).filter { it.isPending }
+
+    /**
+     * Marca uma oferta como aceita. Chamado pelo
+     * [com.cblol.scout.game.TransferMarket.acceptIncomingOffer] depois de
+     * processar a venda. NÃO remove da lista.
+     */
+    fun markAccepted(state: GameState, offerId: String) {
+        val offer = offerById(state, offerId) ?: return
+        if (!offer.isPending) return
+        offer.status = OfferStatus.ACCEPTED
+        offer.resolvedOn = state.currentDate
     }
 
     /**
-     * Marca a recusa de uma oferta: remove da lista e aplica o efeito moral
-     * (mais pesado se o jogador havia pedido para sair).
+     * Marca a recusa de uma oferta: aplica o efeito moral (mais pesado se o
+     * jogador havia pedido para sair) e troca o status para REJECTED. NÃO
+     * remove da lista.
      */
     fun rejectOffer(state: GameState, offer: IncomingTransferOffer) {
+        if (!offer.isPending) return
         MoraleService.recordTransferOfferRejected(
             state, offer.playerId, hadRequested = offer.motivatedByRequest
         )
-        removeOffer(state, offer.id)
+        offer.status = OfferStatus.REJECTED
+        offer.resolvedOn = state.currentDate
     }
 }

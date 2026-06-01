@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.cblol.scout.R
 import com.cblol.scout.data.IncomingTransferOffer
+import com.cblol.scout.data.OfferStatus
 import com.cblol.scout.domain.usecase.IncomingOfferRow
 import com.cblol.scout.game.GameRepository
 import com.cblol.scout.game.SellResult
@@ -186,20 +187,11 @@ class IncomingOffersActivity : AppCompatActivity() {
 
             h.tvName.text = offer.playerName
             h.tvRole.text = offer.playerRole
-            h.tvSubtitle.text = ctx.getString(R.string.incoming_offers_subtitle,
-                offer.fromTeamName, formatDate(offer.expiresOn))
             h.tvAmount.text = ctx.getString(R.string.incoming_offers_amount,
                 "%,d".format(offer.amountBrl))
 
-            if (offer.motivatedByRequest) {
-                h.tvRequested.visibility = View.VISIBLE
-                h.accentBar.setBackgroundColor(ContextCompat.getColor(ctx, R.color.champion_gold))
-            } else {
-                h.tvRequested.visibility = View.GONE
-                h.accentBar.setBackgroundColor(ContextCompat.getColor(ctx, R.color.color_outline_variant))
-            }
-
-            // Comparativo vs preço de mercado — já calculado pelo UseCase
+            // Comparativo vs preço de mercado — igual para qualquer status
+            // (mantém contexto histórico mesmo em propostas arquivadas).
             val pct = row.vsMarketPercent
             if (pct == null) {
                 h.tvVsMarket.visibility = View.GONE
@@ -212,8 +204,80 @@ class IncomingOffersActivity : AppCompatActivity() {
                 }
             }
 
+            // Renderiza diferente conforme o status. PENDING continua igual
+            // (botoes Aceitar/Recusar, subtitle com prazo); arquivadas mostram
+            // badge de status colorido + subtitle com a data de resolução e
+            // escondem os botões.
+            if (offer.isPending) {
+                bindPending(h, offer, ctx)
+            } else {
+                bindResolved(h, offer, ctx)
+            }
+        }
+
+        /** Layout original: badge "pediu pra sair", botões ativos, subtitle com prazo. */
+        private fun bindPending(h: VH, offer: IncomingTransferOffer, ctx: android.content.Context) {
+            h.tvSubtitle.text = ctx.getString(R.string.incoming_offers_subtitle,
+                offer.fromTeamName, formatDate(offer.expiresOn))
+
+            if (offer.motivatedByRequest) {
+                h.tvRequested.visibility = View.VISIBLE
+                h.tvRequested.text = ctx.getString(R.string.incoming_offers_wants_out)
+                h.tvRequested.setTextColor(ContextCompat.getColor(ctx, R.color.champion_gold))
+                h.accentBar.setBackgroundColor(ContextCompat.getColor(ctx, R.color.champion_gold))
+            } else {
+                h.tvRequested.visibility = View.GONE
+                h.accentBar.setBackgroundColor(ContextCompat.getColor(ctx, R.color.color_outline_variant))
+            }
+
+            h.btnAccept.visibility = View.VISIBLE
+            h.btnReject.visibility = View.VISIBLE
             h.btnAccept.setOnClickListener { onAccept(offer) }
             h.btnReject.setOnClickListener { onReject(offer) }
+            h.itemView.alpha = 1f
+        }
+
+        /**
+         * Propostas arquivadas (ACCEPTED/REJECTED/EXPIRED): reaproveita o
+         * [VH.tvRequested] como badge de status (verde/vermelho/amarelo),
+         * troca o subtitle pra mostrar a data de resolução, esconde botoes e
+         * pinta a accentBar com a cor do status. Card fica levemente esmaecido
+         * (alpha 0.85) pra reforçar visualmente que é histórico.
+         */
+        private fun bindResolved(h: VH, offer: IncomingTransferOffer, ctx: android.content.Context) {
+            val (badgeRes, subtitleRes, colorRes) = when (offer.status) {
+                OfferStatus.ACCEPTED -> Triple(
+                    R.string.incoming_offers_status_accepted,
+                    R.string.incoming_offers_subtitle_accepted,
+                    R.color.state_success
+                )
+                OfferStatus.REJECTED -> Triple(
+                    R.string.incoming_offers_status_rejected,
+                    R.string.incoming_offers_subtitle_rejected,
+                    R.color.state_danger
+                )
+                OfferStatus.EXPIRED -> Triple(
+                    R.string.incoming_offers_status_expired,
+                    R.string.incoming_offers_subtitle_expired,
+                    R.color.color_on_surface_variant
+                )
+                OfferStatus.PENDING -> return  // unreachable; bindPending cuida
+            }
+            val color = ContextCompat.getColor(ctx, colorRes)
+            val resolvedDate = formatDate(offer.resolvedOn ?: offer.expiresOn)
+
+            h.tvRequested.visibility = View.VISIBLE
+            h.tvRequested.text = ctx.getString(badgeRes)
+            h.tvRequested.setTextColor(color)
+            h.accentBar.setBackgroundColor(color)
+
+            h.tvSubtitle.text = ctx.getString(subtitleRes, offer.fromTeamName, resolvedDate)
+
+            h.btnAccept.visibility = View.GONE
+            h.btnReject.visibility = View.GONE
+            h.btnAccept.setOnClickListener(null)
+            h.btnReject.setOnClickListener(null)
+            h.itemView.alpha = 0.85f
         }
 
         private fun formatDate(iso: String): String = runCatching {

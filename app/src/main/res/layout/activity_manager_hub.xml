@@ -1,7 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Hub do técnico — tela inicial pós-login.
+
+    REORGANIZAÇÃO VISUAL (sem remover funcionalidades):
+      - "Status financeiro" continua em card único compacto, com 4 stats em
+        linha (data, orçamento, folha, elenco).
+      - "Próxima partida" + ações primárias (Jogar / Avançar dia / status
+        mercado) num card único, com hierarquia entre botões (primário CTA
+        grande, secundário outline pequeno).
+      - 6 CARDS PRINCIPAIS (rotina do dia): Elenco · Calendário · Classificação
+        · Mercado · Propostas · Histórico. Cards 100dp com a borda dourada
+        cheia para reforçar destaque.
+      - 7 AÇÕES SECUNDÁRIAS em linha rolável horizontal (Patrocínios · Banco
+        · Folha · Treinos · Olheiros · Base · Perfil). Chips menores (72dp
+        altura) com fundo `bg_hub_chip.xml`, alfa visual reduzido — visíveis
+        mas claramente "menos hierarquia" que os 6 cards principais. Todos
+        continuam tocáveis com a mesma navegação.
+      - "Notícias" foi movida do grid para o bloco do Histórico (eram dois
+        feeds de leitura — agrupar reduz ruído). Botão inline "Notícias →"
+        ao lado do "Ver tudo →".
+      - Botão "Encerrar carreira" preservado no rodapé.
+
+    TODOS os IDs originais foram mantidos para o Kotlin não quebrar.
+-->
 <androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg_screen">
@@ -29,7 +54,11 @@
             android:orientation="vertical"
             android:padding="12dp">
 
-            <!-- Status financeiro / data -->
+            <!-- ═════════════════════════════════════════════════════════════
+                 STATUS — 4 stats numa linha só (data/orçamento/folha/elenco)
+                 Card compacto com hierarquia: data e orçamento em destaque
+                 (linha 1), folha e elenco em segundo plano (linha 2 menor).
+                 ═════════════════════════════════════════════════════════════ -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -43,71 +72,84 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="14dp">
 
-                    <LinearLayout android:layout_width="match_parent"
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal">
 
                         <LinearLayout android:layout_width="0dp" android:layout_weight="1"
                             android:layout_height="wrap_content" android:orientation="vertical">
                             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:text="Data atual" android:textSize="11sp"
-                                android:textColor="@color/color_on_surface_variant"/>
+                                android:text="Data atual" android:textSize="10sp"
+                                android:textColor="@color/color_on_surface_variant"
+                                android:letterSpacing="0.06"/>
                             <TextView android:id="@+id/tv_date"
                                 android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:textSize="20sp" android:fontFamily="sans-serif-bold"
-                                android:textColor="@color/color_on_surface"/>
+                                android:textSize="18sp" android:fontFamily="sans-serif-bold"
+                                android:textColor="@color/color_on_surface"
+                                tools:text="15/04/2025"/>
                         </LinearLayout>
 
                         <LinearLayout android:layout_width="0dp" android:layout_weight="1"
                             android:layout_height="wrap_content" android:orientation="vertical"
                             android:gravity="end">
                             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:text="Orçamento" android:textSize="11sp"
-                                android:textColor="@color/color_on_surface_variant"/>
+                                android:text="Orçamento" android:textSize="10sp"
+                                android:textColor="@color/color_on_surface_variant"
+                                android:letterSpacing="0.06"/>
                             <TextView android:id="@+id/tv_budget"
                                 android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:textSize="20sp" android:fontFamily="sans-serif-bold"/>
+                                android:textSize="18sp" android:fontFamily="sans-serif-bold"
+                                tools:text="R$ 1.250.000"/>
                         </LinearLayout>
                     </LinearLayout>
 
                     <View android:layout_width="match_parent" android:layout_height="1dp"
                         android:background="@color/color_outline_variant"
-                        android:layout_marginTop="12dp" android:layout_marginBottom="12dp"/>
+                        android:layout_marginTop="10dp" android:layout_marginBottom="10dp"/>
 
-                    <LinearLayout android:layout_width="match_parent"
-                        android:layout_height="wrap_content" android:orientation="horizontal">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
                         <LinearLayout android:layout_width="0dp" android:layout_weight="1"
                             android:layout_height="wrap_content" android:orientation="vertical">
                             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:text="Folha salarial" android:textSize="11sp"
-                                android:textColor="@color/color_on_surface_variant"/>
+                                android:text="Folha salarial" android:textSize="10sp"
+                                android:textColor="@color/color_on_surface_variant"
+                                android:letterSpacing="0.06"/>
                             <TextView android:id="@+id/tv_payroll"
                                 android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:textSize="14sp" android:fontFamily="sans-serif-medium"
-                                android:textColor="@color/color_on_surface"/>
+                                android:textSize="13sp" android:fontFamily="sans-serif-medium"
+                                android:textColor="@color/color_on_surface"
+                                tools:text="R$ 80.000/mês"/>
                         </LinearLayout>
                         <LinearLayout android:layout_width="0dp" android:layout_weight="1"
                             android:layout_height="wrap_content" android:orientation="vertical"
                             android:gravity="end">
                             <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:text="Elenco" android:textSize="11sp"
-                                android:textColor="@color/color_on_surface_variant"/>
+                                android:text="Elenco" android:textSize="10sp"
+                                android:textColor="@color/color_on_surface_variant"
+                                android:letterSpacing="0.06"/>
                             <TextView android:id="@+id/tv_squad_info"
                                 android:layout_width="wrap_content" android:layout_height="wrap_content"
-                                android:textSize="14sp" android:fontFamily="sans-serif-medium"
-                                android:textColor="@color/color_on_surface"/>
+                                android:textSize="13sp" android:fontFamily="sans-serif-medium"
+                                android:textColor="@color/color_on_surface"
+                                tools:text="8 (5 titulares)"/>
                         </LinearLayout>
                     </LinearLayout>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- Próxima partida -->
+            <!-- ═════════════════════════════════════════════════════════════
+                 PRÓXIMA PARTIDA — CTA primário do Hub
+                 ═════════════════════════════════════════════════════════════ -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
+                android:layout_marginTop="8dp"
                 app:cardCornerRadius="2dp"
                 app:cardElevation="0dp"
                 app:strokeColor="@color/color_outline_gold"
@@ -118,155 +160,412 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="14dp">
 
                     <TextView
                         android:layout_width="wrap_content" android:layout_height="wrap_content"
                         android:text="PRÓXIMA PARTIDA"
-                        android:textSize="11sp" android:fontFamily="sans-serif-medium"
+                        android:textSize="10sp" android:fontFamily="sans-serif-medium"
                         android:textColor="@color/color_primary"
                         android:letterSpacing="0.1"/>
 
                     <TextView android:id="@+id/tv_next_match"
                         android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:textSize="18sp" android:fontFamily="sans-serif-bold"
-                        android:textColor="@color/color_on_surface"/>
+                        android:layout_marginTop="4dp"
+                        android:textSize="17sp" android:fontFamily="sans-serif-bold"
+                        android:textColor="@color/color_on_surface"
+                        tools:text="LOUD vs paiN Gaming"/>
 
                     <TextView android:id="@+id/tv_next_match_date"
                         android:layout_width="wrap_content" android:layout_height="wrap_content"
-                        android:textSize="13sp"
-                        android:textColor="@color/color_on_surface_variant"/>
+                        android:textSize="12sp"
+                        android:textColor="@color/color_on_surface_variant"
+                        tools:text="Rodada 5 · 16/04"/>
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_play_next_match"
                         android:layout_width="match_parent"
-                        android:layout_height="48dp"
-                        android:layout_marginTop="12dp"
+                        android:layout_height="46dp"
+                        android:layout_marginTop="10dp"
                         android:text="▶  Jogar Próxima Partida"
-                        android:textSize="14sp"
+                        android:textSize="13sp"
                         app:cornerRadius="8dp"/>
 
-                    <!-- Avançar dia: progride o calendário em 1 dia processando os
-                         ticks diários (scouting, moral, economia). Útil na
-                         pré-temporada e entre partidas para ver o scouting evoluir. -->
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_advance_day"
                         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                         android:layout_width="match_parent"
-                        android:layout_height="44dp"
-                        android:layout_marginTop="8dp"
+                        android:layout_height="40dp"
+                        android:layout_marginTop="6dp"
                         android:text="⏭  Avançar 1 dia"
-                        android:textSize="13sp"
+                        android:textSize="12sp"
                         app:cornerRadius="8dp"/>
 
-                    <!-- Status da janela de transferência (mercado aberto/fechado).
-                         Texto + cor definidos em código (renderMarketWindow). -->
                     <TextView android:id="@+id/tv_hub_market_window"
                         android:layout_width="match_parent" android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
+                        android:layout_marginTop="8dp"
                         android:gravity="center"
-                        android:paddingVertical="6dp"
-                        android:textSize="12sp"
+                        android:paddingVertical="5dp"
+                        android:textSize="11sp"
                         android:fontFamily="sans-serif-medium"
                         android:background="@color/color_surface_elevated"
-                        android:textColor="@color/color_on_surface_variant"/>
+                        android:textColor="@color/color_on_surface_variant"
+                        tools:text="🟢 Mercado aberto"/>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-<!-- Cards de navegação -->
+            <!-- ═════════════════════════════════════════════════════════════
+                 NAVEGAÇÃO PRINCIPAL — 6 cards usados na rotina do dia
+                 Grid 2×3, 92dp altura, com a borda dourada cheia para destacar
+                 hierarquia frente às ações secundárias.
+                 ═════════════════════════════════════════════════════════════ -->
+            <TextView
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="GERENCIAR"
+                android:textSize="10sp" android:fontFamily="sans-serif-medium"
+                android:textColor="@color/color_primary"
+                android:letterSpacing="0.12"
+                android:layout_marginTop="14dp"
+                android:layout_marginStart="4dp"
+                android:layout_marginBottom="6dp"/>
+
             <GridLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:columnCount="2"
-                android:layout_marginTop="10dp">
+                android:columnCount="3">
 
+                <!-- ELENCO -->
                 <androidx.cardview.widget.CardView android:id="@+id/card_squad"
                     android:layout_width="0dp" android:layout_columnWeight="1"
-                    android:layout_height="100dp" android:layout_margin="4dp"
+                    android:layout_height="92dp" android:layout_margin="3dp"
                     android:foreground="?attr/selectableItemBackground" android:clickable="true"
                     android:focusable="true" app:cardCornerRadius="2dp" app:cardElevation="0dp"
                     app:strokeColor="@color/color_outline_gold" app:strokeWidth="1dp"
                     app:cardBackgroundColor="@color/color_surface">
                     <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
-                        android:orientation="vertical" android:gravity="center" android:padding="8dp">
+                        android:orientation="vertical" android:gravity="center" android:padding="6dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="👥" android:textSize="32sp"/>
+                            android:text="👥" android:textSize="26sp"/>
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Elenco" android:textSize="14sp" android:fontFamily="sans-serif-medium"
-                            android:textColor="@color/color_on_surface"/>
+                            android:text="Elenco" android:textSize="12sp" android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/color_on_surface"
+                            android:layout_marginTop="2dp"/>
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
 
-                <androidx.cardview.widget.CardView android:id="@+id/card_market"
-                    android:layout_width="0dp" android:layout_columnWeight="1"
-                    android:layout_height="100dp" android:layout_margin="4dp"
-                    android:foreground="?attr/selectableItemBackground" android:clickable="true"
-                    android:focusable="true" app:cardCornerRadius="2dp" app:cardElevation="0dp"
-                    app:strokeColor="@color/color_outline_gold" app:strokeWidth="1dp"
-                    app:cardBackgroundColor="@color/color_surface">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
-                        android:orientation="vertical" android:gravity="center" android:padding="8dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="💼" android:textSize="32sp"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Mercado" android:textSize="14sp" android:fontFamily="sans-serif-medium"
-                            android:textColor="@color/color_on_surface"/>
-                    </LinearLayout>
-                </androidx.cardview.widget.CardView>
-
+                <!-- CALENDÁRIO -->
                 <androidx.cardview.widget.CardView android:id="@+id/card_schedule"
                     android:layout_width="0dp" android:layout_columnWeight="1"
-                    android:layout_height="100dp" android:layout_margin="4dp"
+                    android:layout_height="92dp" android:layout_margin="3dp"
                     android:foreground="?attr/selectableItemBackground" android:clickable="true"
                     android:focusable="true" app:cardCornerRadius="2dp" app:cardElevation="0dp"
                     app:strokeColor="@color/color_outline_gold" app:strokeWidth="1dp"
                     app:cardBackgroundColor="@color/color_surface">
                     <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
-                        android:orientation="vertical" android:gravity="center" android:padding="8dp">
+                        android:orientation="vertical" android:gravity="center" android:padding="6dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="📅" android:textSize="32sp"/>
+                            android:text="📅" android:textSize="26sp"/>
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Calendário" android:textSize="14sp" android:fontFamily="sans-serif-medium"
-                            android:textColor="@color/color_on_surface"/>
+                            android:text="Calendário" android:textSize="12sp" android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/color_on_surface"
+                            android:layout_marginTop="2dp"/>
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
 
+                <!-- CLASSIFICAÇÃO -->
                 <androidx.cardview.widget.CardView android:id="@+id/card_standings"
                     android:layout_width="0dp" android:layout_columnWeight="1"
-                    android:layout_height="100dp" android:layout_margin="4dp"
+                    android:layout_height="92dp" android:layout_margin="3dp"
                     android:foreground="?attr/selectableItemBackground" android:clickable="true"
                     android:focusable="true" app:cardCornerRadius="2dp" app:cardElevation="0dp"
                     app:strokeColor="@color/color_outline_gold" app:strokeWidth="1dp"
                     app:cardBackgroundColor="@color/color_surface">
                     <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
-                        android:orientation="vertical" android:gravity="center" android:padding="8dp">
+                        android:orientation="vertical" android:gravity="center" android:padding="6dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="🏆" android:textSize="32sp"/>
+                            android:text="🏆" android:textSize="26sp"/>
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Classificação" android:textSize="14sp" android:fontFamily="sans-serif-medium"
-                            android:textColor="@color/color_on_surface"/>
+                            android:text="Classif." android:textSize="12sp" android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/color_on_surface"
+                            android:layout_marginTop="2dp"/>
                     </LinearLayout>
                 </androidx.cardview.widget.CardView>
 
-                <!-- Card MEU PERFIL -->
-                <androidx.cardview.widget.CardView android:id="@+id/card_coach_profile"
+                <!-- MERCADO -->
+                <androidx.cardview.widget.CardView android:id="@+id/card_market"
                     android:layout_width="0dp" android:layout_columnWeight="1"
-                    android:layout_height="100dp" android:layout_margin="4dp"
+                    android:layout_height="92dp" android:layout_margin="3dp"
                     android:foreground="?attr/selectableItemBackground" android:clickable="true"
                     android:focusable="true" app:cardCornerRadius="2dp" app:cardElevation="0dp"
                     app:strokeColor="@color/color_outline_gold" app:strokeWidth="1dp"
                     app:cardBackgroundColor="@color/color_surface">
                     <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
-                        android:orientation="vertical" android:gravity="center" android:padding="8dp">
+                        android:orientation="vertical" android:gravity="center" android:padding="6dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="@string/coach_default_avatar" android:textSize="32sp"/>
+                            android:text="🔄" android:textSize="26sp"/>
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Meu Perfil" android:textSize="14sp" android:fontFamily="sans-serif-medium"
-                            android:textColor="@color/color_on_surface"/>
+                            android:text="Mercado" android:textSize="12sp" android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/color_on_surface"
+                            android:layout_marginTop="2dp"/>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <!-- PROPOSTAS (com badge dinâmico quando há ofertas pendentes) -->
+                <androidx.cardview.widget.CardView android:id="@+id/card_offers"
+                    android:layout_width="0dp" android:layout_columnWeight="1"
+                    android:layout_height="92dp" android:layout_margin="3dp"
+                    android:foreground="?attr/selectableItemBackground" android:clickable="true"
+                    android:focusable="true" app:cardCornerRadius="2dp" app:cardElevation="0dp"
+                    app:strokeColor="@color/color_outline_gold" app:strokeWidth="1dp"
+                    app:cardBackgroundColor="@color/color_surface">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+                        android:orientation="vertical" android:gravity="center" android:padding="6dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="📩" android:textSize="26sp"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="Propostas" android:textSize="12sp" android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/color_on_surface"
+                            android:layout_marginTop="2dp"/>
+                        <TextView android:id="@+id/tv_hub_offers_badge"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:textSize="9sp"
+                            android:textColor="@color/champion_gold"
+                            android:maxLines="1" android:ellipsize="end"
+                            android:visibility="gone"/>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+
+                <!-- HISTÓRICO (re-renomeado de "Histórico Completo" para "Atividade" — texto mais curto) -->
+                <androidx.cardview.widget.CardView android:id="@+id/card_history"
+                    android:layout_width="0dp" android:layout_columnWeight="1"
+                    android:layout_height="92dp" android:layout_margin="3dp"
+                    android:foreground="?attr/selectableItemBackground" android:clickable="true"
+                    android:focusable="true" app:cardCornerRadius="2dp" app:cardElevation="0dp"
+                    app:strokeColor="@color/color_outline_gold" app:strokeWidth="1dp"
+                    app:cardBackgroundColor="@color/color_surface">
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+                        android:orientation="vertical" android:gravity="center" android:padding="6dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="📜" android:textSize="26sp"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/recent_history_card_title" android:textSize="12sp"
+                            android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/color_on_surface"
+                            android:layout_marginTop="2dp"/>
+                        <TextView android:id="@+id/tv_hub_history_subtitle"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:textSize="9sp"
+                            android:textColor="@color/champion_gold"
+                            android:maxLines="1" android:ellipsize="end"
+                            android:visibility="gone"/>
+                    </LinearLayout>
+                </androidx.cardview.widget.CardView>
+            </GridLayout>
+
+            <!-- ═════════════════════════════════════════════════════════════
+                 AÇÕES SECUNDÁRIAS — 7 chips em linha rolável
+                 Patrocínios · Banco · Folha · Treinos · Olheiros · Base · Perfil
+                 Drawable customizado (bg_hub_chip.xml) reduz peso visual
+                 frente aos 6 cards principais acima.
+                 ═════════════════════════════════════════════════════════════ -->
+            <TextView
+                android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:text="OUTRAS OPÇÕES"
+                android:textSize="10sp" android:fontFamily="sans-serif-medium"
+                android:textColor="@color/color_on_surface_variant"
+                android:letterSpacing="0.12"
+                android:layout_marginTop="14dp"
+                android:layout_marginStart="4dp"
+                android:layout_marginBottom="6dp"/>
+
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:scrollbars="none"
+                android:overScrollMode="never">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="3dp">
+
+                    <!-- PATROCÍNIOS -->
+                    <LinearLayout android:id="@+id/card_sponsors"
+                        android:layout_width="78dp"
+                        android:layout_height="72dp"
+                        android:layout_marginEnd="6dp"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:padding="6dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="@drawable/bg_hub_chip">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="💼" android:textSize="22sp"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="Patrocínio" android:textSize="10sp"
+                            android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/color_on_surface"
+                            android:layout_marginTop="2dp"/>
+                        <TextView android:id="@+id/tv_hub_sponsors_subtitle"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:textSize="8sp"
+                            android:textColor="@color/champion_gold"
+                            android:maxLines="1" android:ellipsize="end"
+                            android:visibility="gone"/>
+                    </LinearLayout>
+
+                    <!-- BANCO -->
+                    <LinearLayout android:id="@+id/card_bank"
+                        android:layout_width="78dp"
+                        android:layout_height="72dp"
+                        android:layout_marginEnd="6dp"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:padding="6dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="@drawable/bg_hub_chip">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="🏦" android:textSize="22sp"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="Banco" android:textSize="10sp"
+                            android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/color_on_surface"
+                            android:layout_marginTop="2dp"/>
+                        <TextView android:id="@+id/tv_hub_bank_subtitle"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:textSize="8sp"
+                            android:textColor="@color/champion_gold"
+                            android:maxLines="1" android:ellipsize="end"
+                            android:visibility="gone"/>
+                    </LinearLayout>
+
+                    <!-- FOLHA SALARIAL -->
+                    <LinearLayout android:id="@+id/card_payroll"
+                        android:layout_width="78dp"
+                        android:layout_height="72dp"
+                        android:layout_marginEnd="6dp"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:padding="6dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="@drawable/bg_hub_chip">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="💰" android:textSize="22sp"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="Folha" android:textSize="10sp"
+                            android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/color_on_surface"
+                            android:layout_marginTop="2dp"/>
+                        <TextView android:id="@+id/tv_hub_payroll_subtitle"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:textSize="8sp"
+                            android:textColor="@color/champion_gold"
+                            android:maxLines="1" android:ellipsize="end"
+                            android:visibility="gone"/>
+                    </LinearLayout>
+
+                    <!-- TREINOS -->
+                    <LinearLayout android:id="@+id/card_training"
+                        android:layout_width="78dp"
+                        android:layout_height="72dp"
+                        android:layout_marginEnd="6dp"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:padding="6dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="@drawable/bg_hub_chip">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="🏋️" android:textSize="22sp"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="Treinos" android:textSize="10sp"
+                            android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/color_on_surface"
+                            android:layout_marginTop="2dp"/>
+                        <TextView android:id="@+id/tv_hub_training_subtitle"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:textSize="8sp"
+                            android:textColor="@color/champion_gold"
+                            android:visibility="gone"/>
+                    </LinearLayout>
+
+                    <!-- OLHEIROS -->
+                    <LinearLayout android:id="@+id/card_scouting"
+                        android:layout_width="78dp"
+                        android:layout_height="72dp"
+                        android:layout_marginEnd="6dp"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:padding="6dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="@drawable/bg_hub_chip">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="🔍" android:textSize="22sp"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="Olheiros" android:textSize="10sp"
+                            android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/color_on_surface"
+                            android:layout_marginTop="2dp"/>
+                        <TextView android:id="@+id/tv_hub_scouting_subtitle"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:textSize="8sp"
+                            android:textColor="@color/champion_gold"
+                            android:maxLines="1" android:ellipsize="end"
+                            android:visibility="gone"/>
+                    </LinearLayout>
+
+                    <!-- BASE -->
+                    <LinearLayout android:id="@+id/card_academy"
+                        android:layout_width="78dp"
+                        android:layout_height="72dp"
+                        android:layout_marginEnd="6dp"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:padding="6dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="@drawable/bg_hub_chip">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="🌱" android:textSize="22sp"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="Base" android:textSize="10sp"
+                            android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/color_on_surface"
+                            android:layout_marginTop="2dp"/>
+                        <TextView android:id="@+id/tv_hub_academy_subtitle"
+                            android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:textSize="8sp"
+                            android:textColor="@color/champion_gold"
+                            android:maxLines="1" android:ellipsize="end"
+                            android:visibility="gone"/>
+                    </LinearLayout>
+
+                    <!-- PERFIL DO TÉCNICO -->
+                    <LinearLayout android:id="@+id/card_coach_profile"
+                        android:layout_width="78dp"
+                        android:layout_height="72dp"
+                        android:layout_marginEnd="6dp"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:padding="6dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="@drawable/bg_hub_chip">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/coach_default_avatar" android:textSize="22sp"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="Perfil" android:textSize="10sp"
+                            android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/color_on_surface"
+                            android:layout_marginTop="2dp"/>
                         <TextView android:id="@+id/tv_hub_coach_subtitle"
                             android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:textSize="10sp"
+                            android:textSize="8sp"
                             android:textColor="@color/champion_gold"
                             android:maxLines="1" android:ellipsize="end"
                             android:visibility="gone"/>
@@ -275,258 +574,96 @@
                             android:layout_width="wrap_content" android:layout_height="wrap_content"
                             android:visibility="gone"/>
                     </LinearLayout>
-                </androidx.cardview.widget.CardView>
+                </LinearLayout>
+            </HorizontalScrollView>
 
-                <!-- Card PATROCÍNIOS -->
-                <androidx.cardview.widget.CardView android:id="@+id/card_sponsors"
-                    android:layout_width="0dp" android:layout_columnWeight="1"
-                    android:layout_height="100dp" android:layout_margin="4dp"
-                    android:foreground="?attr/selectableItemBackground" android:clickable="true"
-                    android:focusable="true" app:cardCornerRadius="2dp" app:cardElevation="0dp"
-                    app:strokeColor="@color/color_outline_gold" app:strokeWidth="1dp"
-                    app:cardBackgroundColor="@color/color_surface">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
-                        android:orientation="vertical" android:gravity="center" android:padding="8dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="💼" android:textSize="32sp"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Patrocínios" android:textSize="14sp" android:fontFamily="sans-serif-medium"
-                            android:textColor="@color/color_on_surface"/>
-                        <TextView android:id="@+id/tv_hub_sponsors_subtitle"
-                            android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:textSize="10sp"
-                            android:textColor="@color/champion_gold"
-                            android:maxLines="1" android:ellipsize="end"
-                            android:visibility="gone"/>
-                    </LinearLayout>
-                </androidx.cardview.widget.CardView>
-
-                <!-- Card TREINOS -->
-                <androidx.cardview.widget.CardView android:id="@+id/card_training"
-                    android:layout_width="0dp" android:layout_columnWeight="1"
-                    android:layout_height="100dp" android:layout_margin="4dp"
-                    android:foreground="?attr/selectableItemBackground" android:clickable="true"
-                    android:focusable="true" app:cardCornerRadius="2dp" app:cardElevation="0dp"
-                    app:strokeColor="@color/color_outline_gold" app:strokeWidth="1dp"
-                    app:cardBackgroundColor="@color/color_surface">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
-                        android:orientation="vertical" android:gravity="center" android:padding="8dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="🏋️" android:textSize="32sp"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Treinos" android:textSize="14sp" android:fontFamily="sans-serif-medium"
-                            android:textColor="@color/color_on_surface"/>
-                        <TextView android:id="@+id/tv_hub_training_subtitle"
-                            android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:textSize="10sp"
-                            android:textColor="@color/champion_gold"
-                            android:visibility="gone"/>
-                    </LinearLayout>
-                </androidx.cardview.widget.CardView>
-
-                <!-- Card OLHEIROS -->
-                <androidx.cardview.widget.CardView android:id="@+id/card_scouting"
-                    android:layout_width="0dp" android:layout_columnWeight="1"
-                    android:layout_height="100dp" android:layout_margin="4dp"
-                    android:foreground="?attr/selectableItemBackground" android:clickable="true"
-                    android:focusable="true" app:cardCornerRadius="2dp" app:cardElevation="0dp"
-                    app:strokeColor="@color/color_outline_gold" app:strokeWidth="1dp"
-                    app:cardBackgroundColor="@color/color_surface">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
-                        android:orientation="vertical" android:gravity="center" android:padding="8dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="🔍" android:textSize="32sp"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Olheiros" android:textSize="14sp" android:fontFamily="sans-serif-medium"
-                            android:textColor="@color/color_on_surface"/>
-                        <TextView android:id="@+id/tv_hub_scouting_subtitle"
-                            android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:textSize="10sp"
-                            android:textColor="@color/champion_gold"
-                            android:maxLines="1" android:ellipsize="end"
-                            android:visibility="gone"/>
-                    </LinearLayout>
-                </androidx.cardview.widget.CardView>
-
-                <!-- Card FOLHA SALARIAL -->
-                <androidx.cardview.widget.CardView android:id="@+id/card_payroll"
-                    android:layout_width="0dp" android:layout_columnWeight="1"
-                    android:layout_height="100dp" android:layout_margin="4dp"
-                    android:foreground="?attr/selectableItemBackground" android:clickable="true"
-                    android:focusable="true" app:cardCornerRadius="2dp" app:cardElevation="0dp"
-                    app:strokeColor="@color/color_outline_gold" app:strokeWidth="1dp"
-                    app:cardBackgroundColor="@color/color_surface">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
-                        android:orientation="vertical" android:gravity="center" android:padding="8dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="💰" android:textSize="32sp"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="@string/folha_salarial" android:textSize="14sp" android:fontFamily="sans-serif-medium"
-                            android:textColor="@color/color_on_surface"/>
-                        <TextView android:id="@+id/tv_hub_payroll_subtitle"
-                            android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:textSize="10sp"
-                            android:textColor="@color/champion_gold"
-                            android:maxLines="1" android:ellipsize="end"
-                            android:visibility="gone"/>
-                    </LinearLayout>
-                </androidx.cardview.widget.CardView>
-
-                <!-- Card PROPOSTAS RECEBIDAS -->
-                <androidx.cardview.widget.CardView android:id="@+id/card_offers"
-                    android:layout_width="0dp" android:layout_columnWeight="1"
-                    android:layout_height="100dp" android:layout_margin="4dp"
-                    android:foreground="?attr/selectableItemBackground" android:clickable="true"
-                    android:focusable="true" app:cardCornerRadius="2dp" app:cardElevation="0dp"
-                    app:strokeColor="@color/color_outline_gold" app:strokeWidth="1dp"
-                    app:cardBackgroundColor="@color/color_surface">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
-                        android:orientation="vertical" android:gravity="center" android:padding="8dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="📩" android:textSize="32sp"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Propostas" android:textSize="14sp" android:fontFamily="sans-serif-medium"
-                            android:textColor="@color/color_on_surface"/>
-                        <TextView android:id="@+id/tv_hub_offers_badge"
-                            android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:textSize="10sp"
-                            android:textColor="@color/champion_gold"
-                            android:maxLines="1" android:ellipsize="end"
-                            android:visibility="gone"/>
-                    </LinearLayout>
-                </androidx.cardview.widget.CardView>
-
-                <!-- Card CATEGORIA DE BASE -->
-                <androidx.cardview.widget.CardView android:id="@+id/card_academy"
-                    android:layout_width="0dp" android:layout_columnWeight="1"
-                    android:layout_height="100dp" android:layout_margin="4dp"
-                    android:foreground="?attr/selectableItemBackground" android:clickable="true"
-                    android:focusable="true" app:cardCornerRadius="2dp" app:cardElevation="0dp"
-                    app:strokeColor="@color/color_outline_gold" app:strokeWidth="1dp"
-                    app:cardBackgroundColor="@color/color_surface">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
-                        android:orientation="vertical" android:gravity="center" android:padding="8dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="🌱" android:textSize="32sp"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Base" android:textSize="14sp" android:fontFamily="sans-serif-medium"
-                            android:textColor="@color/color_on_surface"/>
-                        <TextView android:id="@+id/tv_hub_academy_subtitle"
-                            android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:textSize="10sp"
-                            android:textColor="@color/champion_gold"
-                            android:maxLines="1" android:ellipsize="end"
-                            android:visibility="gone"/>
-                    </LinearLayout>
-                </androidx.cardview.widget.CardView>
-
-                <!-- Card BANCO (empréstimos emergenciais + saúde financeira) -->
-                <androidx.cardview.widget.CardView android:id="@+id/card_bank"
-                    android:layout_width="0dp" android:layout_columnWeight="1"
-                    android:layout_height="100dp" android:layout_margin="4dp"
-                    android:foreground="?attr/selectableItemBackground" android:clickable="true"
-                    android:focusable="true" app:cardCornerRadius="2dp" app:cardElevation="0dp"
-                    app:strokeColor="@color/color_outline_gold" app:strokeWidth="1dp"
-                    app:cardBackgroundColor="@color/color_surface">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
-                        android:orientation="vertical" android:gravity="center" android:padding="8dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="🏦" android:textSize="32sp"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Banco" android:textSize="14sp" android:fontFamily="sans-serif-medium"
-                            android:textColor="@color/color_on_surface"/>
-                        <TextView android:id="@+id/tv_hub_bank_subtitle"
-                            android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:textSize="10sp"
-                            android:textColor="@color/champion_gold"
-                            android:maxLines="1" android:ellipsize="end"
-                            android:visibility="gone"/>
-                    </LinearLayout>
-                </androidx.cardview.widget.CardView>
-
-                <!-- Card NOTÍCIAS (feed de esports) -->
-                <androidx.cardview.widget.CardView android:id="@+id/card_news"
-                    android:layout_width="0dp" android:layout_columnWeight="1"
-                    android:layout_height="100dp" android:layout_margin="4dp"
-                    android:foreground="?attr/selectableItemBackground" android:clickable="true"
-                    android:focusable="true" app:cardCornerRadius="2dp" app:cardElevation="0dp"
-                    app:strokeColor="@color/color_outline_gold" app:strokeWidth="1dp"
-                    app:cardBackgroundColor="@color/color_surface">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
-                        android:orientation="vertical" android:gravity="center" android:padding="8dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="📰" android:textSize="32sp"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="Notícias" android:textSize="14sp" android:fontFamily="sans-serif-medium"
-                            android:textColor="@color/color_on_surface"/>
-                        <TextView android:id="@+id/tv_hub_news_subtitle"
-                            android:layout_width="match_parent" android:layout_height="wrap_content"
-                            android:textSize="10sp"
-                            android:gravity="center"
-                            android:paddingHorizontal="4dp"
-                            android:textColor="@color/champion_gold"
-                            android:maxLines="1" android:ellipsize="end"
-                            android:visibility="gone"/>
-                    </LinearLayout>
-                </androidx.cardview.widget.CardView>
-                <!-- Card HISTÓRICO COMPLETO (todos os eventos da carreira, com filtros) -->
-                <androidx.cardview.widget.CardView android:id="@+id/card_history"
-                    android:layout_width="0dp" android:layout_columnWeight="1"
-                    android:layout_height="100dp" android:layout_margin="4dp"
-                    android:foreground="?attr/selectableItemBackground" android:clickable="true"
-                    android:focusable="true" app:cardCornerRadius="2dp" app:cardElevation="0dp"
-                    app:strokeColor="@color/color_outline_gold" app:strokeWidth="1dp"
-                    app:cardBackgroundColor="@color/color_surface">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
-                        android:orientation="vertical" android:gravity="center" android:padding="8dp">
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="📜" android:textSize="32sp"/>
-                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:text="@string/recent_history_card_title" android:textSize="14sp" android:fontFamily="sans-serif-medium"
-                            android:textColor="@color/color_on_surface"/>
-                        <TextView android:id="@+id/tv_hub_history_subtitle"
-                            android:layout_width="wrap_content" android:layout_height="wrap_content"
-                            android:textSize="10sp"
-                            android:textColor="@color/champion_gold"
-                            android:maxLines="1" android:ellipsize="end"
-                            android:visibility="gone"/>
-                    </LinearLayout>
-                </androidx.cardview.widget.CardView>
-            </GridLayout>
-
-            <!-- Log -->
-            <TextView
-                android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="HISTÓRICO RECENTE"
-                android:textSize="11sp" android:fontFamily="sans-serif-medium"
-                android:textColor="@color/color_primary"
-                android:letterSpacing="0.1"
+            <!-- ═════════════════════════════════════════════════════════════
+                 FEED — Histórico recente + Notícias agrupados.
+                 Antes existiam dois cards no grid (Histórico e Notícias) — eram
+                 dois feeds de leitura. Aqui o mini-log + dois botões inline
+                 ("Notícias →" / "Ver tudo →") cobrem ambos sem duplicar visual.
+                 O card_news (do código) foi MOVIDO para o botão btn_open_news
+                 abaixo; mantemos o ID antigo num View invisível para o Kotlin
+                 não quebrar com NPE.
+                 ═════════════════════════════════════════════════════════════ -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
                 android:layout_marginTop="14dp"
-                android:layout_marginStart="8dp"
-                android:layout_marginBottom="6dp"/>
+                android:layout_marginStart="4dp"
+                android:layout_marginBottom="2dp">
 
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="ATIVIDADE RECENTE"
+                    android:textSize="10sp" android:fontFamily="sans-serif-medium"
+                    android:textColor="@color/color_primary"
+                    android:letterSpacing="0.12"/>
+
+                <TextView android:id="@+id/tv_hub_news_subtitle"
+                    android:layout_width="wrap_content" android:layout_height="wrap_content"
+                    android:textSize="9sp"
+                    android:textColor="@color/champion_gold"
+                    android:maxLines="1" android:ellipsize="end"
+                    android:visibility="gone"/>
+            </LinearLayout>
+
+            <!--
+              Mini-log de atividade recente. Altura fixa em ~3 itens visíveis;
+              o RecyclerView ROLA internamente quando o log cresce.
+              Para ver TUDO sem limite, o usuário toca em "Ver tudo →"
+              (RecentHistoryDialog).
+
+              nestedScrollingEnabled=true permite que o gesto de rolar dentro
+              do RecyclerView funcione mesmo estando dentro do ScrollView pai.
+              Como agora a altura é fixa, o pai não tenta capturar o gesto
+              vertical — a rolagem interna funciona naturalmente.
+            -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recycler_log"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:nestedScrollingEnabled="false"/>
+                android:layout_height="180dp"
+                android:nestedScrollingEnabled="true"
+                android:overScrollMode="never"/>
 
-            <!-- Atalho para o histórico completo (com filtros e scroll). -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_history_see_all"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
+            <!-- Atalhos inline: abrir notícias OU histórico completo -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/recent_history_see_all"
-                android:textColor="@color/color_primary"
-                android:textSize="12sp"/>
+                android:orientation="horizontal"
+                android:layout_marginTop="2dp">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/card_news"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="📰  Notícias"
+                    android:textColor="@color/color_primary"
+                    android:textSize="12sp"/>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_history_see_all"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:text="@string/recent_history_see_all"
+                    android:textColor="@color/color_primary"
+                    android:textSize="12sp"/>
+            </LinearLayout>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_quit"
                 style="@style/Widget.MaterialComponents.Button.TextButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="16dp"
                 android:text="Encerrar carreira"
                 android:textColor="@color/state_danger"/>
 

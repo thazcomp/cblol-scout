@@ -2,60 +2,71 @@
 <!--
     Item de página do ViewPager2 do onboarding.
 
-    Estrutura vertical:
-      - Emoji/ícone grande (96sp) no topo
-      - Título (24sp, dourado)
-      - Descrição multilinha (15sp, neutra)
+    Estrutura: ScrollView (fillViewport=true) → LinearLayout vertical
+    com gravity=center. Comportamento dual:
 
-    Todos os textos são preenchidos pelo OnboardingAdapter a partir de
-    R.array.onboarding_titles / R.array.onboarding_messages / R.array.onboarding_icons.
+      - Conteúdo CABE na viewport → fillViewport estica o LinearLayout até a
+        altura do ScrollView, e gravity=center centraliza os 3 elementos.
+        Slides curtos mantêm a estética original (emoji centralizado).
+      - Conteúdo MAIOR que a viewport → o LinearLayout cresce além e o
+        ScrollView ativa o scroll vertical. Slides longos (Aviso Legal,
+        Pick & Ban, Patrocínios…) rolam até o fim sem cortar.
+
+    NOTA: não use `android:minHeight="match_parent"` — não é uma dimensão
+    válida (parser do Android trata como 0). Quem cuida da altura mínima é
+    o `android:fillViewport="true"` do ScrollView; o LinearLayout fica com
+    `wrap_content` puro e cresce se precisar.
+
+    Por que ScrollView e não NestedScrollView? O ViewPager2 já distingue bem
+    gestos horizontais (page swipe) de verticais (scroll dentro do item) —
+    ScrollView simples basta e é mais leve.
 -->
-<androidx.constraintlayout.widget.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="32dp">
+    android:fillViewport="true"
+    android:scrollbars="none">
 
-    <TextView
-        android:id="@+id/tv_onboarding_icon"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textSize="96sp"
-        android:gravity="center"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toTopOf="@+id/tv_onboarding_title"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintVertical_chainStyle="packed" />
-
-    <TextView
-        android:id="@+id/tv_onboarding_title"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:textColor="@color/champion_gold"
-        android:textSize="24sp"
-        android:textStyle="bold"
+        android:orientation="vertical"
         android:gravity="center"
-        android:letterSpacing="0.02"
-        app:layout_constraintTop_toBottomOf="@+id/tv_onboarding_icon"
-        app:layout_constraintBottom_toTopOf="@+id/tv_onboarding_message"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        android:padding="24dp"
+        tools:ignore="UselessParent">
 
-    <TextView
-        android:id="@+id/tv_onboarding_message"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:textColor="@color/color_on_surface"
-        android:textSize="15sp"
-        android:gravity="center"
-        android:lineSpacingMultiplier="1.4"
-        app:layout_constraintTop_toBottomOf="@+id/tv_onboarding_title"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        <TextView
+            android:id="@+id/tv_onboarding_icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="80sp"
+            android:gravity="center"
+            android:layout_gravity="center_horizontal"
+            tools:text="🏆"/>
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+        <TextView
+            android:id="@+id/tv_onboarding_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:textColor="@color/champion_gold"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:letterSpacing="0.02"
+            tools:text="Aviso Legal · Riot Games"/>
+
+        <TextView
+            android:id="@+id/tv_onboarding_message"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:textColor="@color/color_on_surface"
+            android:textSize="14sp"
+            android:gravity="center"
+            android:lineSpacingMultiplier="1.35"
+            tools:text="Descrição multilinha do slide com texto longo que pode rolar verticalmente quando excede a viewport disponível…"/>
+
+    </LinearLayout>
+</ScrollView>

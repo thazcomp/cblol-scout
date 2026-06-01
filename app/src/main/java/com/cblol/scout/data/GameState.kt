@@ -22,7 +22,8 @@ enum class Division(val label: String, val shortLabel: String) {
 }
 
 /**
- * Estado completo de uma carreira (modo jogo). Persistido em SharedPreferences via Gson.
+ * Estado completo de uma carreira (modo jogo). Persistido em banco Realm
+ * criptografado via [com.cblol.scout.data.realm.GameStatePersistence].
  */
 data class GameState(
     val managerName: String,
@@ -684,6 +685,12 @@ data class BondEvent(
  * transferência tendem a gerar ofertas mais frequentes e a ficar insatisfeitos
  * se a oferta for recusada.
  *
+ * **Histórico preservado** ([status]/[resolvedOn]): propostas NÃO são removidas
+ * da lista quando resolvidas. Permanecem com o [OfferStatus] correspondente,
+ * permitindo ao gerente revisar prazos perdidos e decisões passadas. O
+ * [com.cblol.scout.domain.usecase.IncomingOfferService.pendingOffers] filtra
+ * apenas as que ainda aguardam resposta quando é isso que importa.
+ *
  * @property id identificador único da oferta (para aceitar/recusar)
  * @property playerId jogador alvo (id no override/snapshot)
  * @property playerName nome do jogador (snapshot, para a UI não refazer lookup)
@@ -706,8 +713,47 @@ data class IncomingTransferOffer(
     val amountBrl: Long,
     val offeredOn: String,
     val expiresOn: String,
-    val motivatedByRequest: Boolean = false
-)
+    val motivatedByRequest: Boolean = false,
+    /**
+     * Status da proposta no histórico. Propostas NUNCA são removidas — elas
+     * percorrem [PENDING] → uma das resoluções ([ACCEPTED]/[REJECTED]/[EXPIRED])
+     * e ficam para sempre na lista, permitindo ao gerente revisar decisões
+     * passadas e prazos perdidos.
+     */
+    var status: OfferStatus = OfferStatus.PENDING,
+    /**
+     * Data (ISO) em que a proposta saiu de PENDING (null enquanto ainda está
+     * pendente). Útil para ordenação cronológica e para a UI mostrar
+     * "recusada em 12/04", etc.
+     */
+    var resolvedOn: String? = null
+) {
+    /** Propostas ainda aguardando resposta do gerente. */
+    val isPending: Boolean get() = status == OfferStatus.PENDING
+}
+
+/**
+ * Ciclo de vida de uma [IncomingTransferOffer].
+ *
+ * **Por que manter as resolvidas na lista?** O usuário pediu para preservar o
+ * histórico de propostas — saber que recusou R$ 5M pela estrela do time há
+ * dois meses é informação relevante para a narrativa da carreira. Antes, ao
+ * recusar/aceitar/expirar, a proposta sumia; agora ela apenas troca de
+ * [OfferStatus], permanecendo visível.
+ *
+ * **OCP**: novos estados (ex: COUNTER_OFFERED quando a contraproposta entrar)
+ * cabem aqui sem mexer em quem só consulta [IncomingTransferOffer.isPending].
+ */
+enum class OfferStatus(val emoji: String, val label: String) {
+    /** Aguardando resposta do gerente — a única que ainda pode ser aceita/recusada. */
+    PENDING("📩", "Aguardando"),
+    /** Gerente aceitou a oferta e o jogador foi vendido. */
+    ACCEPTED("✅", "Aceita"),
+    /** Gerente recusou explicitamente a oferta. */
+    REJECTED("❌", "Recusada"),
+    /** Prazo da proposta passou OU mercado fechou sem resposta. */
+    EXPIRED("⏰", "Expirada")
+}
 
 /**
  * Tipo de janela de transferência. Cada split tem uma pré-temporada (antes do

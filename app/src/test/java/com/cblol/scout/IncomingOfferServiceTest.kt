@@ -1,5 +1,6 @@
 package com.cblol.scout
 
+import com.cblol.scout.data.OfferStatus
 import com.cblol.scout.domain.usecase.IncomingOfferService
 import com.cblol.scout.domain.usecase.MoraleService
 import com.cblol.scout.domain.usecase.TransferWindowService
@@ -17,6 +18,11 @@ import org.junit.Test
  * A geração é probabilística (usa Random), então os testes usam um roster onde
  * TODOS pediram transferência (prob 0.70 cada) ou validam invariantes que valem
  * independentemente do sorteio (teto de ofertas, expiração, intervalo, etc.).
+ *
+ * **Política de histórico**: propostas NUNCA são removidas. O ciclo de vida
+ * usa [OfferStatus] — PENDING → uma das resoluções (ACCEPTED/REJECTED/EXPIRED).
+ * Os testes refletem isso: aceitar/recusar/expirar não diminui o tamanho da
+ * lista, apenas muta o status.
  */
 class IncomingOfferServiceTest {
 
@@ -35,7 +41,7 @@ class IncomingOfferServiceTest {
         }
     }
 
-    // ── Geração: pré-condições ──────────────────────────────────────────
+    // Geracao: pre-condicoes ----------------------------------------------
 
     @Test
     fun generate_marketClosed_producesNothing() {
@@ -90,8 +96,10 @@ class IncomingOfferServiceTest {
     }
 
     @Test
-    fun generate_neverExceedsMaxActiveOffers() {
+    fun generate_neverExceedsMaxPendingOffers() {
         // Avança a data a cada rodada para escapar do intervalo e acumular ofertas.
+        // O teto é por PENDINGs (resolvidas não contam); como nenhum tick aqui
+        // resolve nada, pendingOffers deve respeitar o limite.
         val roster = makeRoster5("T1", 85)
         val gs = makeGameState()
         flagAllRequested(gs, roster)
@@ -100,63 +108,99 @@ class IncomingOfferServiceTest {
         repeat(10) {
             day = day.plusDays(IncomingOfferService.OFFER_INTERVAL_DAYS.toLong())
             gs.currentDate = day.toString()
-            // só dentro da janela
             if (TransferWindowService.isMarketOpen(gs)) {
                 IncomingOfferService.generateOffersIfDue(gs, makeSnapshot(), roster, ::marketPrice)
             }
         }
-        assertTrue("Não pode exceder 5 ofertas ativas",
-            IncomingOfferService.activeOffers(gs).size <= 5)
+        assertTrue("Não pode exceder 5 ofertas pendentes",
+            IncomingOfferService.pendingOffers(gs).size <= 5)
     }
 
-    // ── Expiração ───────────────────────────────────────────────────────
+    // Expiracao -----------------------------------------------------------
 
     @Test
-    fun expire_removesOffersWhenMarketCloses() {
+    fun expire_marksOffersAsExpiredWhenMarketCloses() {
+        // Propostas não saem da lista — ficam com status EXPIRED para histórico.
         val gs = makeGameState()
         val roster = makeRoster5("T1", 85)
         flagAllRequested(gs, roster)
         IncomingOfferService.generateOffersIfDue(gs, makeSnapshot(), roster, ::marketPrice)
+        val countBefore = (gs.incomingOffers ?: emptyList()).size
 
-        // Move para fora da janela → todas as ofertas devem expirar.
+        // Move para fora da janela → todas as PENDING devem virar EXPIRED.
         gs.currentDate = "2026-05-20"
         assertFalse(TransferWindowService.isMarketOpen(gs))
-        IncomingOfferService.expireOffers(gs)
-        assertTrue(IncomingOfferService.activeOffers(gs).isEmpty())
-    }
-
-    @Test
-    fun expire_removesOffersPastValidityDate() {
-        val gs = makeGameState()
-        val roster = makeRoster5("T1", 85)
-        flagAllRequested(gs, roster)
-        IncomingOfferService.generateOffersIfDue(gs, makeSnapshot(), roster, ::marketPrice)
-        val before = IncomingOfferService.activeOffers(gs).size
-
-        // Avança além da validade, mas ainda dentro da janela de pré-temporada.
-        // Pré-temporada vai de gameStart até a véspera do split (21 dias), e a
-        // validade da oferta é 5 dias — então +6 dias garante expiração com
-        // mercado ainda aberto.
-        val day = java.time.LocalDate.parse(gs.currentDate).plusDays(6)
-        gs.currentDate = day.toString()
-        if (TransferWindowService.isMarketOpen(gs) && before > 0) {
-            IncomingOfferService.expireOffers(gs)
-            assertTrue(IncomingOfferService.activeOffers(gs).size < before)
+        val expired = IncomingOfferService.expireOffers(gs)
+        if (countBefore > 0) {
+            assertEquals(countBefore, expired.size)
+        }
+        // Total de ofertas (incluindo resolvidas) deve permanecer o mesmo.
+        assertEquals(countBefore, (gs.incomingOffers ?: emptyList()).size)
+        // Nenhuma PENDING sobrou.
+        assertTrue(IncomingOfferService.pendingOffers(gs).isEmpty())
+        // Todas marcadas como EXPIRED com resolvedOn setado.
+        (gs.incomingOffers ?: emptyList()).forEach {
+            assertEquals(OfferStatus.EXPIRED, it.status)
+            assertEquals(gs.currentDate, it.resolvedOn)
         }
     }
 
-    // ── Resposta: recusar ───────────────────────────────────────────────
-
     @Test
-    fun rejectOffer_removesIt() {
+    fun expire_marksOffersPastValidityDateAsExpired() {
         val gs = makeGameState()
         val roster = makeRoster5("T1", 85)
         flagAllRequested(gs, roster)
         IncomingOfferService.generateOffersIfDue(gs, makeSnapshot(), roster, ::marketPrice)
-        val offer = IncomingOfferService.activeOffers(gs).firstOrNull() ?: return
+        val pendingBefore = IncomingOfferService.pendingOffers(gs).size
+
+        // Avança além da validade, mas ainda dentro da janela de pré-temporada.
+        val day = java.time.LocalDate.parse(gs.currentDate).plusDays(6)
+        gs.currentDate = day.toString()
+        if (TransferWindowService.isMarketOpen(gs) && pendingBefore > 0) {
+            IncomingOfferService.expireOffers(gs)
+            // Ofertas devem ter mudado de status (não saíram da lista).
+            assertTrue(IncomingOfferService.pendingOffers(gs).size < pendingBefore)
+        }
+    }
+
+    @Test
+    fun expire_isIdempotent() {
+        // Chamar expireOffers várias vezes não muda nada além da primeira
+        // — propostas já EXPIRED ficam intactas.
+        val gs = makeGameState()
+        val roster = makeRoster5("T1", 85)
+        flagAllRequested(gs, roster)
+        IncomingOfferService.generateOffersIfDue(gs, makeSnapshot(), roster, ::marketPrice)
+        gs.currentDate = "2026-05-20"  // mercado fechado
+        IncomingOfferService.expireOffers(gs)
+        val resolvedDates = (gs.incomingOffers ?: emptyList()).map { it.resolvedOn }
+        // Avança o tempo e expira de novo — nada deve mudar.
+        gs.currentDate = "2026-06-15"
+        val secondPass = IncomingOfferService.expireOffers(gs)
+        assertTrue("Segunda chamada não deve expirar nada", secondPass.isEmpty())
+        assertEquals(resolvedDates, (gs.incomingOffers ?: emptyList()).map { it.resolvedOn })
+    }
+
+    // Resposta: recusar ---------------------------------------------------
+
+    @Test
+    fun rejectOffer_marksAsRejected_keepsInList() {
+        val gs = makeGameState()
+        val roster = makeRoster5("T1", 85)
+        flagAllRequested(gs, roster)
+        IncomingOfferService.generateOffersIfDue(gs, makeSnapshot(), roster, ::marketPrice)
+        val offer = IncomingOfferService.pendingOffers(gs).firstOrNull() ?: return
+        val countBefore = (gs.incomingOffers ?: emptyList()).size
 
         IncomingOfferService.rejectOffer(gs, offer)
-        assertNull(IncomingOfferService.offerById(gs, offer.id))
+
+        // Oferta CONTINUA na lista — só mudou de status.
+        val sameOffer = IncomingOfferService.offerById(gs, offer.id)
+        assertNotNull("Oferta deve permanecer na lista após recusa", sameOffer)
+        assertEquals(OfferStatus.REJECTED, sameOffer?.status)
+        assertEquals(gs.currentDate, sameOffer?.resolvedOn)
+        assertEquals(countBefore, (gs.incomingOffers ?: emptyList()).size)
+        assertFalse(sameOffer?.isPending ?: true)
     }
 
     @Test
@@ -183,10 +227,65 @@ class IncomingOfferServiceTest {
             moodAfter < moodBefore)
     }
 
-    // ── activeOffers ordenado ───────────────────────────────────────────
+    // Resposta: aceitar (via markAccepted) --------------------------------
 
     @Test
-    fun activeOffers_sortedByAmountDescending() {
+    fun markAccepted_marksAsAccepted_keepsInList() {
+        // Espelha o que TransferMarket.acceptIncomingOffer faz com o serviço.
+        val gs = makeGameState()
+        val offer = com.cblol.scout.data.IncomingTransferOffer(
+            "o1", "p1", "P1", "MID", "T2", "T2",
+            1_000_000, gs.currentDate, "2026-03-20"
+        )
+        gs.incomingOffers = mutableListOf(offer)
+
+        IncomingOfferService.markAccepted(gs, "o1")
+
+        val same = IncomingOfferService.offerById(gs, "o1")
+        assertNotNull(same)
+        assertEquals(OfferStatus.ACCEPTED, same?.status)
+        assertEquals(gs.currentDate, same?.resolvedOn)
+    }
+
+    // activeOffers ordenacao ----------------------------------------------
+
+    @Test
+    fun activeOffers_pendingFirst_thenResolvedByDate() {
+        // Mistura PENDINGs e resolvidas — PENDINGs devem vir primeiro,
+        // resolvidas em seguida ordenadas por data desc.
+        val gs = makeGameState()
+        gs.incomingOffers = mutableListOf(
+            // resolvida antiga
+            com.cblol.scout.data.IncomingTransferOffer(
+                id = "r1", playerId = "p1", playerName = "P1", playerRole = "MID",
+                fromTeamId = "T2", fromTeamName = "T2",
+                amountBrl = 500_000, offeredOn = "2026-01-10", expiresOn = "2026-01-15",
+                status = OfferStatus.REJECTED,
+                resolvedOn = "2026-01-15"
+            ),
+            // pendente com valor médio
+            com.cblol.scout.data.IncomingTransferOffer(
+                id = "p1", playerId = "p2", playerName = "P2", playerRole = "TOP",
+                fromTeamId = "T3", fromTeamName = "T3",
+                amountBrl = 1_000_000, offeredOn = gs.currentDate, expiresOn = "2026-03-20"
+            ),
+            // resolvida recente
+            com.cblol.scout.data.IncomingTransferOffer(
+                id = "r2", playerId = "p3", playerName = "P3", playerRole = "ADC",
+                fromTeamId = "T4", fromTeamName = "T4",
+                amountBrl = 2_000_000, offeredOn = "2026-02-01", expiresOn = "2026-02-05",
+                status = OfferStatus.ACCEPTED,
+                resolvedOn = "2026-02-05"
+            )
+        )
+        val sorted = IncomingOfferService.activeOffers(gs)
+        // 1º: pendente. 2º/3º: resolvidas por data desc (r2 antes de r1).
+        assertEquals(listOf("p1", "r2", "r1"), sorted.map { it.id })
+    }
+
+    @Test
+    fun activeOffers_allPending_sortedByAmountDescending() {
+        // Quando todas são PENDING e têm mesma data, a ordem cai no valor.
         val gs = makeGameState()
         gs.incomingOffers = mutableListOf(
             com.cblol.scout.data.IncomingTransferOffer(

@@ -340,7 +340,11 @@ class CalendarEventsAggregator(private val context: Context) {
         window: ClosedRange<LocalDate>,
         out: MutableList<CalendarEvent>
     ) {
+        // Apenas propostas PENDENTES geram marcador no calendário — propostas
+        // já resolvidas (aceitas/recusadas/expiradas) vão para o histórico,
+        // mas o prazo delas não é mais acionável então não polui o calendário.
         offers?.forEach { offer ->
+            if (!offer.isPending) return@forEach
             val day = runCatching { LocalDate.parse(offer.expiresOn) }.getOrNull() ?: return@forEach
             if (day !in window) return@forEach
             out += CalendarEvent.IncomingOfferExpires(

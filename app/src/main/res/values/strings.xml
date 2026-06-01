@@ -581,38 +581,93 @@
     <string name="onboarding_next">PRÓXIMO</string>
     <string name="onboarding_start">COMEÇAR</string>
 
-    <!-- Títulos de cada página (ordem importa, casa 1:1 com messages/icons) -->
+    <!--
+      Slides do onboarding (pré-login).
+
+      Apresentação dos sistemas REAIS do app + aviso legal da Riot Games.
+      Ordem importa: os três string-arrays casam 1:1 (titles[i] / messages[i] /
+      icons[i]). Para adicionar um sistema novo, adicionar item em CADA um dos
+      três arrays na mesma posição.
+
+      Sequência atual (15 slides):
+        0  Bem-vindo + escopo do jogo
+        1  Dados públicos (fontes)
+        2  Atributos gerados por IA
+        3  Pick & Ban manual com sugestões
+        4  Simulação BO3 ao vivo
+        5  Calendário mensal (todos os sistemas)
+        6  Patrocínios
+        7  Banco e finanças
+        8  Categoria de base (academia)
+        9  Olheiros (scouting)
+        10 Treinos
+        11 Moral, química e eventos fora de jogo
+        12 Histórico + feed de notícias
+        13 AVISO LEGAL Riot Games (obrigatório por uso de IP do LoL)
+        14 Pronto para começar
+    -->
     <string-array name="onboarding_titles">
         <item>Bem-vindo ao CBLOL Scout</item>
         <item>Dados Públicos</item>
         <item>Atributos Gerados por IA</item>
         <item>Pick &amp; Ban Estratégico</item>
-        <item>Simulação Realista</item>
-        <item>Carreira de Técnico</item>
+        <item>Simulação BO3 Ao Vivo</item>
+        <item>Calendário Mensal</item>
+        <item>Patrocínios</item>
+        <item>Banco e Finanças</item>
+        <item>Categoria de Base</item>
+        <item>Olheiros</item>
+        <item>Treinos</item>
+        <item>Moral, Química e Eventos</item>
+        <item>Histórico e Notícias</item>
+        <item>Aviso Legal · Riot Games</item>
         <item>Pronto para Começar?</item>
     </string-array>
 
-    <!-- Mensagem de cada página (multilinha, casa 1:1 com titles/icons) -->
     <string-array name="onboarding_messages">
-        <item>Você é o novo técnico de uma organização do CBLOL. Monte seu elenco, treine, faça transferências e leve seu time ao topo do campeonato brasileiro.</item>
+        <item>Você é o novo técnico de uma organização do CBLOL ou do Circuito Desafiante. Monte o elenco, gerencie finanças, faça pick &amp; ban, dispute partidas e leve seu time ao topo do campeonato brasileiro.</item>
         <item>Todas as informações sobre times, jogadores e estatísticas vêm de fontes públicas: Liquipedia, Lolesports, Riot DataDragon e portais de e-sports. Nenhum dado privado ou proprietário é utilizado.</item>
-        <item>Como não existe um índice oficial público de “overall” dos jogadores, todos os valores (Lane, Teamfight, Criatividade, Consistência, Clutch) e estimativas de salário são gerados e balanceados por inteligência artificial a partir de estatísticas reais (KDA, CS/min, KP, GD15, etc).</item>
-        <item>No pick &amp; ban manual, sugestões contextuais aparecem com base em 4 motivos:\n• MAIN — campeão do pool do jogador\n• COMP — encaixa numa composição do time\n• COUNTER — responde aos picks inimigos\n• SINERGIA — preenche lacunas (CC, AP/AD, sustain)</item>
-        <item>A simulação combina: overall dos jogadores, sinergia da composição detectada, bônus por jogadores nos mains, vantagem do lado azul e fator aleatório. Cada mapa narra eventos em tempo real e pode ser visto ao vivo.</item>
-        <item>Gerencie orçamento semanal, salários mensais, contrato dos atletas, mercado de transferências e calendário do split. Cada decisão impacta o desempenho no campeonato.</item>
-        <item>Escolha um nome, selecione uma organização e comece sua carreira. Boa sorte, técnico!</item>
+        <item>Como não existe um índice oficial público de “overall” dos jogadores, todos os valores (Lane Phase, Team Fight, Criatividade, Consistência, Clutch) e estimativas de salário são gerados e balanceados por inteligência artificial a partir de estatísticas reais (KDA, KP, CS/min, GD@15, Damage Share, Vision Score).</item>
+        <item>No pick &amp; ban manual, sugestões contextuais aparecem com base em 4 motivos:\n• MAIN — campeão do pool do jogador\n• COMP — encaixa numa composição do time\n• COUNTER — responde aos picks inimigos\n• SINERGIA — preenche lacunas (CC, AP/AD, sustain)\n\nVocê também pode deixar a IA escolher por você a qualquer momento.</item>
+        <item>Cada série é Melhor de 3. A simulação combina overall dos jogadores, sinergia da composição detectada, jogadores no main, vantagem do lado azul, química do elenco e fator aleatório. Eventos (kills, torres, dragões, Baron) são narrados em tempo real e você pode acelerar a velocidade.</item>
+        <item>Veja o split inteiro numa grade mensal estilo Google Calendar. Cada dia mostra pontos coloridos por categoria: suas partidas, jogos dos outros times, janelas de transferência, ofertas expirando, contratos de patrocínio, folha salarial e marcos do split. Toque num dia para ver tudo que acontece nele.</item>
+        <item>Aceite ofertas de patrocinadores por categoria (energético, periféricos, banco, fast food, telecom…) e tier (bronze a diamante). Cada contrato paga uma receita semanal e pode dar bônus por vitória ou penalidade por derrota. Cancelar antes do fim do contrato tem multa de 4 semanas.</item>
+        <item>O banco oferece linhas de crédito conforme sua reputação: micro-empréstimo, emergencial, investimento e mega. Cada um tem juros e prazo próprios. Você também acompanha sua saúde financeira (🟢/🟡/🔴), folha salarial mensal e pode quitar dívidas antecipadamente.</item>
+        <item>Recrute jovens talentos para a categoria de base, avalie o potencial deles (custo extra revela o valor exato) e promova ao elenco principal quando estiverem prontos. Faça upgrade da academia (Amadora → Profissional → Elite) para aumentar capacidade, velocidade de desenvolvimento e potencial máximo.</item>
+        <item>Investigue jogadores de outros times antes de oferecer transferência. Quanto mais tempo o olheiro acompanha, mais atributos ficam visíveis (overall, salário real, idade, contrato). Faça upgrade do departamento para escotear mais jogadores ao mesmo tempo e mais rápido.</item>
+        <item>Sessões de treino aumentam atributos do elenco titular. Cada tipo tem custo, duração em dias e cooldown próprios. O resultado pode ser desde Desastre 💥 até Excelente ✨, com efeitos no overall temporários ou permanentes.</item>
+        <item>Jogadores têm moral individual (0–100) que afeta o desempenho. Resultados, salário, banco x titular e eventos especiais (festa, briga, jogada ensaiada, polêmica) mudam a moral. Duplas formam laços com o tempo, gerando bônus de química quando jogam juntos no rift.</item>
+        <item>O feed editorial cobre sua trajetória com manchetes geradas pelas fontes do meta de esports. Já o histórico completo (📜 no Hub) reúne TODOS os eventos da carreira — partidas, transferências, patrocínios, banco, treinos, moral, química — filtráveis por categoria.</item>
+        <item>CBLOL Scout não é endossado pela Riot Games e não reflete sua opinião nem suas posições.\n\nLeague of Legends e Riot Games são marcas registradas da Riot Games, Inc.\nLeague of Legends © Riot Games, Inc.\n\nProjeto de fã, single-player e sem fins lucrativos. Dados vêm de fontes públicas; nomes e marcas pertencem aos seus donos.\n\n(Toque no rodapé do Login para ver o aviso completo a qualquer momento.)</item>
+        <item>Escolha um nome, selecione uma organização e comece sua carreira. Você pode rever este onboarding limpando os dados do app em Configurações. Boa sorte, técnico!</item>
     </string-array>
 
-    <!-- Ícones de cada página (emoji único, casa 1:1 com titles/messages) -->
     <string-array name="onboarding_icons">
         <item>🏆</item>
         <item>📊</item>
         <item>🤖</item>
         <item>✨</item>
         <item>⚡</item>
+        <item>🗓️</item>
         <item>💼</item>
+        <item>💰</item>
+        <item>🌱</item>
+        <item>🔍</item>
+        <item>🏋️</item>
+        <item>🎭</item>
+        <item>📜</item>
+        <item>⚖️</item>
         <item>🚀</item>
     </string-array>
+
+    <!--
+      Strings do rodapé legal exibido no LoginActivity. Mantemos ACESSÍVEL
+      permanentemente (não só no onboarding one-shot) por conformidade com
+      as diretrizes da Riot Games para projetos de fã que usam IP do LoL.
+    -->
+    <string name="legal_disclaimer_short">CBLOL Scout não é endossado pela Riot Games. LoL e Riot Games são marcas registradas da Riot Games, Inc. · Projeto de fã sem fins lucrativos.</string>
+    <string name="legal_disclaimer_dialog_title">Aviso Legal</string>
+    <string name="legal_disclaimer_dialog_body">CBLOL Scout não é endossado pela Riot Games e não reflete a opinião nem as posições da Riot Games ou de quem está oficialmente envolvido na produção ou gestão de League of Legends.\n\nLeague of Legends e Riot Games são marcas registradas ou marcas comerciais da Riot Games, Inc. League of Legends © Riot Games, Inc.\n\nEste é um projeto de fã, single-player e sem fins lucrativos. Todos os dados de jogadores, times e estatísticas vêm de fontes públicas (Liquipedia, Lolesports, Riot DataDragon, portais de e-sports). Nomes, marcas, logotipos e identidades visuais pertencem aos seus respectivos donos.</string>
 
     <!-- Avançar dia (Hub) -->
     <string name="hub_advance_done">Avançou para %1$s.</string>
@@ -831,5 +886,18 @@
     <string name="recent_history_filter_chip_format">%1$s %2$s</string>
     <string name="recent_history_filter_chip_with_count">%1$s %2$s (%3$d)</string>
     <string name="recent_history_see_all">Ver tudo →</string>
+
+    <!-- ═════════════════════════════════════════════════════════════════════
+         PROPOSTAS RECEBIDAS — status arquivados (não-pendentes)
+         Propostas são mantidas para sempre na lista; status muda de
+         PENDING para uma das resoluções abaixo, e a UI exibe um badge +
+         subtitle apropriado.
+         ═════════════════════════════════════════════════════════════════════ -->
+    <string name="incoming_offers_status_accepted">✅ Aceita</string>
+    <string name="incoming_offers_status_rejected">❌ Recusada</string>
+    <string name="incoming_offers_status_expired">⏰ Expirada</string>
+    <string name="incoming_offers_subtitle_accepted">Proposta de %1$s · aceita em %2$s</string>
+    <string name="incoming_offers_subtitle_rejected">Proposta de %1$s · recusada em %2$s</string>
+    <string name="incoming_offers_subtitle_expired">Proposta de %1$s · expirou em %2$s</string>
 
 </resources>

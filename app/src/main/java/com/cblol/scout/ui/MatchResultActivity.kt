@@ -187,6 +187,20 @@ class MatchResultActivity : AppCompatActivity() {
 
     private fun showNextMapDialog(data: MatchResultData) {
         val nextMap = data.mapNumber + 1
+        if (data.isMyMatch) {
+            showNextMapDialogForManager(data, nextMap)
+        } else {
+            showNextMapDialogForOtherMatch(data, nextMap)
+        }
+    }
+
+    /**
+     * Próximo mapa de uma série do **time do gerente** — oferece os 3 caminhos:
+     *  - Fazer pick & ban manual (estratégico).
+     *  - Pular direto para a simulação (IA escolhe).
+     *  - Cancelar (volta ao Hub).
+     */
+    private fun showNextMapDialogForManager(data: MatchResultData, nextMap: Int) {
         stylizedDialog(this)
             .setTitle(getString(R.string.result_next_map_title, nextMap))
             .setMessage(R.string.result_next_map_message)
@@ -200,6 +214,25 @@ class MatchResultActivity : AppCompatActivity() {
                 })
             }
             .setNeutralButton(R.string.btn_skip_simulation) { _, _ ->
+                finish()
+                startActivity(Intent(this, MatchSimulationActivity::class.java)
+                    .putExtra(MatchSimulationActivity.EXTRA_MATCH_ID, data.matchId))
+            }
+            .setNegativeButton(R.string.btn_cancel, null)
+            .show()
+    }
+
+    /**
+     * Próximo mapa de uma série entre **dois outros times**. O gerente está
+     * apenas assistindo — não tem como fazer pick & ban manual em rosters que
+     * não são dele. A única ação oferecida é "Assistir o próximo mapa" (com
+     * a IA escolhendo os picks) ou cancelar.
+     */
+    private fun showNextMapDialogForOtherMatch(data: MatchResultData, nextMap: Int) {
+        stylizedDialog(this)
+            .setTitle(getString(R.string.result_next_map_title, nextMap))
+            .setMessage(R.string.dialog_watch_match_message)
+            .setPositiveButton(R.string.btn_watch) { _, _ ->
                 finish()
                 startActivity(Intent(this, MatchSimulationActivity::class.java)
                     .putExtra(MatchSimulationActivity.EXTRA_MATCH_ID, data.matchId))

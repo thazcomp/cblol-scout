@@ -31,6 +31,21 @@ class LoginActivity : AppCompatActivity() {
         binding.btnGuest.setOnClickListener {
             goToNext(getString(R.string.login_guest))
         }
+        binding.tvLegalDisclaimer.setOnClickListener { showLegalDisclaimer() }
+    }
+
+    /**
+     * Abre o diálogo com o aviso legal completo da Riot Games. Acessível
+     * permanentemente do Login (em todas as execuções, não só no
+     * onboarding one-shot) por conformidade com as diretrizes da Riot Games
+     * para projetos de fã que usam IP do LoL.
+     */
+    private fun showLegalDisclaimer() {
+        stylizedDialog(this)
+            .setTitle(R.string.legal_disclaimer_dialog_title)
+            .setMessage(R.string.legal_disclaimer_dialog_body)
+            .setPositiveButton(R.string.btn_ok, null)
+            .show()
     }
 
     /** Se já existe save vai direto pro Hub; caso contrário, abre seleção de time. */

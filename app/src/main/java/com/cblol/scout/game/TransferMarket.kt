@@ -215,6 +215,7 @@ object TransferMarket {
 
         val offer = IncomingOfferService.offerById(gs, offerId)
             ?: return SellResult.Error("Esta oferta não está mais disponível.")
+        if (!offer.isPending) return SellResult.Error("Esta oferta já foi resolvida.")
 
         val roster = GameRepository.rosterOf(context, gs.managerTeamId)
         val player = roster.find { it.id == offer.playerId }
@@ -240,7 +241,7 @@ object TransferMarket {
         CoachProgressionService.recordSell(gs.coachProfile, price)
         MoraleService.recordPlayerSold(gs, offer.playerId)
         MoraleService.clearTransferRequest(gs, offer.playerId)
-        IncomingOfferService.removeOffer(gs, offerId)
+        IncomingOfferService.markAccepted(gs, offerId)
         GameRepository.log(
             "TRANSFER",
             "${offer.playerName} aceitou ir para $buyerName por R$ ${"%,d".format(price)} (proposta recebida)"
