@@ -900,4 +900,14 @@
     <string name="incoming_offers_subtitle_rejected">Proposta de %1$s · recusada em %2$s</string>
     <string name="incoming_offers_subtitle_expired">Proposta de %1$s · expirou em %2$s</string>
 
+    <!-- ═════════════════════════════════════════════════════════════════════
+         TUTORIAL — explicações dos sistemas, acessíveis a qualquer momento
+         (diferente do onboarding que é one-shot na primeira execução).
+         ═════════════════════════════════════════════════════════════════════ -->
+    <string name="tutorial_title">📚 Tutorial</string>
+    <string name="tutorial_subtitle">Aprenda sobre todos os sistemas do jogo. Toque em qualquer tópico para ler em detalhe — você pode voltar aqui a qualquer momento durante a carreira.</string>
+    <string name="tutorial_card_title">Tutorial</string>
+    <string name="tutorial_card_subtitle">Como funciona</string>
+    <string name="tutorial_login_button">📚 Ver Tutorial</string>
+
 </resources>

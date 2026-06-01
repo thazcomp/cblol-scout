@@ -199,6 +199,9 @@ class ManagerHubActivity : AppCompatActivity() {
         findViewById<View>(R.id.btn_history_see_all).setOnClickListener {
             RecentHistoryDialog.show(this)
         }
+        findViewById<View>(R.id.card_tutorial).setOnClickListener {
+            startActivity(TutorialActivity.intent(this))
+        }
         binding.btnQuit.setOnClickListener { confirmQuit() }
     }
 

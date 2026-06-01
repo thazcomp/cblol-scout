@@ -31,6 +31,9 @@ class LoginActivity : AppCompatActivity() {
         binding.btnGuest.setOnClickListener {
             goToNext(getString(R.string.login_guest))
         }
+        binding.btnTutorial.setOnClickListener {
+            startActivity(TutorialActivity.intent(this))
+        }
         binding.tvLegalDisclaimer.setOnClickListener { showLegalDisclaimer() }
     }
 

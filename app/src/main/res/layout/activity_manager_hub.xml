@@ -574,6 +574,26 @@
                             android:layout_width="wrap_content" android:layout_height="wrap_content"
                             android:visibility="gone"/>
                     </LinearLayout>
+
+                    <!-- TUTORIAL (explicações de todos os sistemas, sob demanda) -->
+                    <LinearLayout android:id="@+id/card_tutorial"
+                        android:layout_width="78dp"
+                        android:layout_height="72dp"
+                        android:layout_marginEnd="6dp"
+                        android:orientation="vertical"
+                        android:gravity="center"
+                        android:padding="6dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="@drawable/bg_hub_chip">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="📚" android:textSize="22sp"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="@string/tutorial_card_title" android:textSize="10sp"
+                            android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/color_on_surface"
+                            android:layout_marginTop="2dp"/>
+                    </LinearLayout>
                 </LinearLayout>
             </HorizontalScrollView>
 

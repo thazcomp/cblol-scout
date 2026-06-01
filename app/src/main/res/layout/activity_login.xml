@@ -48,6 +48,23 @@
             android:backgroundTint="@color/color_primary"/>
 
         <!--
+          Atalho para o tutorial — acessível já no Login (antes mesmo de
+          criar carreira), pra quem quer entender o jogo antes de começar.
+          Também fica acessível depois pelo card "📚 Tutorial" no Hub.
+        -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_tutorial"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="@string/tutorial_login_button"
+            android:textSize="13sp"
+            android:textColor="@color/color_primary"
+            app:strokeColor="@color/color_outline_gold"
+            app:cornerRadius="14dp"/>
+
+        <!--
           Rodapé legal (disclaimer Riot Games).
 
           É visível em TODA execução do app (não só no onboarding one-shot),
