@@ -50,7 +50,31 @@ internal object PickBanGenerator {
         val used = mutableSetOf<String>()
         val playerChampions = mutableMapOf<String, String>()
 
+        // RESERVA todos os campeões planejados pelo humano ANTES de qualquer
+        // sorteio aleatório. Caso contrário um ban automático da IA poderia
+        // calhar de banir um champion que o jogador queria PICKAR — e a
+        // verificação `if (championId in used) return@forEach` em
+        // `processPicksFromPlan` descartaria o pick silenciosamente.
+        //
+        // Mantém a invariante: "o que o humano declarou no plano sempre
+        // entra na timeline final". Bans/picks do plano que colidem entre
+        // si dentro do mesmo lado são filtrados (set), mas isso espelha o
+        // comportamento natural de drafts reais (não adianta listar o mesmo
+        // champion duas vezes).
+        val plannedHomePicks = homePicks.filter { it.isNotBlank() }
+        val plannedAwayPicks = awayPicks.filter { it.isNotBlank() }
+        val plannedHomeBans  = homeBans.filter  { it.isNotBlank() }
+        val plannedAwayBans  = awayBans.filter  { it.isNotBlank() }
+        // Bans tem prioridade sobre picks: se o jogador listou o mesmo champion
+        // em ambos por engano, o ban prevalece (não haverá pick depois).
+        used += plannedHomeBans
+        used += plannedAwayBans
+        used += plannedHomePicks
+        used += plannedAwayPicks
+
         // 5 bans alternados (HOME ban 1, AWAY ban 1, HOME ban 2, AWAY ban 2, ...)
+        // Os bans do plano já estão em `used`; `banFromPlanOrRandom` os emite
+        // sem dupla-reserva (vide guarda interna).
         repeat(5) { idx ->
             out += banFromPlanOrRandom(gameNumber, Side.HOME, idx, homeBans, used)
             out += banFromPlanOrRandom(gameNumber, Side.AWAY, idx, awayBans, used)
@@ -67,8 +91,12 @@ internal object PickBanGenerator {
     // ── Helpers privados ─────────────────────────────────────────────────
 
     /**
-     * Usa o ban do plano se disponível e livre; senão sorteia um do pool por
-     * role evitando colisão com picks/bans já usados.
+     * Usa o ban do plano se disponível; senão sorteia um do pool por role
+     * evitando colisão com picks/bans já usados.
+     *
+     * **Bans planejados já estão em `used`** (foram pré-reservados em
+     * [generate]). Esta função detecta isso checando `candidate in used` E
+     * `candidate é o próximo do plano`, e emite o evento sem dupla-reserva.
      */
     private fun banFromPlanOrRandom(
         gameNumber: Int,
@@ -78,8 +106,9 @@ internal object PickBanGenerator {
         used: MutableSet<String>
     ): MatchEvent.Ban {
         val candidate = planBans.getOrNull(index)
-        if (candidate != null && candidate !in used) {
-            used += candidate
+        if (candidate != null && candidate.isNotBlank()) {
+            // Plano sempre vence; champion já foi reservado em `used` em
+            // [generate], então não re-adicionamos.
             return MatchEvent.Ban(gameNumber, side, candidate)
         }
         val pool = (Champions.MID + Champions.JNG + Champions.ADC + Champions.TOP)
@@ -92,7 +121,11 @@ internal object PickBanGenerator {
     /**
      * Processa todos os picks de UM lado.
      *  - Com `picks` do plano: casa cada pick com o assignment correspondente
-     *    (se houver) ou cai no fallback por role natural do campeão.
+     *    (se houver) ou cai no fallback por role natural do campeão. **Se o
+     *    plano traz MENOS de 5 picks**, completa os restantes via IA usando
+     *    os jogadores que ainda não pegaram champion. Isso garante que cada
+     *    lado sempre termina com 5 picks (5 eventos por lado) mesmo quando
+     *    o jogador deixou a draft parcial.
      *  - Sem plano: IA escolhe um champion do main de cada jogador, com
      *    fallback por role e depois por qualquer campeão livre.
      */
@@ -108,6 +141,11 @@ internal object PickBanGenerator {
     ) {
         if (picks.isNotEmpty()) {
             processPicksFromPlan(gameNumber, side, picks, roster, assignments, used, playerChampions, out)
+            // Completa com IA para jogadores que ainda não têm champion.
+            val remaining = roster.filter { it.nome_jogo !in playerChampions.keys }
+            if (remaining.isNotEmpty()) {
+                processPicksFromAi(gameNumber, side, remaining, used, playerChampions, out)
+            }
         } else {
             processPicksFromAi(gameNumber, side, roster, used, playerChampions, out)
         }
@@ -125,8 +163,12 @@ internal object PickBanGenerator {
         out: MutableList<MatchEvent>
     ) {
         picks.forEach { championId ->
-            if (championId in used) return@forEach
-            used += championId
+            if (championId.isBlank()) return@forEach
+            // Picks planejados já foram pré-reservados em [generate], então
+            // não re-adicionamos a `used` aqui. A única razão pra pular seria
+            // pick duplicado no próprio plano (mesmo champion listado duas
+            // vezes) — nesse caso o segundo é silenciosamente descartado.
+            if (championId in playerChampions.values) return@forEach
 
             val assignment = assignments.firstOrNull {
                 it.championId.equals(championId, ignoreCase = true)
