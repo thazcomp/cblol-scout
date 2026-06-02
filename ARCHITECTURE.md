@@ -2,6 +2,54 @@
 
 Este documento descreve o padrão de código adotado no projeto. **Todo trabalho novo deve seguir essas regras** para manter consistência, testabilidade e manutenibilidade.
 
+## Level up + Badges do técnico
+
+O sistema de progressão do técnico foi estendido com **tela de level up dramática** + **badges desbloqueadas** com bônus passivos. Três camadas:
+
+### 1. Modelo de dados (`data/GameState.kt`)
+- `CoachProfile.unlockedBadges: MutableList<String>` — ids das badges já desbloqueadas, sempre contém `"rookie"`.
+- `GameState.coachBonuses: CoachBonuses?` — bônus passivos acumulados pelos milestones (9 campos: `extraPickBanSuggestions`, `contractedMoraleBonus`, `scoutingDaysReduction`, `bondGrowthMultiplier`, `trainingOutcomeBonus`, `loanInterestReduction`, `sponsorWeeklyBonusBrl`, `incomingOfferBonusPercent`, `academyGrowthMultiplier`).
+- `GameState.pendingCoachLevelUps: MutableList<Int>?` — fila de levels conquistados ainda não apresentados ao usuário.
+
+### 2. Catálogo de recompensas (`domain/LevelUpRewards.kt`)
+Objeto com 9 milestones (lv 2, 4, 7, 10, 15, 18, 20, 25, 30), cada um com `badgeId`/emoji/nome/descrição + lambda `apply(CoachBonuses)` que SOMA os bônus correspondentes. A badge `"rookie"` (lv 1) é desbloqueada automaticamente no início da carreira.
+
+### 3. Detecção e enfileiramento (`CoachProgressionService`)
+- `detectAndQueueLevelUps(state, oldXp)` — chamado APÓS `record*` em cada call site. Compara `levelFor(oldXp)` com o novo `levelFor(profile.xp)`. Para cada level cruzado: enfileira em `pendingCoachLevelUps`, adiciona badge a `unlockedBadges` se for milestone, e aplica `reward.apply(coachBonuses)`.
+- `rebuildBonusesFromBadges(profile)` — usado pela migração pra reconstruir `coachBonuses` em saves antigos a partir das badges já desbloqueadas. Idempotente.
+
+**Call sites** onde XP é ganho e `detectAndQueueLevelUps` foi adicionado:
+- `MatchResultActivity.awardCoachXp` (vitórias/derrotas + série + off-match event)
+- `PickBanActivity.registerPickBanXp` (pick & ban manual + bonus perfect draft)
+- `TransferMarket.sellPlayer`/`buyPlayer`/`renegotiateContract`/`acceptIncomingOffer`
+
+### 4. UI (`CoachLevelUpActivity`)
+- Layout dramático: "LEVEL UP!" dourado, "Nv X → Nv Y" com animação overshoot, título derivado.
+- Dois blocos via `View.GONE`:
+  - **Milestone**: badge gigante + nome + descrição + bullets de bônus (construídos dinamicamente).
+  - **Intermediário**: mensagem motivacional + "próximo marco: Nv X · emoji Nome".
+- Botão CONTINUAR remove o level da fila e fecha; se ainda há levels enfileirados, o próximo `onResume` do Hub abre de novo (cadeia natural).
+- `onBackPressed()` consumido para evitar sair sem desempilhar.
+
+### 5. Trigger (`ManagerHubActivity.onResume`)
+Nova função `showPendingCoachLevelUpIfAny()` chamada ANTES de `showPendingOffMatchEventIfAny()`. Lê o primeiro level da fila e abre a Activity — sem laço, sem complexidade.
+
+### 6. Visível no perfil (`CoachProfileDialog`)
+Nova seção "🏅 BADGES" com lista de todos os 9 milestones. Cada linha:
+- **Desbloqueado**: emoji da badge + nome bold + descrição em cinza
+- **Bloqueado**: emoji esmaecido alpha 0.4 + cadeado 🔒 + nome cinza + legenda "Desbloqueia no Nv X"
+
+### 7. Consumo dos bônus em serviços
+- `MoraleService.recordPlayerHired` — soma `contractedMoraleBonus` ao delta inicial de moral
+- `IncomingOfferService.applyCoachOfferBonus` — multiplica valor da oferta por `(100 + incomingOfferBonusPercent)/100`
+- Os demais bônus (`extraPickBanSuggestions`, `scoutingDaysReduction`, `bondGrowthMultiplier`, `trainingOutcomeBonus`, `loanInterestReduction`, `sponsorWeeklyBonusBrl`, `academyGrowthMultiplier`) estão **declarados** no modelo `CoachBonuses` mas não consumidos ainda — cada serviço pode lê-los quando for natural fazer.
+
+### Compatibilidade com saves antigos
+- `GameStateMigrator.migrateCoachBonuses` reconstrói `coachBonuses` a partir das badges já desbloqueadas (chama `rebuildBonusesFromBadges`). Idempotente.
+- `migrateCoachProfile` garante que `unlockedBadges` sempre contém `"rookie"`.
+- Saves novos: nascem com badge `"rookie"` e `CoachBonuses()` vazio.
+
+
 ---
 
 ## Visão geral

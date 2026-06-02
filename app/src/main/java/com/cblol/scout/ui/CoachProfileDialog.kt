@@ -2,11 +2,15 @@ package com.cblol.scout.ui
 
 import android.app.Activity
 import android.view.View
+import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import com.cblol.scout.R
 import com.cblol.scout.data.CoachProfile
 import com.cblol.scout.domain.GameConstants
+import com.cblol.scout.domain.LevelUpRewards
 import com.cblol.scout.domain.usecase.CoachProgressionService
 
 /**
@@ -42,6 +46,7 @@ object CoachProfileDialog {
         bindHeader(view, stats)
         bindXp(view, stats)
         bindAttributes(view, stats)
+        bindBadges(view, profile)
         bindStats(view, stats)
 
         stylizedDialog(activity)
@@ -93,6 +98,90 @@ object CoachProfileDialog {
         container.findViewById<TextView>(R.id.tv_attr_label).text = label
         container.findViewById<TextView>(R.id.tv_attr_value).text = value.toString()
         container.findViewById<ProgressBar>(R.id.pb_attr_bar).progress = value
+    }
+
+    /**
+     * Renderiza a seção de badges:
+     *  - Para cada milestone em [LevelUpRewards.milestones], mostra uma linha
+     *    com emoji + nome.
+     *  - Desbloqueadas (badgeId em [CoachProfile.unlockedBadges]): cor normal,
+     *    com descrição em cinza embaixo.
+     *  - Bloqueadas: emoji esmaecido + cadeado, texto cinza, com legenda
+     *    "Desbloqueia no Nv X".
+     *
+     * Construída dinamicamente porque o número de milestones é variável.
+     */
+    private fun bindBadges(view: View, profile: CoachProfile) {
+        val container = view.findViewById<LinearLayout>(R.id.ll_coach_badges)
+        container.removeAllViews()
+        val unlocked = profile.unlockedBadges.toSet()
+
+        LevelUpRewards.milestones.forEach { reward ->
+            val isUnlocked = reward.badgeId in unlocked
+            container.addView(buildBadgeRow(view, reward, isUnlocked))
+        }
+    }
+
+    /** Constrói uma linha de badge (emoji + nome + descrição/legenda). */
+    private fun buildBadgeRow(
+        view: View,
+        reward: LevelUpRewards.LevelUpReward,
+        isUnlocked: Boolean
+    ): View {
+        val ctx = view.context
+        val density = ctx.resources.displayMetrics.density
+        val row = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).also {
+                it.topMargin = (4 * density).toInt()
+                it.bottomMargin = (4 * density).toInt()
+            }
+            gravity = android.view.Gravity.CENTER_VERTICAL
+        }
+
+        val emoji = TextView(ctx).apply {
+            text = if (isUnlocked) reward.badgeEmoji else "🔒"
+            textSize = 22f
+            alpha = if (isUnlocked) 1f else 0.4f
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).also {
+                it.marginEnd = (10 * density).toInt()
+            }
+        }
+
+        val info = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        val nameTv = TextView(ctx).apply {
+            text = reward.badgeName
+            textSize = 13f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(
+                ContextCompat.getColor(
+                    ctx,
+                    if (isUnlocked) R.color.color_on_surface else R.color.color_on_surface_variant
+                )
+            )
+        }
+        val subTv = TextView(ctx).apply {
+            text = if (isUnlocked) reward.description
+                   else ctx.getString(R.string.coach_badges_locked_format, reward.level)
+            textSize = 11f
+            setTextColor(ContextCompat.getColor(ctx, R.color.color_on_surface_variant))
+            setLineSpacing(0f, 1.25f)
+        }
+        info.addView(nameTv)
+        info.addView(subTv)
+
+        row.addView(emoji)
+        row.addView(info)
+        return row
     }
 
     private fun bindStats(view: View, stats: CoachProgressionService.CoachStats) {

@@ -910,4 +910,20 @@
     <string name="tutorial_card_subtitle">Como funciona</string>
     <string name="tutorial_login_button">📚 Ver Tutorial</string>
 
+    <!-- ═════════════════════════════════════════════════════════════════════
+         LEVEL UP do técnico (CoachLevelUpActivity)
+         ═════════════════════════════════════════════════════════════════════ -->
+    <string name="coach_levelup_headline">LEVEL UP!</string>
+    <string name="coach_levelup_level_label">Nv %1$d</string>
+    <string name="coach_levelup_badge_unlocked">✨ BADGE DESBLOQUEADA</string>
+    <string name="coach_levelup_intermediate">Você evoluiu como técnico! Continue acumulando vitórias para alcançar o próximo marco.</string>
+    <string name="coach_levelup_next_milestone_format">Próximo marco: Nv %1$d · %2$s %3$s</string>
+    <string name="coach_levelup_no_more_milestones">Você já conquistou TODAS as badges. Lendário!</string>
+    <string name="coach_levelup_continue">CONTINUAR</string>
+
+    <!-- Seção "Badges" no CoachProfileDialog -->
+    <string name="coach_badges_section_title">🏅 BADGES</string>
+    <string name="coach_badges_locked_label">🔒 %1$s</string>
+    <string name="coach_badges_locked_format">Desbloqueia no Nv %1$d</string>
+
 </resources>

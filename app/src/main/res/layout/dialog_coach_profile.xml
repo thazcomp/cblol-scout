@@ -152,6 +152,31 @@
             android:id="@+id/attr_reputation"
             layout="@layout/item_coach_attribute" />
 
+        <!-- ═══ BADGES desbloqueadas + próximos marcos ═══ -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/coach_badges_section_title"
+            android:textColor="@color/champion_gold"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.1"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="4dp" />
+
+        <!--
+          Container preenchido dinamicamente em Kotlin com chips de badges.
+          Cada item tem o emoji + nome; badges bloqueadas são renderizadas
+          em cinza com cadeado.
+        -->
+        <LinearLayout
+            android:id="@+id/ll_coach_badges"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="8dp" />
+
         <!-- ═══ ESTATÍSTICAS CRUAS ═══ -->
         <TextView
             android:layout_width="match_parent"

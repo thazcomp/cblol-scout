@@ -78,6 +78,7 @@ object TransferMarket {
         // Encerramento antecipado: paga multa se o contrato ainda está ativo
         val terminationCost = ContractService.earlyTerminationCost(gs, player)
         val price = marketPriceOf(player)
+        val xpBefore = gs.coachProfile.xp
 
         val otherTeams = snap.times.filter { it.id != gs.managerTeamId }
         val newTeam = otherTeams.random()
@@ -97,6 +98,7 @@ object TransferMarket {
         CoachProgressionService.recordSell(gs.coachProfile, price)
         MoraleService.recordPlayerSold(gs, playerId)
         MoraleService.clearTransferRequest(gs, playerId)
+        CoachProgressionService.detectAndQueueLevelUps(gs, xpBefore)
         GameRepository.log(
             "TRANSFER",
             "${player.nome_jogo} vendido para ${newTeam.nome} por R$ ${"%,d".format(price)}"
@@ -125,6 +127,7 @@ object TransferMarket {
         if (gs.budget < price) {
             return BuyResult.Error("Orçamento insuficiente. Falta R$ ${"%,d".format(price - gs.budget)}")
         }
+        val xpBefore = gs.coachProfile.xp
 
         GameRepository.updateOverride(playerId) { ov ->
             ov.copy(newTeamId = gs.managerTeamId, transferredOn = gs.currentDate, titular = false)
@@ -132,6 +135,7 @@ object TransferMarket {
         gs.budget -= price
         CoachProgressionService.recordHire(gs.coachProfile, price)
         MoraleService.recordPlayerHired(gs, playerId)
+        CoachProgressionService.detectAndQueueLevelUps(gs, xpBefore)
         GameRepository.log(
             "TRANSFER",
             "${player.nome_jogo} contratado por R$ ${"%,d".format(price)}"
@@ -177,10 +181,12 @@ object TransferMarket {
 
         return when (result) {
             is ContractService.OfferResult.Accepted -> {
+                val xpBefore = gs.coachProfile.xp
                 ContractService.applyAcceptedOffer(gs, player, newMonthlySalary, newEndDate, signingBonus)
                 CoachProgressionService.recordRenew(gs.coachProfile)
                 MoraleService.recordContractRenewed(gs, playerId)
                 MoraleService.clearTransferRequest(gs, playerId)
+                CoachProgressionService.detectAndQueueLevelUps(gs, xpBefore)
                 GameRepository.log("CONTRACT", result.message)
                 GameRepository.save(context)
                 true
@@ -226,6 +232,7 @@ object TransferMarket {
         val buyerName = buyer?.nome ?: offer.fromTeamName
         val price = offer.amountBrl
         val terminationCost = ContractService.earlyTerminationCost(gs, player)
+        val xpBefore = gs.coachProfile.xp
 
         GameRepository.updateOverride(offer.playerId) { ov ->
             ov.copy(newTeamId = offer.fromTeamId, transferredOn = gs.currentDate, titular = false)
@@ -242,6 +249,7 @@ object TransferMarket {
         MoraleService.recordPlayerSold(gs, offer.playerId)
         MoraleService.clearTransferRequest(gs, offer.playerId)
         IncomingOfferService.markAccepted(gs, offerId)
+        CoachProgressionService.detectAndQueueLevelUps(gs, xpBefore)
         GameRepository.log(
             "TRANSFER",
             "${offer.playerName} aceitou ir para $buyerName por R$ ${"%,d".format(price)} (proposta recebida)"

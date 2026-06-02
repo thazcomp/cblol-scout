@@ -31,6 +31,7 @@ internal object GameStateMigrator {
      */
     fun migrate(gs: GameState): GameState {
         migrateCoachProfile(gs)
+        migrateCoachBonuses(gs)
         migrateMoodHistory(gs)
         migrateScoutingDepartment(gs)
         migrateTransferWindows(gs)
@@ -50,6 +51,35 @@ internal object GameStateMigrator {
         if (gs.coachProfile == null) {
             gs.coachProfile = CoachProfile()
         }
+        // unlockedBadges foi adicionado depois do CoachProfile — saves antigos
+        // têm o profile mas não a lista. Inicializamos com a badge inicial.
+        @Suppress("SENSELESS_COMPARISON")
+        if (gs.coachProfile.unlockedBadges == null) {
+            gs.coachProfile.unlockedBadges = mutableListOf("rookie")
+        } else if (gs.coachProfile.unlockedBadges.isEmpty()) {
+            // Lista vazia em saves recém-migrados: garante a badge inicial.
+            gs.coachProfile.unlockedBadges.add("rookie")
+        }
+    }
+
+    /**
+     * Inicializa [com.cblol.scout.data.GameState.coachBonuses] (e reconstrói a
+     * partir das badges já desbloqueadas) + [com.cblol.scout.data.GameState.pendingCoachLevelUps].
+     *
+     * Idempotente: rodar de novo não duplica bônus, pois reaplica tudo do
+     * zero a partir da lista de badges desbloqueadas. Importante porque
+     * `migrate` pode rodar várias vezes em diferentes pontos do ciclo de
+     * vida do save.
+     */
+    private fun migrateCoachBonuses(gs: GameState) {
+        if (gs.pendingCoachLevelUps == null) {
+            gs.pendingCoachLevelUps = mutableListOf()
+        }
+        // Reconstrói SEMPRE a partir das badges já desbloqueadas — garante que
+        // o save fica consistente mesmo se o objeto antigo tinha valores
+        // estranhos. Idempotente porque o cálculo é puro.
+        gs.coachBonuses = com.cblol.scout.domain.usecase.CoachProgressionService
+            .rebuildBonusesFromBadges(gs.coachProfile)
     }
 
     private fun migrateMoodHistory(gs: GameState) {

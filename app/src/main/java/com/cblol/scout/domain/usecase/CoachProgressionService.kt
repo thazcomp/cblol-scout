@@ -156,6 +156,65 @@ object CoachProgressionService {
 
     // ── Mutação do profile (chamada pelo CareerUseCases) ────────────────
 
+    /**
+     * Aplica os bônus de TODAS as [com.cblol.scout.domain.LevelUpRewards.milestones]
+     * cujo level é <= levelAtual em cima de uma nova instância de
+     * [com.cblol.scout.data.CoachBonuses], retornando-a.
+     *
+     * Idempotente: pode ser chamada quantas vezes for, sempre devolve o estado
+     * acumulado correto. Útil para a migração (saves antigos sem bonuses
+     * recebem bônus correspondentes às badges já ganhas).
+     */
+    fun rebuildBonusesFromBadges(
+        profile: com.cblol.scout.data.CoachProfile
+    ): com.cblol.scout.data.CoachBonuses {
+        val bonuses = com.cblol.scout.data.CoachBonuses()
+        com.cblol.scout.domain.LevelUpRewards.milestones
+            .filter { it.badgeId in profile.unlockedBadges }
+            .forEach { it.apply(bonuses) }
+        return bonuses
+    }
+
+    /**
+     * Detecta level ups conquistados entre [oldXp] e o XP atual do [profile].
+     * Enfileira os levels novos em [com.cblol.scout.data.GameState.pendingCoachLevelUps]
+     * e aplica os bônus dos milestones tocados em
+     * [com.cblol.scout.data.GameState.coachBonuses] (se for milestone).
+     *
+     * **Quando vários levels num único ganho de XP** (raro mas possível em
+     * vitórias de série BO3 logo no começo): enfileira UM POR UM. A UI vai
+     * mostrar as telas em sequência (uma `onResume` cada).
+     *
+     * Idempotente em relação a saves: badges já ganhas não são re-aplicadas.
+     */
+    fun detectAndQueueLevelUps(
+        state: com.cblol.scout.data.GameState,
+        oldXp: Int
+    ) {
+        val profile = state.coachProfile
+        val oldLevel = levelFor(oldXp)
+        val newLevel = levelFor(profile.xp)
+        if (newLevel <= oldLevel) return
+
+        // Garante container de fila e de bônus.
+        val queue = state.pendingCoachLevelUps ?: mutableListOf<Int>().also {
+            state.pendingCoachLevelUps = it
+        }
+        val bonuses = state.coachBonuses ?: com.cblol.scout.data.CoachBonuses().also {
+            state.coachBonuses = it
+        }
+
+        // Enfileira cada level conquistado e aplica bônus dos milestones tocados.
+        for (lvl in (oldLevel + 1)..newLevel) {
+            queue.add(lvl)
+            val reward = com.cblol.scout.domain.LevelUpRewards.rewardFor(lvl) ?: continue
+            if (reward.badgeId !in profile.unlockedBadges) {
+                profile.unlockedBadges.add(reward.badgeId)
+                reward.apply(bonuses)
+            }
+        }
+    }
+
     /** Registra resultado de um mapa do split, retornando XP ganho. */
     fun recordMapResult(profile: CoachProfile?, playerWon: Boolean): Int {
         if (profile == null) return 0

@@ -74,6 +74,11 @@ class MatchResultActivity : AppCompatActivity() {
     private fun awardCoachXp(data: MatchResultData) {
         if (!data.isMyMatch) return
         val gs = GameRepository.current()
+
+        // Captura XP ANTES de qualquer ganho — usado depois para detectar
+        // cruzamento de level boundary e enfileirar level ups na UI.
+        val xpBefore = gs.coachProfile.xp
+
         CoachProgressionService.recordMapResult(gs.coachProfile, data.playerWon)
 
         // Atualiza moral do roster inteiro do time do jogador
@@ -117,6 +122,13 @@ class MatchResultActivity : AppCompatActivity() {
             val fullRoster = GameRepository.rosterOf(applicationContext, gs.managerTeamId)
             OffMatchEventService.maybeGenerateEvent(gs, fullRoster)
         }
+
+        // Detecta level ups conquistados nesta tela (com qualquer combinação
+        // de recordMapResult + recordSeriesResult). Cada level cruzado é
+        // enfileirado em [GameState.pendingCoachLevelUps] e o Hub consome
+        // mostrando uma [CoachLevelUpActivity] por vez no próximo onResume.
+        CoachProgressionService.detectAndQueueLevelUps(gs, xpBefore)
+
         GameRepository.save(applicationContext)
     }
 

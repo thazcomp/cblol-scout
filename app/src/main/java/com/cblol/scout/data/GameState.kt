@@ -53,6 +53,36 @@ data class GameState(
     var coachProfile: CoachProfile = CoachProfile(),
 
     /**
+     * Bônus passivos desbloqueados pelo técnico ao atingir milestones de level
+     * (badges em [com.cblol.scout.domain.LevelUpRewards.milestones]).
+     *
+     * Lidos pelos serviços relevantes quando aplicam suas regras
+     * (MoraleService, ScoutingService, TrainingService, etc.) — ver KDoc de
+     * [CoachBonuses] para o mapa de leitores.
+     *
+     * Nullable porque saves antigos não têm este campo; o
+     * [com.cblol.scout.game.repo.GameStateMigrator] inicializa com uma
+     * instância vazia e reaplica os bônus de TODAS as badges já desbloqueadas
+     * (idempotente).
+     */
+    var coachBonuses: CoachBonuses? = null,
+
+    /**
+     * Fila de levels recém-conquistados pelo técnico que ainda não foram
+     * mostrados ao jogador via [com.cblol.scout.ui.CoachLevelUpActivity].
+     *
+     * Quando o XP cruza o limiar do próximo level dentro de um
+     * `CoachProgressionService.record*`, o novo level é ENFILEIRADO aqui.
+     * O [com.cblol.scout.ui.ManagerHubActivity.onResume] consome um por vez
+     * abrindo a tela de level up para cada um — evita perder uma animação se
+     * o jogador subir 2 levels seguidos (ex: ganhou série BO3 que cruzou
+     * dois marcos).
+     *
+     * Nullable + mutável por compat. com saves antigos. Inicializa vazia.
+     */
+    var pendingCoachLevelUps: MutableList<Int>? = null,
+
+    /**
      * Último evento fora de jogo gerado mas ainda não visto pelo jogador.
      * Quando não-nulo, a [com.cblol.scout.ui.ManagerHubActivity] (ou o
      * [com.cblol.scout.ui.MatchResultActivity] após o fim da série) deve abrir
@@ -1050,6 +1080,11 @@ data class Standing(
  * **Título**: derivado do level, dando um nome em PT-BR ao estágio do técnico
  * ("Iniciante" → "Veterano" → "Lendário").
  *
+ * **Badges desbloqueadas** ([unlockedBadges]): cada milestone de level (2, 4,
+ * 7, 10, 15, 18, 20, 25, 30) desbloqueia uma badge cosmética + bônus
+ * passivos no [GameState.coachBonuses]. As badges são cumulativas — técnico
+ * lendário possui TODAS as badges abaixo do seu level.
+ *
  * O perfil é persistido junto com o `GameState` no save.
  */
 data class CoachProfile(
@@ -1078,7 +1113,87 @@ data class CoachProfile(
     /** Soma de R$ recebido em transferências durante a carreira. */
     var totalEarned: Long = 0L,
     /** Reputação (0-100) — sobe com vitórias e desce com derrotas pesadas. */
-    var reputation: Int = 50
+    var reputation: Int = 50,
+
+    /**
+     * Ids das badges já desbloqueadas (do [com.cblol.scout.domain.LevelUpRewards]).
+     * Cumulativas — nunca são removidas. Cada level milestone adiciona um id
+     * aqui quando atingido pela primeira vez. Inclui sempre `"rookie"` (badge
+     * de boas-vindas, level 1).
+     *
+     * MutableList para permitir [add]/[contains] direto sem realocar a coleção.
+     */
+    var unlockedBadges: MutableList<String> = mutableListOf("rookie")
+)
+
+/**
+ * Bônus passivos do técnico, acumulados conforme ele atinge milestones de
+ * level e desbloqueia [com.cblol.scout.domain.LevelUpRewards].
+ *
+ * **Cada milestone SOMA aos campos abaixo** — nunca substitui. Técnicos
+ * lendários acumulam TODOS os bônus que conquistaram, mesmo de milestones
+ * antigos.
+ *
+ * **Onde são lidos:**
+ *  - [extraPickBanSuggestions] → [com.cblol.scout.util.PickSuggestionEngine]
+ *  - [contractedMoraleBonus] → [com.cblol.scout.domain.usecase.MoraleService]
+ *    ao definir moral inicial em contratações
+ *  - [scoutingDaysReduction] → [com.cblol.scout.domain.usecase.ScoutingService]
+ *    ao calcular dias por nível de scouting
+ *  - [bondGrowthMultiplier] → [com.cblol.scout.domain.usecase.PlayerBondService]
+ *    ao processar evolução diária de laços
+ *  - [trainingOutcomeBonus] → [com.cblol.scout.domain.usecase.TrainingService]
+ *    ao sortear outcome de treino
+ *  - [loanInterestReduction] → [com.cblol.scout.domain.usecase.BankService]
+ *    ao calcular juros de novos empréstimos
+ *  - [sponsorWeeklyBonusBrl] → [com.cblol.scout.domain.usecase.SponsorService]
+ *    ao calcular pagamento semanal
+ *  - [incomingOfferBonusPercent] → [com.cblol.scout.domain.usecase.IncomingOfferService]
+ *    ao calcular valor de propostas recebidas
+ *  - [academyGrowthMultiplier] → [com.cblol.scout.domain.usecase.AcademyService]
+ *    ao processar evolução diária de prospects
+ *
+ * **SOLID/OCP:** novo bônus = novo campo aqui + leitor no serviço relevante.
+ * Serviços que ignoram um campo simplesmente não são afetados.
+ *
+ * **Compatibilidade com saves antigos:** todos os campos têm default (zero
+ * ou identidade multiplicativa) — saves antigos sem este objeto desserializam
+ * como `null` e o [com.cblol.scout.game.repo.GameStateMigrator] inicializa
+ * com uma instância vazia, deixando o jogo igual ao antes do sistema existir.
+ */
+data class CoachBonuses(
+    /** Número EXTRA de sugestões exibidas no pick & ban manual. */
+    var extraPickBanSuggestions: Int = 0,
+
+    /** Pontos somados à moral inicial de jogadores que assinam contrato novo. */
+    var contractedMoraleBonus: Int = 0,
+
+    /** Dias subtraídos por nível de scouting (clamp para não ir abaixo de 1). */
+    var scoutingDaysReduction: Int = 0,
+
+    /** Multiplicador EXTRA aplicado à evolução diária de laços (1.0 = base). */
+    var bondGrowthMultiplier: Double = 0.0,
+
+    /**
+     * Pontos percentuais somados à chance de outcome bom em treinos.
+     * Ex: 10 = +10% de chance de [com.cblol.scout.data.TrainingOutcome.GREAT].
+     */
+    var trainingOutcomeBonus: Int = 0,
+
+    /** Pontos percentuais subtraídos dos juros de novos empréstimos (0.02 = -2%). */
+    var loanInterestReduction: Double = 0.0,
+
+    /** R$ extras pagos por semana de patrocínio ativo. */
+    var sponsorWeeklyBonusBrl: Long = 0L,
+
+    /**
+     * Pontos percentuais somados ao valor de propostas recebidas (10 = +10%
+     * sobre o preço de mercado).
+     */
+    var incomingOfferBonusPercent: Int = 0,
+
+    /** Multiplicador EXTRA aplicado à evolução diária de prospects (1.0 = base). */
+    var academyGrowthMultiplier: Double = 0.0
 )
 
 /**

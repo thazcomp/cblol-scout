@@ -68,7 +68,27 @@ class ManagerHubActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         vm.refresh()
+        showPendingCoachLevelUpIfAny()
         showPendingOffMatchEventIfAny()
+    }
+
+    /**
+     * Se há levels recém-conquistados pelo técnico que ainda não foram
+     * mostrados, abre a [CoachLevelUpActivity] com o primeiro da fila.
+     *
+     * Só abrimos UM por vez: o usuário pressiona CONTINUAR, a Activity
+     * remove o level da fila e fecha, e ao voltar pro Hub o `onResume`
+     * detecta o próximo restante e abre de novo. Sem laço explícito.
+     *
+     * Verificado ANTES de [showPendingOffMatchEventIfAny] para que a tela
+     * de level up sempre apareça antes do evento fora de jogo — ambos
+     * disparam no fim de uma série BO3, e ver "você subiu de level" antes
+     * de "um jogador se lesionou" é mais natural narrativamente.
+     */
+    private fun showPendingCoachLevelUpIfAny() {
+        val gs = runCatching { GameRepository.current() }.getOrNull() ?: return
+        val nextLevel = gs.pendingCoachLevelUps?.firstOrNull() ?: return
+        startActivity(CoachLevelUpActivity.intent(this, nextLevel))
     }
 
     /**

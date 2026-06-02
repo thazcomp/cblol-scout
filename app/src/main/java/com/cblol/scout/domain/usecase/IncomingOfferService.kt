@@ -142,7 +142,8 @@ object IncomingOfferService {
         val created = candidates.map { player ->
             val requested = MoraleService.hasRequestedTransfer(state, player.id)
             val team = otherTeams.random()
-            val amount = offerAmountFor(player, requested, marketPriceOf)
+            val baseAmount = offerAmountFor(player, requested, marketPriceOf)
+            val amount = applyCoachOfferBonus(state, baseAmount)
             IncomingTransferOffer(
                 id = "offer_${player.id}_${state.currentDate}_${Random.nextInt(1000, 9999)}",
                 playerId = player.id,
@@ -182,6 +183,18 @@ object IncomingOfferService {
         val bonus = if (requested) REQUESTED_BONUS_MULT else 0.0
         val mult = Random.nextDouble(MIN_OFFER_MULT, MAX_OFFER_MULT) + bonus
         return (base * mult).toLong().coerceAtLeast(1)
+    }
+
+    /**
+     * Aplica o bônus do técnico (badge "Negociador" do lv 20) ao valor da
+     * oferta antes de retorná-la ao caller. Mantido separado para que a
+     * fórmula básica de [offerAmountFor] continue pura/testável sem precisar
+     * de [GameState].
+     */
+    private fun applyCoachOfferBonus(state: GameState, amount: Long): Long {
+        val bonusPercent = state.coachBonuses?.incomingOfferBonusPercent ?: 0
+        if (bonusPercent <= 0) return amount
+        return (amount * (100 + bonusPercent) / 100).coerceAtLeast(amount)
     }
 
     // ── Expiração ───────────────────────────────────────────────────────

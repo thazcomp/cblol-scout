@@ -833,6 +833,7 @@ class PickBanActivity : AppCompatActivity() {
      */
     private fun registerPickBanXp() {
         val gs = GameRepository.current()
+        val xpBefore = gs.coachProfile.xp
         val myPickIds = (if (state.playerIsBlue) state.bluePicks else state.redPicks).map { it.id }
         val allOnMains = playerStarters.size in 1..myPickIds.size && playerStarters.all { player ->
             // Defensivo: championPool pode estar nulo (Gson). Helper interno trataria,
@@ -841,6 +842,9 @@ class PickBanActivity : AppCompatActivity() {
             myPickIds.any { picked -> pool.any { it.equals(picked, ignoreCase = true) } }
         }
         CoachProgressionService.recordManualPickBan(gs.coachProfile, allOnMains)
+        // Detecta cruzamento de level boundary — a tela de level up abrirá no
+        // próximo onResume do Hub (após a partida).
+        CoachProgressionService.detectAndQueueLevelUps(gs, xpBefore)
         GameRepository.save(applicationContext)
     }
 

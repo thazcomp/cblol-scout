@@ -283,7 +283,11 @@ object MoraleService {
     }
 
     fun recordPlayerHired(state: GameState, playerId: String) {
-        applyDeltaWithReason(state, playerId, DELTA_HIRED, "Contratado pelo clube")
+        // Bônus do técnico "Carismático"/"Pai de Família"/"Imortal": o jogador
+        // chega com moral inicial maior. Acumulativo nos milestones que dão
+        // este bônus (lv 4 +5, lv 10 +5 adicional, lv 30 +10 adicional).
+        val coachBonus = state.coachBonuses?.contractedMoraleBonus ?: 0
+        applyDeltaWithReason(state, playerId, DELTA_HIRED + coachBonus, "Contratado pelo clube")
     }
 
     fun recordContractRenewed(state: GameState, playerId: String) {
