@@ -5,6 +5,7 @@ import com.cblol.scout.data.Division
 import com.cblol.scout.data.GameState
 import com.cblol.scout.game.repo.GameStateMigrator
 import com.google.gson.Gson
+import com.google.gson.JsonObject
 import io.realm.kotlin.Realm
 import io.realm.kotlin.RealmConfiguration
 import io.realm.kotlin.ext.query
@@ -70,12 +71,21 @@ class GameStatePersistence(
     fun load(): GameState? = withRealm { realm ->
         val entity = realm.query<GameStateBlobEntity>("id == $0", GameStateBlobEntity.SLOT_ID)
             .first().find() ?: return@withRealm null
-        val fromJson = runCatching { gson.fromJson(entity.payloadJson, GameState::class.java) }
-            .getOrNull() ?: return@withRealm null
-        // Garante que os campos-chave da entidade prevaleçam (o payload JSON é o
-        // estado serializado na ÚLTIMA gravação completa — desde então pode ter
-        // havido um save parcial que atualizou só os campos diretos).
-        val merged = fromJson.copy(currentDate = entity.currentDate).also {
+        // Parse payload into JsonObject so we can inject defaults for fields
+        // that Gson might set to null when missing (legacy saves). This avoids
+        // passing null into the generated Kotlin `copy` method which does
+        // non-null checks and throws NPE.
+        val safeFromJson = runCatching {
+            val jsonObj = gson.fromJson(entity.payloadJson, JsonObject::class.java) ?: JsonObject()
+            if (!jsonObj.has("seriesState") || jsonObj.get("seriesState").isJsonNull) {
+                jsonObj.add("seriesState", JsonObject())
+            }
+            // Add other fields defaults if needed in future (coachBonuses, etc.)
+            gson.fromJson(jsonObj, GameState::class.java)
+        }.getOrNull() ?: return@withRealm null
+
+        // Garante que os campos-chave da entidade prevaleçam.
+        val merged = safeFromJson.copy(currentDate = entity.currentDate).also {
             it.budget = entity.budget
         }
         GameStateMigrator.migrate(merged)
