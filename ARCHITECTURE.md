@@ -2,6 +2,24 @@
 
 Este documento descreve o padrão de código adotado no projeto. **Todo trabalho novo deve seguir essas regras** para manter consistência, testabilidade e manutenibilidade.
 
+## Seletor de lane antes das sugestões no Pick & Ban manual
+
+Durante cada pick do treinador na `PickBanActivity`, **antes** das sugestões contextuais aparece uma faixa de chips (TOP/JNG/MID/ADC/SUP) perguntando para qual lane esse pick será.
+
+### Por que existe
+O `PickSuggestionEngine.suggest()` recebe um `currentPlayer` para devolver sugestões contextualizadas (MAIN do champion pool dele, role natural, etc). Antes, o `currentPlayer` era deduzido pelo **índice** do pick (1º pick → TOP, 2º → JNG, etc), assumindo ordem fixa. Isso forava o coach a pickar sempre em ordem TOP→JNG→MID→ADC→SUP, o que não reflete a realidade do esporte. Agora ele declara explicitamente "este pick é da MID" antes de ver as sugestões.
+
+### Camadas
+1. **UI** (`activity_pick_ban.xml`): novo `ll_lane_picker_container` com `cg_lane_picker` chipgroup, mostrado em fase de PICK do treinador.
+2. **Activity** (`PickBanActivity`): cria os 5 chips em `setupLanePicker()`, reage em `onLaneSelected(role)` (pré-marca o chip de filtro de role e dispara `refreshSuggestions`), e em `confirmAction` registra a role na lista `pickedLanes`. Default sem toque: fallback para `firstUnpickedLane()` que preserva o comportamento legacy TOP→SUP.
+3. **PickSlotView**: ganhou parâmetro `roleLabel` em `setChampion` — quando o coach pickou explicitamente uma lane, o slot mostra "MID" em vez do nome do campeão, dando contexto visual.
+4. **PickBanActivity → Router**: envia `RESULT_PICKED_LANES` (lista de roles em ordem dos picks do treinador) junto com os outros results.
+5. **PickBanRouterActivity**: quando recebe 5 lanes (uma por pick), monta `RoleAssignment`s direto via `buildAssignmentsFromLanes` e **pula** a `RoleAssignmentActivity`. O coach já disse a lane de cada pick durante o draft — não precisa decidir de novo. Quando as lanes não vieram completas (caso defensivo), continua abrindo a `RoleAssignmentActivity` como antes.
+
+### Lanes já utilizadas ficam disabled
+O `refreshLanePicker` (chamado em todo `advanceTurn`) desabilita + esmaece (alpha 0.35) chips de roles que já estão em `pickedLanes`. Garante que cada role só é escolhida uma vez.
+
+
 ## Level up + Badges do técnico
 
 O sistema de progressão do técnico foi estendido com **tela de level up dramática** + **badges desbloqueadas** com bônus passivos. Três camadas:

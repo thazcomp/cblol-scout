@@ -38,6 +38,13 @@ class PickBanRouterActivity : AppCompatActivity() {
     private var redPicks:  List<String> = emptyList()
     private var blueBans:  List<String> = emptyList()
     private var redBans:   List<String> = emptyList()
+    /**
+     * Lanes escolhidas pelo treinador na ordem dos picks dele. Quando vier
+     * preenchida (5 itens, um por pick), usamos para montar os RoleAssignments
+     * automaticamente e pular a [RoleAssignmentActivity] — o coach já disse
+     * a lane de cada pick durante o draft.
+     */
+    private var pickedLanes: List<String> = emptyList()
     private var mapNumFromResult = 1
 
     // Flag que evita relançar o PickBanActivity se o Router for recriado pelo
@@ -59,6 +66,7 @@ class PickBanRouterActivity : AppCompatActivity() {
             redPicks  = savedInstanceState.getStringArrayList(STATE_RED_PICKS)?.toList()  ?: emptyList()
             blueBans  = savedInstanceState.getStringArrayList(STATE_BLUE_BANS)?.toList()  ?: emptyList()
             redBans   = savedInstanceState.getStringArrayList(STATE_RED_BANS)?.toList()   ?: emptyList()
+            pickedLanes = savedInstanceState.getStringArrayList(STATE_PICKED_LANES)?.toList() ?: emptyList()
         }
 
         // Só lança o pick & ban na PRIMEIRA criação. Se o Router for recriado pelo
@@ -79,6 +87,7 @@ class PickBanRouterActivity : AppCompatActivity() {
         outState.putStringArrayList(STATE_RED_PICKS,  ArrayList(redPicks))
         outState.putStringArrayList(STATE_BLUE_BANS,  ArrayList(blueBans))
         outState.putStringArrayList(STATE_RED_BANS,   ArrayList(redBans))
+        outState.putStringArrayList(STATE_PICKED_LANES, ArrayList(pickedLanes))
     }
 
     private fun readIntentExtras() {
@@ -120,6 +129,7 @@ class PickBanRouterActivity : AppCompatActivity() {
         redPicks  = data.getStringArrayListExtra(PickBanActivity.RESULT_RED_PICKS)?.toList()  ?: emptyList()
         blueBans  = data.getStringArrayListExtra(PickBanActivity.RESULT_BLUE_BANS)?.toList()  ?: emptyList()
         redBans   = data.getStringArrayListExtra(PickBanActivity.RESULT_RED_BANS)?.toList()   ?: emptyList()
+        pickedLanes = data.getStringArrayListExtra(PickBanActivity.RESULT_PICKED_LANES)?.toList() ?: emptyList()
         mapNumFromResult = data.getIntExtra(PickBanActivity.EXTRA_MAP_NUMBER, mapNumber)
 
         // Identifica quais picks são do JOGADOR (depende do lado) e os do oponente
@@ -135,7 +145,51 @@ class PickBanRouterActivity : AppCompatActivity() {
             return
         }
 
+        // Atalho: se o coach já escolheu a lane de CADA pick durante o draft,
+        // não precisamos abrir a [RoleAssignmentActivity] — montamos os
+        // RoleAssignments aqui mesmo e seguimos direto pra simulação.
+        if (pickedLanes.size == myPicks.size && pickedLanes.all { it.isNotBlank() }) {
+            val assignments = buildAssignmentsFromLanes(myPicks, pickedLanes)
+            savePickBanPlan(assignments)
+            startSimulation()
+            finish()
+            return
+        }
+
         launchRoleAssignment(myPicks, opponentPicks)
+    }
+
+    /**
+     * Monta a lista de [RoleAssignment]s a partir das lanes que o treinador
+     * escolheu durante o pick & ban. Cada pick é pareado com o JOGADOR TITULAR
+     * da lane correspondente — ou seja, se o coach disse "esse pick é da MID",
+     * o titular de MID do time é quem joga com ele.
+     *
+     * Defensivo: se o time não tem titular para alguma role (caso raro mas
+     * possível em saves transitórios), cai numa string vazia que o motor
+     * tratará como "role natural do campeão".
+     */
+    private fun buildAssignmentsFromLanes(
+        picks: List<String>,
+        lanes: List<String>
+    ): List<com.cblol.scout.data.RoleAssignment> {
+        val starters = GameRepository.rosterOf(applicationContext, playerTeamId)
+            .filter { it.titular }
+        return picks.mapIndexedNotNull { index, championId ->
+            val role = lanes.getOrNull(index) ?: return@mapIndexedNotNull null
+            val player = starters.firstOrNull { it.role == role } ?: return@mapIndexedNotNull null
+            com.cblol.scout.data.RoleAssignment(
+                championId   = championId,
+                playerName   = player.nome_jogo,
+                assignedRole = role,
+                // Role nativa do jogador no roster. Quando a lane escolhida
+                // bate com a role natural (caso comum), [isWrongRole] retorna
+                // false; quando o coach colocou um jogador fora da posção
+                // (ex: TOP nato jogando MID por algum motivo), o motor aplica
+                // penalidade de rota errada normalmente.
+                naturalRole  = player.role
+            )
+        }
     }
 
     private fun launchRoleAssignment(myPicks: List<String>, opponentPicks: List<String>) {
@@ -206,5 +260,6 @@ class PickBanRouterActivity : AppCompatActivity() {
         private const val STATE_RED_PICKS            = "router_red_picks"
         private const val STATE_BLUE_BANS            = "router_blue_bans"
         private const val STATE_RED_BANS             = "router_red_bans"
+        private const val STATE_PICKED_LANES         = "router_picked_lanes"
     }
 }

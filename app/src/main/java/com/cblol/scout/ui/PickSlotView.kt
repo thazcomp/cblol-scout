@@ -41,10 +41,16 @@ class PickSlotView @JvmOverloads constructor(
         setEmpty()
     }
 
-    fun setChampion(champ: Champion) {
+    /**
+     * Preenche o slot com o campeão pickado. Por padrão exibe o nome do campeão
+     * no rodapé; se [roleLabel] for fornecido (ex: "MID"), exibe-o em vez do nome
+     * — útil quando o treinador escolheu explicitamente a lane no pick & ban
+     * (assim ele vê de relance "este pick é da MID" no slot lateral).
+     */
+    fun setChampion(champ: Champion, roleLabel: String? = null) {
         tvEmpty.visibility = android.view.View.GONE
         ivChampion.visibility = android.view.View.VISIBLE
-        tvRole.text = champ.name
+        tvRole.text = roleLabel ?: champ.name
         viewActiveBorder.visibility = android.view.View.INVISIBLE
         stopPulse()
 

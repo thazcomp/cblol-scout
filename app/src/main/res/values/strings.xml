@@ -926,4 +926,10 @@
     <string name="coach_badges_locked_label">🔒 %1$s</string>
     <string name="coach_badges_locked_format">Desbloqueia no Nv %1$d</string>
 
+    <!-- ═════════════════════════════════════════════════════════════════════
+         SELETOR DE LANE no PickBan manual — antes das sugestões
+         ═════════════════════════════════════════════════════════════════════ -->
+    <string name="pb_lane_picker_header">PARA QUAL LANE É ESTE PICK?</string>
+    <string name="pb_lane_picker_hint">Escolha a lane para ver sugestões do jogador titular dessa rota</string>
+
 </resources>

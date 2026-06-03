@@ -418,6 +418,45 @@
                    • badge colorido por motivo principal (MAIN/COMP/COUNTER/SYNERGY/META)
                  Clicar num card seleciona o campeão como se o jogador tivesse tocado.
             ══════════════════════════════════════════════════════════════ -->
+            <!-- SELETOR DE LANE.
+                 Aparece apenas no turno do treinador em fase de PICK, ANTES das
+                 sugestões. Permite ao coach escolher para qual lane esse pick
+                 sera — isso alimenta o PickSuggestionEngine com a role correta
+                 (em vez de assumir ordem fixa TOP->JNG->MID->ADC->SUP). Lanes
+                 ja pickadas viram disabled. -->
+            <LinearLayout
+                android:id="@+id/ll_lane_picker_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                android:layout_marginTop="3dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/pb_lane_picker_header"
+                    android:textColor="@color/champion_gold"
+                    android:textSize="9sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.1"
+                    android:layout_marginStart="2dp" />
+
+                <HorizontalScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:scrollbars="none"
+                    android:layout_marginTop="2dp">
+
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/cg_lane_picker"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:singleSelection="true"
+                        app:selectionRequired="false" />
+                </HorizontalScrollView>
+            </LinearLayout>
+
             <LinearLayout
                 android:id="@+id/ll_suggestions_container"
                 android:layout_width="match_parent"

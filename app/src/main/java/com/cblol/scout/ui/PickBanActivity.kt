@@ -102,6 +102,27 @@ class PickBanActivity : AppCompatActivity() {
      *  qual atleta vai pickar em cada slot e oferecer seus mains como sugestão. */
     private var playerStarters: List<Player> = emptyList()
 
+    // ── Seletor de lane (aparece antes das sugestões em cada pick do treinador) ──
+    private lateinit var llLanePickerContainer: View
+    private lateinit var cgLanePicker: ChipGroup
+    /**
+     * Lane (TOP/JNG/MID/ADC/SUP) escolhida pelo treinador para o pick ATUAL.
+     * Null quando o seletor ainda não foi tocado neste turno; nesse caso o
+     * [refreshSuggestions] usa fallback para a primeira lane ainda disponível.
+     * Resetado a cada novo turno de pick.
+     */
+    private var selectedLaneForPick: String? = null
+    /**
+     * Lanes escolhidas pelos picks do treinador, em ordem de confirmação.
+     * Ex: `["MID", "TOP", "ADC", "SUP", "JNG"]` significa que o 1º pick foi
+     * para a MID, o 2º para o TOP, e assim por diante.
+     *
+     * No final, isso vira [com.cblol.scout.data.RoleAssignment]s pareando
+     * `picks[i] ↔ jogador titular da lane pickedLanes[i]`, eliminando a
+     * necessidade de o coach passar pela [RoleAssignmentActivity] depois.
+     */
+    private val pickedLanes: MutableList<String> = mutableListOf()
+
     // ── Loading overlay ─────────────────────────────────────────────────
     private lateinit var viewLoadingOverlay: View
     private lateinit var progressBarLoading: ProgressBar
@@ -156,6 +177,7 @@ class PickBanActivity : AppCompatActivity() {
             viewLoadingOverlay.visibility = View.GONE
             setupChampionGrid()
             setupSuggestions()
+            setupLanePicker()
             setupRoleFilters()
             setupTagFilters()
             setupSearch()
@@ -208,6 +230,9 @@ class PickBanActivity : AppCompatActivity() {
 
         llSuggestionsContainer = findViewById(R.id.ll_suggestions_container)
         rvSuggestions          = findViewById(R.id.rv_suggestions)
+
+        llLanePickerContainer = findViewById(R.id.ll_lane_picker_container)
+        cgLanePicker          = findViewById(R.id.cg_lane_picker)
 
         blueBanSlots = listOf(
             findViewById(R.id.iv_blue_ban_1), findViewById(R.id.iv_blue_ban_2),
@@ -315,6 +340,94 @@ class PickBanActivity : AppCompatActivity() {
     }
 
     /**
+     * Cria os 5 chips de lane (TOP/JNG/MID/ADC/SUP) no [cgLanePicker].
+     *
+     * Comportamento:
+     *  - Seleção exclusiva (singleSelection do ChipGroup).
+     *  - Tocar num chip: define [selectedLaneForPick], pré-seleciona o chip
+     *    de filtro de role correspondente (atalho UX) e atualiza as sugestões.
+     *  - Lanes já utilizadas em picks anteriores ficam disabled + esmaecidas
+     *    em [refreshLanePicker].
+     *
+     * **SOLID/OCP**: a lista de roles é declarativa em [LANES_FOR_PICKER];
+     * adicionar uma nova role não muda nada além da lista.
+     */
+    private fun setupLanePicker() {
+        LANES_FOR_PICKER.forEach { (roleKey, labelRes) ->
+            val chip = Chip(this).apply {
+                text         = getString(labelRes)
+                isCheckable  = true
+                isChecked    = false
+                tag          = roleKey   // armazena a chave da role para leitura no listener
+                textSize     = resources.getDimension(R.dimen.pickban_role_chip_text_size) /
+                                resources.displayMetrics.scaledDensity
+            }
+            chip.setOnCheckedChangeListener { _, checked ->
+                if (checked) onLaneSelected(roleKey)
+            }
+            cgLanePicker.addView(chip)
+        }
+    }
+
+    /**
+     * Reage à seleção de uma lane pelo treinador.
+     *  1. Memoriza a lane para o pick atual.
+     *  2. Pré-marca o chip de filtro de role correspondente na faixa abaixo,
+     *     atalho útil para o treinador (senão ele teria que rolar a grade pra achar).
+     *  3. Recomputa sugestões usando o jogador titular da lane escolhida.
+     */
+    private fun onLaneSelected(role: String) {
+        selectedLaneForPick = role
+
+        // Reflete na faixa de filtros de role da grade (atalho UX).
+        for (i in 0 until cgRoleFilter.childCount) {
+            val chip = cgRoleFilter.getChildAt(i) as? Chip ?: continue
+            chip.isChecked = chip.tag == role
+        }
+        // Aplica o filtro no adapter manualmente (o listener só dispara em
+        // mudanças via toque, não em alterações programáticas dependendo da
+        // ordem de eventos do ChipGroup — garantia explícita aqui).
+        championAdapter.filterByRole(role)
+
+        // Recomputa sugestões contextuais para a role escolhida.
+        val isPlayerTurn = currentTurnIsPlayerPick()
+        if (isPlayerTurn) {
+            refreshSuggestions(isPlayerTurn = true, phase = PickBanPhase.PICK)
+        }
+    }
+
+    /**
+     * Mostra/atualiza o seletor de lane com base no turno atual.
+     *  - Esconde fora de turnos de pick do treinador.
+     *  - Habilita só as lanes ainda não pickadas (as outras ficam disabled+esmaecidas).
+     *  - Limpa marcação anterior (cada pick começa com nenhuma lane selecionada).
+     */
+    private fun refreshLanePicker(isPlayerTurn: Boolean, phase: PickBanPhase) {
+        if (!isPlayerTurn || phase != PickBanPhase.PICK) {
+            llLanePickerContainer.visibility = View.GONE
+            return
+        }
+        llLanePickerContainer.visibility = View.VISIBLE
+        // Limpa qualquer marcação do turno anterior (o coach decide nova lane a cada pick).
+        cgLanePicker.clearCheck()
+
+        for (i in 0 until cgLanePicker.childCount) {
+            val chip = cgLanePicker.getChildAt(i) as? Chip ?: continue
+            val roleKey = chip.tag as? String ?: continue
+            val alreadyUsed = roleKey in pickedLanes
+            chip.isEnabled = !alreadyUsed
+            chip.alpha     = if (alreadyUsed) 0.35f else 1f
+        }
+    }
+
+    /** Helper: o turno corrente é um PICK do treinador? */
+    private fun currentTurnIsPlayerPick(): Boolean {
+        if (state.currentTurnIndex >= turnOrder.size) return false
+        val (isBlue, phase) = turnOrder[state.currentTurnIndex]
+        return phase == PickBanPhase.PICK && isBlue == state.playerIsBlue
+    }
+
+    /**
      * Lida com o toque num card de sugestão.
      *
      * Faz APENAS:
@@ -410,6 +523,7 @@ class PickBanActivity : AppCompatActivity() {
                 text        = getString(labelRes)
                 isCheckable = true
                 isChecked   = (roleKey == ROLE_ALL)
+                tag         = roleKey  // permite localização por role em [onLaneSelected]
                 textSize    = resources.getDimension(R.dimen.pickban_role_chip_text_size) /
                               resources.displayMetrics.scaledDensity
             }
@@ -537,6 +651,10 @@ class PickBanActivity : AppCompatActivity() {
         selectedChampion = null
         championAdapter.clearSelection()
         btnClear.visibility = View.GONE
+        // Reset da escolha de lane: cada turno de pick começa sem lane selecionada.
+        // O `refreshLanePicker` mostra o seletor e habilita/desabilita os chips.
+        selectedLaneForPick = null
+        refreshLanePicker(isPlayerTurn, phase)
         refreshSuggestions(isPlayerTurn, phase)
 
         cancelAiRunnable()
@@ -578,7 +696,13 @@ class PickBanActivity : AppCompatActivity() {
         val myPicks       = (if (state.playerIsBlue) state.bluePicks else state.redPicks).map { it.id }
         val opponentPicks = (if (state.playerIsBlue) state.redPicks  else state.bluePicks).map { it.id }
         val allBans       = (state.blueBans + state.redBans).map { it.id }
-        val currentPlayer = playerStarters.getOrNull(myPicks.size)
+
+        // Resolve qual jogador titular está pickando AGORA:
+        //   1º) se o coach já escolheu uma lane no seletor neste turno, usa essa
+        //   2º) senão, fallback para a primeira lane ainda disponivel (preserva
+        //      o comportamento legacy TOP→JNG→MID→ADC→SUP)
+        val role = selectedLaneForPick ?: firstUnpickedLane()
+        val currentPlayer = role?.let { r -> playerStarters.firstOrNull { it.role == r } }
 
         val suggestions = PickSuggestionEngine.suggest(
             myPicks       = myPicks,
@@ -597,6 +721,14 @@ class PickBanActivity : AppCompatActivity() {
             suggestionsAdapter.submit(suggestions)
         }
     }
+
+    /**
+     * Primeira lane (TOP→SUP) que ainda não foi escolhida pelo treinador.
+     * Usada como fallback quando o coach ainda não tocou em nenhum chip do
+     * seletor de lane — preserva o comportamento legacy de assumir ordem fixa.
+     */
+    private fun firstUnpickedLane(): String? =
+        LANES_FOR_PICKER.map { it.first }.firstOrNull { it !in pickedLanes }
 
     private fun cancelAiRunnable() {
         aiRunnable?.let { handler.removeCallbacks(it) }
@@ -636,6 +768,14 @@ class PickBanActivity : AppCompatActivity() {
             PickBanPhase.PICK -> registerPick(champ, isBlue)
         }
 
+        // Se foi um PICK do TREINADOR, registra a lane escolhida na ordem.
+        // Quando o coach não usou o seletor (selectedLaneForPick == null), cai
+        // no fallback de [firstUnpickedLane] — preserva o comportamento legacy.
+        if (phase == PickBanPhase.PICK && isBlue == state.playerIsBlue) {
+            val lane = selectedLaneForPick ?: firstUnpickedLane()
+            if (lane != null) pickedLanes.add(lane)
+        }
+
         updateSynergyBars()
         championAdapter.markUsed(champ.id)
         state.currentTurnIndex++
@@ -657,8 +797,17 @@ class PickBanActivity : AppCompatActivity() {
         val list  = if (isBlue) state.bluePicks else state.redPicks
         val slots = if (isBlue) bluePickSlots else redPickSlots
         list.add(champ)
+
+        // Quando é pick do TREINADOR e ele escolheu uma lane, exibe a lane no
+        // slot lateral ("MID" em vez do nome do campeão) para o coach ler de
+        // relance a posição que cada pick vai ocupar. Para picks do oponente
+        // (IA) ou sem lane explicita, mantém o comportamento padrão (nome).
+        val laneLabel = if (isBlue == state.playerIsBlue) {
+            selectedLaneForPick ?: firstUnpickedLane()
+        } else null
+
         slots.getOrNull(list.size - 1)?.apply {
-            setChampion(champ)
+            setChampion(champ, roleLabel = laneLabel)
             setActive(false)
         }
     }
@@ -820,6 +969,11 @@ class PickBanActivity : AppCompatActivity() {
             putStringArrayListExtra(RESULT_RED_PICKS,  ArrayList(state.redPicks.map  { it.id }))
             putStringArrayListExtra(RESULT_BLUE_BANS,  ArrayList(state.blueBans.map  { it.id }))
             putStringArrayListExtra(RESULT_RED_BANS,   ArrayList(state.redBans.map   { it.id }))
+            // Lanes escolhidas pelo treinador (em ordem dos picks dele). O
+            // [PickBanRouterActivity] usa isso para montar [RoleAssignment]s
+            // automaticamente, eliminando a necessidade da RoleAssignmentActivity
+            // quando o coach já disse a lane de cada pick.
+            putStringArrayListExtra(RESULT_PICKED_LANES, ArrayList(pickedLanes))
             putExtra(EXTRA_MATCH_ID,   matchId)
             putExtra(EXTRA_MAP_NUMBER, mapNumber)
         })
@@ -862,6 +1016,13 @@ class PickBanActivity : AppCompatActivity() {
         const val RESULT_RED_PICKS  = "red_picks"
         const val RESULT_BLUE_BANS  = "blue_bans"
         const val RESULT_RED_BANS   = "red_bans"
+        /**
+         * Lanes escolhidas pelo treinador na ordem dos picks. Pode estar vazio
+         * se o coach pulou para a IA antes de fazer qualquer pick. Consumido
+         * pelo [PickBanRouterActivity] para montar [RoleAssignment]s sem
+         * precisar abrir a [RoleAssignmentActivity].
+         */
+        const val RESULT_PICKED_LANES = "picked_lanes"
 
         // UI constants
         private const val ALPHA_ACTIVE = 1f
@@ -874,6 +1035,15 @@ class PickBanActivity : AppCompatActivity() {
         private const val SYNERGY_THRESHOLD_PARTIAL = 8
 
         private const val ROLE_ALL = "ALL"
+
+        /** Roles oferecidas no seletor de lane (sem o "ALL"). Ordem TOP→SUP. */
+        private val LANES_FOR_PICKER: List<Pair<String, Int>> = listOf(
+            "TOP" to R.string.filter_top,
+            "JNG" to R.string.filter_jng,
+            "MID" to R.string.filter_mid,
+            "ADC" to R.string.filter_adc,
+            "SUP" to R.string.filter_sup
+        )
 
         /** Roles para os chips de filtro: par (chave interna usada pelo adapter, label R.string). */
         private val ROLE_FILTERS: List<Pair<String, Int>> = listOf(
