@@ -331,10 +331,16 @@ class PickBanActivity : AppCompatActivity() {
      * O treinador precisa explicitamente clicar em CONFIRMAR depois.
      */
     private fun setupSuggestions() {
-        suggestionsAdapter = PickSuggestionAdapter { champ ->
-            android.util.Log.d("PickBan", "Card de sugestão tocado: ${champ.name}")
-            handleSuggestionTap(champ)
-        }
+        suggestionsAdapter = PickSuggestionAdapter(
+            onClick = { champ ->
+                android.util.Log.d("PickBan", "Card de sugestão tocado: ${champ.name}")
+                handleSuggestionTap(champ)
+            },
+            onHelpClick = {
+                // Mesmo dialog do botão "?" do topo — reusa a fonte única de verdade.
+                showCompSuggestions()
+            }
+        )
         rvSuggestions.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         rvSuggestions.adapter = suggestionsAdapter
     }

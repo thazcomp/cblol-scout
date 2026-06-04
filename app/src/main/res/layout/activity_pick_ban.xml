@@ -475,6 +475,21 @@
                     android:letterSpacing="0.1"
                     android:layout_marginStart="2dp" />
 
+                <!-- Legenda das cores/categorias dos badges. Texto pequeno que
+                     explica o que cada cor significa, já que sozinhas as cores
+                     eram ambíguas. -->
+                <TextView
+                    android:id="@+id/tv_suggestions_legend"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/pb_suggestions_legend"
+                    android:textColor="#99FFFFFF"
+                    android:textSize="8sp"
+                    android:layout_marginStart="2dp"
+                    android:layout_marginTop="1dp"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rv_suggestions"
                     android:layout_width="match_parent"
