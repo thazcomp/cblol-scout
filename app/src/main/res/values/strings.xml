@@ -4,7 +4,7 @@
     <!-- ═══════════════════════════════════════════════════════════════════
          APP / GERAL
          ═══════════════════════════════════════════════════════════════════ -->
-    <string name="app_name">CBLOL Scout</string>
+    <string name="app_name">Rift Manager</string>
     <string name="logout">Sair</string>
     <string name="generating_timeline">Gerando timeline…</string>
 
@@ -270,7 +270,7 @@
          DETALHES DO JOGADOR
          ═══════════════════════════════════════════════════════════════════ -->
     <string name="dialog_sell_player_title">Vender %1$s?</string>
-    <string name="dialog_sell_player_message">Você receberá R$ %1$s.\nO jogador será transferido para outra organização do CBLOL.</string>
+    <string name="dialog_sell_player_message">Você receberá R$ %1$s.\nO jogador será transferido para outra organização da liga.</string>
     <string name="dialog_renegotiate_title">Renegociar %1$s</string>
 
     <!-- ════════════════════════════════════════════════════════════════
@@ -297,7 +297,7 @@
          TEAM SELECT
          ═══════════════════════════════════════════════════════════════ -->
     <string name="team_select_greeting">Olá, %1$s 👋</string>
-    <string name="team_select_subtitle">Escolha um time · CBLOL %1$s</string>
+    <string name="team_select_subtitle">Escolha um time · Liga Nacional %1$s</string>
     <string name="team_select_tier_label">Tier %1$s</string>
     <string name="team_select_players">%1$d jogadores</string>
     <string name="team_select_overall">OVR %1$d</string>
@@ -619,7 +619,7 @@
         14 Pronto para começar
     -->
     <string-array name="onboarding_titles">
-        <item>Bem-vindo ao CBLOL Scout</item>
+        <item>Bem-vindo ao Rift Manager</item>
         <item>Dados Públicos</item>
         <item>Atributos Gerados por IA</item>
         <item>Pick &amp; Ban Estratégico</item>
@@ -637,7 +637,7 @@
     </string-array>
 
     <string-array name="onboarding_messages">
-        <item>Você é o novo técnico de uma organização do CBLOL ou do Circuito Desafiante. Monte o elenco, gerencie finanças, faça pick &amp; ban, dispute partidas e leve seu time ao topo do campeonato brasileiro.</item>
+        <item>Você é o novo técnico de uma organização da 1ª divisão ou do Circuito Desafiante. Monte o elenco, gerencie finanças, faça pick &amp; ban, dispute partidas e leve seu time ao topo do campeonato brasileiro.</item>
         <item>Todas as informações sobre times, jogadores e estatísticas vêm de fontes públicas: Liquipedia, Lolesports, Riot DataDragon e portais de e-sports. Nenhum dado privado ou proprietário é utilizado.</item>
         <item>Como não existe um índice oficial público de “overall” dos jogadores, todos os valores (Lane Phase, Team Fight, Criatividade, Consistência, Clutch) e estimativas de salário são gerados e balanceados por inteligência artificial a partir de estatísticas reais (KDA, KP, CS/min, GD@15, Damage Share, Vision Score).</item>
         <item>No pick &amp; ban manual, sugestões contextuais aparecem com base em 4 motivos:\n• MAIN — campeão do pool do jogador\n• COMP — encaixa numa composição do time\n• COUNTER — responde aos picks inimigos\n• SINERGIA — preenche lacunas (CC, AP/AD, sustain)\n\nVocê também pode deixar a IA escolher por você a qualquer momento.</item>
@@ -650,7 +650,7 @@
         <item>Sessões de treino aumentam atributos do elenco titular. Cada tipo tem custo, duração em dias e cooldown próprios. O resultado pode ser desde Desastre 💥 até Excelente ✨, com efeitos no overall temporários ou permanentes.</item>
         <item>Jogadores têm moral individual (0–100) que afeta o desempenho. Resultados, salário, banco x titular e eventos especiais (festa, briga, jogada ensaiada, polêmica) mudam a moral. Duplas formam laços com o tempo, gerando bônus de química quando jogam juntos no rift.</item>
         <item>O feed editorial cobre sua trajetória com manchetes geradas pelas fontes do meta de esports. Já o histórico completo (📜 no Hub) reúne TODOS os eventos da carreira — partidas, transferências, patrocínios, banco, treinos, moral, química — filtráveis por categoria.</item>
-        <item>CBLOL Scout não é endossado pela Riot Games e não reflete sua opinião nem suas posições.\n\nLeague of Legends e Riot Games são marcas registradas da Riot Games, Inc.\nLeague of Legends © Riot Games, Inc.\n\nProjeto de fã, single-player e sem fins lucrativos. Dados vêm de fontes públicas; nomes e marcas pertencem aos seus donos.\n\n(Toque no rodapé do Login para ver o aviso completo a qualquer momento.)</item>
+        <item>Rift Manager não é endossado pela Riot Games e não reflete sua opinião nem suas posições.\n\nLeague of Legends e Riot Games são marcas registradas da Riot Games, Inc.\nLeague of Legends © Riot Games, Inc.\n\nProjeto de fã, single-player e sem fins lucrativos. Dados vêm de fontes públicas; nomes e marcas pertencem aos seus donos.\n\n(Toque no rodapé do Login para ver o aviso completo a qualquer momento.)</item>
         <item>Escolha um nome, selecione uma organização e comece sua carreira. Você pode rever este onboarding limpando os dados do app em Configurações. Boa sorte, técnico!</item>
     </string-array>
 
@@ -677,9 +677,9 @@
       permanentemente (não só no onboarding one-shot) por conformidade com
       as diretrizes da Riot Games para projetos de fã que usam IP do LoL.
     -->
-    <string name="legal_disclaimer_short">CBLOL Scout não é endossado pela Riot Games. LoL e Riot Games são marcas registradas da Riot Games, Inc. · Projeto de fã sem fins lucrativos.</string>
+    <string name="legal_disclaimer_short">Rift Manager não é endossado pela Riot Games. LoL e Riot Games são marcas registradas da Riot Games, Inc. · Projeto de fã sem fins lucrativos.</string>
     <string name="legal_disclaimer_dialog_title">Aviso Legal</string>
-    <string name="legal_disclaimer_dialog_body">CBLOL Scout não é endossado pela Riot Games e não reflete a opinião nem as posições da Riot Games ou de quem está oficialmente envolvido na produção ou gestão de League of Legends.\n\nLeague of Legends e Riot Games são marcas registradas ou marcas comerciais da Riot Games, Inc. League of Legends © Riot Games, Inc.\n\nEste é um projeto de fã, single-player e sem fins lucrativos. Todos os dados de jogadores, times e estatísticas vêm de fontes públicas (Liquipedia, Lolesports, Riot DataDragon, portais de e-sports). Nomes, marcas, logotipos e identidades visuais pertencem aos seus respectivos donos.</string>
+    <string name="legal_disclaimer_dialog_body">Rift Manager não é endossado pela Riot Games e não reflete a opinião nem as posições da Riot Games ou de quem está oficialmente envolvido na produção ou gestão de League of Legends.\n\nLeague of Legends e Riot Games são marcas registradas ou marcas comerciais da Riot Games, Inc. League of Legends © Riot Games, Inc.\n\nEste é um projeto de fã, single-player e sem fins lucrativos. Todos os dados de jogadores, times e estatísticas vêm de fontes públicas (Liquipedia, Lolesports, Riot DataDragon, portais de e-sports). Nomes, marcas, logotipos e identidades visuais pertencem aos seus respectivos donos.</string>
 
     <!-- Avançar dia (Hub) -->
     <string name="hub_advance_done">Avançou para %1$s.</string>

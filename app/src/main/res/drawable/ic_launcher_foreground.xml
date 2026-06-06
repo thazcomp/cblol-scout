@@ -1,37 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    Foreground do ícone adaptativo. Desenhado dentro da safe zone central
+    (área de 72x72 dentro do viewport 108x108 que o launcher garante visível
+    em qualquer máscara — círculo, squircle, etc).
+
+    Motivo: um troféu/coroa estilizado em dourado, evocando "manager/scout de
+    esports campeão". Vetorial, então escala perfeitamente em qualquer densidade
+    sem precisar de PNGs por dpi.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Hexágono externo dourado claro (borda) -->
+    <!-- Taça do troféu -->
     <path
-        android:fillColor="#C8AA6E"
-        android:pathData="M54,18 L82,34 L82,74 L54,90 L26,74 L26,34 Z"/>
+        android:fillColor="#F0B638"
+        android:pathData="M42,38 L66,38 L66,50 C66,58 60,64 54,64 C48,64 42,58 42,50 Z" />
 
-    <!-- Hexágono interno dourado -->
+    <!-- Alça esquerda -->
     <path
-        android:fillColor="#C89B3C"
-        android:pathData="M54,22 L78,36 L78,72 L54,86 L30,72 L30,36 Z"/>
+        android:strokeColor="#F0B638"
+        android:strokeWidth="3.5"
+        android:fillColor="#00000000"
+        android:pathData="M42,42 C36,42 34,46 34,50 C34,54 37,56 41,56" />
 
-    <!-- Hexágono escuro central (fundo do emblema) -->
+    <!-- Alça direita -->
     <path
-        android:fillColor="#010A13"
-        android:pathData="M54,32 L70,41 L70,67 L54,76 L38,67 L38,41 Z"/>
+        android:strokeColor="#F0B638"
+        android:strokeWidth="3.5"
+        android:fillColor="#00000000"
+        android:pathData="M66,42 C72,42 74,46 74,50 C74,54 71,56 67,56" />
 
-    <!-- Letra "S" estilizada de Scout em dourado -->
+    <!-- Haste -->
     <path
-        android:fillColor="#C89B3C"
-        android:pathData="M48,42 L62,42 L62,46 L52,46 L52,52 L62,52 L62,68 L46,68 L46,64 L58,64 L58,56 L48,56 Z"/>
+        android:fillColor="#F0B638"
+        android:pathData="M51,64 L57,64 L57,72 L51,72 Z" />
 
-    <!-- Detalhe superior (corte angular) -->
+    <!-- Base -->
     <path
-        android:fillColor="#C8AA6E"
-        android:pathData="M52,30 L56,30 L54,34 Z"/>
+        android:fillColor="#FFD876"
+        android:pathData="M44,72 L64,72 L66,78 L42,78 Z" />
 
-    <!-- Detalhe inferior -->
+    <!-- Estrela central na taça (acento) -->
     <path
-        android:fillColor="#C8AA6E"
-        android:pathData="M52,76 L56,76 L54,80 L52,80 Z"/>
+        android:fillColor="#0A0B1A"
+        android:pathData="M54,44 L55.5,48 L59.5,48 L56.2,50.5 L57.5,54.5 L54,52 L50.5,54.5 L51.8,50.5 L48.5,48 L52.5,48 Z" />
 </vector>

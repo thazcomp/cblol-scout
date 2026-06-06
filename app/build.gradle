@@ -4,22 +4,68 @@ plugins {
     id 'io.realm.kotlin'
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Assinatura de release
+// As credenciais do keystore NUNCA ficam no controle de versão. Elas são
+// lidas de um arquivo `keystore.properties` na raiz do projeto (ignorado pelo
+// git). Se o arquivo não existir (ex: máquina de outro dev, CI sem segredos),
+// o bloco de assinatura é simplesmente ignorado e o build de release sai sem
+// assinatura — permitindo compilar/validar sem ter a chave em mãos.
+// ─────────────────────────────────────────────────────────────────────────
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+def hasKeystore = keystorePropertiesFile.exists()
+if (hasKeystore) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
+    // namespace = pacote do código-fonte (R, imports com.cblol.scout.*).
+    // Mantido como está de propósito: mudá-lo obrigaria renomear o pacote em
+    // todos os arquivos .kt. NÃO é visível ao público.
     namespace 'com.cblol.scout'
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.cblol.scout"
+        // applicationId = identidade PÚBLICA do app na Play Store. Pode (e aqui
+        // diverge) do namespace. Definido como com.riftmanager.app para
+        // refletir o nome comercial "Rift Manager". DEFINITIVO após o 1º envio
+        // à loja — não pode mudar depois sem criar um app totalmente novo.
+        applicationId "com.riftmanager.app"
         minSdk 27
         targetSdk 34
         versionCode 1
         versionName "1.0"
+
+        // Limita os idiomas empacotados (o app é PT-BR), reduzindo o tamanho.
+        resourceConfigurations += ["pt", "pt-rBR"]
+    }
+
+    signingConfigs {
+        if (hasKeystore) {
+            release {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
     }
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
+            shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // Aplica a assinatura de release apenas se o keystore foi fornecido.
+            if (hasKeystore) {
+                signingConfig signingConfigs.release
+            }
+        }
+        debug {
+            // Sufixo no applicationId para poder instalar debug + release lado a lado.
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
         }
     }
 
@@ -34,6 +80,13 @@ android {
 
     buildFeatures {
         viewBinding true
+    }
+
+    // Garante que o App Bundle gere APKs otimizados por densidade/idioma/abi.
+    bundle {
+        language { enableSplit = true }
+        density { enableSplit = true }
+        abi { enableSplit = true }
     }
 }
 
