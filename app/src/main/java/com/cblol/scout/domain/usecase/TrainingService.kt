@@ -53,6 +53,16 @@ object TrainingService {
         object Available : Availability()
         data class OnCooldown(val daysRemaining: Int) : Availability()
         data class InsufficientFunds(val needed: Long, val current: Long) : Availability()
+        /**
+         * Há uma partida do gerente agendada DENTRO do período que o treino
+         * consumiria. Treinar avançaria o calendário por cima desse dia de
+         * jogo, fazendo a partida ser auto-simulada (o jogador perderia o
+         * pick & ban manual). Por isso o treino é bloqueado até ele jogar.
+         *
+         * @property matchDateIso data ISO da partida que bloqueia o treino
+         * @property daysUntilMatch dias a partir de hoje até a partida
+         */
+        data class MatchInWindow(val matchDateIso: String, val daysUntilMatch: Int) : Availability()
     }
 
     /** Verifica se o treino pode ser executado agora. */
@@ -62,7 +72,47 @@ object TrainingService {
         if (state.budget < type.cost) {
             return Availability.InsufficientFunds(type.cost, state.budget)
         }
+        // Bloqueia se uma partida do gerente cair dentro da janela do treino
+        // — senão o avanço de dias auto-simularia o jogo dele (bug: "treino
+        // sobrescreve dia de jogo").
+        managerMatchWithin(state, type.durationDays)?.let { (iso, daysUntil) ->
+            return Availability.MatchInWindow(iso, daysUntil)
+        }
         return Availability.Available
+    }
+
+    /**
+     * Procura a primeira partida PENDENTE do gerente cuja data caia no
+     * intervalo `(hoje, hoje + durationDays]` — ou seja, que seria
+     * ultrapassada se o treino avançasse [durationDays] dias.
+     *
+     * Retorna `(dataIso, diasAtéAData)` ou `null` se nenhuma partida do
+     * gerente cair na janela. Treinos de duração 0 nunca bloqueiam.
+     *
+     * **Por que `<=`:** se o treino dura 3 dias e há jogo exatamente no 3º
+     * dia, treinar passaria por cima dele. Já um jogo HOJE (dia 0, ainda não
+     * jogado) também bloqueia, pois o jogador deve resolver a partida do dia
+     * antes de gastar dias treinando.
+     */
+    fun managerMatchWithin(state: GameState, durationDays: Int): Pair<String, Int>? {
+        val today = runCatching { LocalDate.parse(state.currentDate) }.getOrNull() ?: return null
+        val limit = today.plusDays(durationDays.toLong())
+        val managerId = state.managerTeamId
+
+        return state.matches
+            .asSequence()
+            .filter { !it.played }
+            .filter { it.homeTeamId == managerId || it.awayTeamId == managerId }
+            .mapNotNull { m ->
+                val d = runCatching { LocalDate.parse(m.date) }.getOrNull() ?: return@mapNotNull null
+                d to m
+            }
+            // Partida de hoje (inclusive) até o fim da janela do treino.
+            .filter { (d, _) -> !d.isBefore(today) && !d.isAfter(limit) }
+            .minByOrNull { (d, _) -> d }
+            ?.let { (d, _) ->
+                d.toString() to ChronoUnit.DAYS.between(today, d).toInt()
+            }
     }
 
     /** Quantos dias faltam para o treino sair do cooldown (0 se já liberado). */

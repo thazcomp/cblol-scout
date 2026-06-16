@@ -78,21 +78,35 @@ object SecondDivisionTeamsGenerator {
                 tier_orcamento = "B"
             )
         }
-        val players = teams.flatMap { team -> generateRoster(team, rng) }
+        // Distribuidores ÚNICOS criados UMA vez para toda a liga — garantem que
+        // não haja gamertags nem nomes reais repetidos entre os ~48 jogadores
+        // dos 8 times. Como há 48 jogadores para 42 gamertags, era até
+        // matematicamente impossível não repetir no sorteio antigo; o sufixo
+        // numérico do UniqueNamePool cobre esse excedente com unicidade.
+        val tagPool  = UniqueNamePool(GAMER_TAGS, rng)
+        val namePool = UniqueRealNamePool(FIRST_NAMES, LAST_NAMES, rng)
+        val players = teams.flatMap { team -> generateRoster(team, rng, tagPool, namePool) }
         return Generated(teams = teams, players = players)
     }
 
     // ── Construção de um roster ─────────────────────────────────────────
 
-    private fun generateRoster(team: Team, rng: Random): List<Player> {
+    private fun generateRoster(
+        team: Team,
+        rng: Random,
+        tagPool: UniqueNamePool,
+        namePool: UniqueRealNamePool
+    ): List<Player> {
         val roster = mutableListOf<Player>()
         // 1 titular por role (5).
         ROLES.forEachIndexed { idx, role ->
-            roster += buildPlayer(team, role, indexInRole = idx, titular = true, rng = rng)
+            roster += buildPlayer(team, role, indexInRole = idx, titular = true, rng = rng,
+                                  tagPool = tagPool, namePool = namePool)
         }
         // 1 reserva sorteado em uma role aleatória.
         val benchRole = ROLES.random(rng)
-        roster += buildPlayer(team, benchRole, indexInRole = 99, titular = false, rng = rng)
+        roster += buildPlayer(team, benchRole, indexInRole = 99, titular = false, rng = rng,
+                              tagPool = tagPool, namePool = namePool)
         return roster
     }
 
@@ -101,10 +115,12 @@ object SecondDivisionTeamsGenerator {
         role: String,
         indexInRole: Int,
         titular: Boolean,
-        rng: Random
+        rng: Random,
+        tagPool: UniqueNamePool,
+        namePool: UniqueRealNamePool
     ): Player {
-        val gamerTag = pickGamerTag(rng)
-        val realName = pickRealName(rng)
+        val gamerTag = tagPool.next()
+        val realName = namePool.next()
         val id       = "${team.id}_${role.lowercase()}_$indexInRole"
         val age      = rng.nextInt(17, 25)
 
@@ -196,10 +212,6 @@ object SecondDivisionTeamsGenerator {
         return pool.shuffled(rng).take(rng.nextInt(3, 5))
     }
 
-    private fun pickGamerTag(rng: Random): String = GAMER_TAGS.random(rng)
-    private fun pickRealName(rng: Random): String =
-        "${FIRST_NAMES.random(rng)} ${LAST_NAMES.random(rng)}"
-
     // ── Pools de nomes ──────────────────────────────────────────────────
 
     /**
@@ -223,7 +235,10 @@ object SecondDivisionTeamsGenerator {
         "Rage", "Nyx", "Onslaught", "Phantom", "Skyfall", "Mirage",
         "Tempest", "Wraith", "Echo", "Blitz", "Crisis", "Zone",
         "Aether", "Bolt", "Orion", "Helio", "Lumen", "Saber",
-        "Comet", "Atlas", "Sigma", "Reaper", "Vesper", "Halo"
+        "Comet", "Atlas", "Sigma", "Reaper", "Vesper", "Halo",
+        "Pulse", "Raze", "Nova", "Drift", "Ember", "Surge",
+        "Talon", "Vandal", "Specter", "Riptide", "Kaze", "Volt",
+        "Strix", "Fang", "Cinder", "Maverick", "Aegis", "Ronin"
     )
 
     private val FIRST_NAMES = listOf(

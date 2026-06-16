@@ -125,6 +125,25 @@ class TrainingActivity : AppCompatActivity() {
     // ── Ação: iniciar treino ────────────────────────────────────────────
 
     private fun confirmTraining(type: TrainingType) {
+        // Revalidação defensiva: se uma partida do gerente cai na janela do
+        // treino, NUNCA treina (senão o avanço de dias auto-simularia o jogo).
+        // Mostra um dialog explicativo em vez do de confirmação.
+        val gs = GameRepository.current()
+        val avail = TrainingService.checkAvailability(gs, type)
+        if (avail is TrainingService.Availability.MatchInWindow) {
+            val msg = if (avail.daysUntilMatch <= 0) {
+                getString(R.string.training_blocked_match_today_msg)
+            } else {
+                getString(R.string.training_blocked_match_msg, type.durationDays, avail.daysUntilMatch)
+            }
+            stylizedDialog(this)
+                .setTitle(R.string.training_blocked_match_title)
+                .setMessage(msg)
+                .setPositiveButton(R.string.btn_ok, null)
+                .show()
+            return
+        }
+
         stylizedDialog(this)
             .setTitle(R.string.training_confirm_title)
             .setMessage(getString(R.string.training_confirm_msg,
@@ -208,6 +227,18 @@ class TrainingActivity : AppCompatActivity() {
                 is TrainingService.Availability.InsufficientFunds -> {
                     h.tvStatus.visibility = View.VISIBLE
                     h.tvStatus.text = ctx.getString(R.string.training_status_no_funds)
+                    h.btnTrain.isEnabled = false
+                    h.btnTrain.alpha = 0.4f
+                }
+                is TrainingService.Availability.MatchInWindow -> {
+                    // Há partida do gerente na janela do treino — bloqueia para
+                    // não auto-simular o jogo (o jogador perderia o pick & ban).
+                    h.tvStatus.visibility = View.VISIBLE
+                    h.tvStatus.text = if (avail.daysUntilMatch <= 0) {
+                        ctx.getString(R.string.training_status_match_today)
+                    } else {
+                        ctx.getString(R.string.training_status_match, avail.daysUntilMatch)
+                    }
                     h.btnTrain.isEnabled = false
                     h.btnTrain.alpha = 0.4f
                 }

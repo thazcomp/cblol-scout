@@ -188,13 +188,26 @@ class RunTrainingUseCase(private val ctx: Context) {
     /**
      * Avança o calendário pelos dias do treino (rodando partidas/eventos do
      * GameEngine no caminho) e em seguida aplica os efeitos do treino no
-     * roster titular. Retorna a sessão criada pelo TrainingService.
+     * roster titular. Retorna a sessão criada pelo TrainingService, ou `null`
+     * se o treino não pôde ser executado.
+     *
+     * **Importante (correção do bug "treino sobrescreve dia de jogo"):** a
+     * disponibilidade é checada ANTES de avançar qualquer dia. Se houver uma
+     * partida do gerente dentro da janela do treino (ou cooldown / saldo
+     * insuficiente), NÃO avançamos o calendário nem aplicamos efeitos —
+     * senão o [GameEngine.advanceDays] auto-simularia a partida do gerente,
+     * fazendo-o perder o pick & ban manual.
      */
     operator fun invoke(type: TrainingType): TrainingSession? {
+        val gs = GameRepository.current()
+        // Gate ANTES de mexer no calendário. Se não estiver disponível
+        // (cooldown, sem dinheiro, ou partida na janela), aborta sem efeitos.
+        if (TrainingService.checkAvailability(gs, type) !is TrainingService.Availability.Available) {
+            return null
+        }
         if (type.durationDays > 0) {
             GameEngine.advanceDays(ctx, type.durationDays)
         }
-        val gs = GameRepository.current()
         val roster = GameRepository.rosterOf(ctx, gs.managerTeamId).filter { it.titular }
         TrainingService.runTraining(gs, type, roster)
         GameRepository.save(ctx)

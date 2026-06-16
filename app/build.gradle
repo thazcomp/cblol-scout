@@ -31,11 +31,11 @@ android {
         // diverge) do namespace. Definido como com.riftmanager.app para
         // refletir o nome comercial "Rift Manager". DEFINITIVO após o 1º envio
         // à loja — não pode mudar depois sem criar um app totalmente novo.
-        applicationId "com.riftmanager.app"
+        applicationId "com.taptwotimes.riftmanager.app"
         minSdk 27
-        targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        targetSdk 35
+        versionCode 12
+        versionName "1.2"
 
         // Limita os idiomas empacotados (o app é PT-BR), reduzindo o tamanho.
         resourceConfigurations += ["pt", "pt-rBR"]

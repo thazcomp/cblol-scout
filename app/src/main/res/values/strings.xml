@@ -494,6 +494,11 @@
     <string name="training_action_start">TREINAR</string>
     <string name="training_status_cooldown">⏳ EM COOLDOWN — disponível em %1$d dia(s)</string>
     <string name="training_status_no_funds">⚠ ORÇAMENTO INSUFICIENTE</string>
+    <string name="training_status_match">🎮 PARTIDA EM %1$d DIA(S) — jogue antes de treinar</string>
+    <string name="training_status_match_today">🎮 VOCÊ TEM PARTIDA HOJE — jogue antes de treinar</string>
+    <string name="training_blocked_match_title">⚠️ Partida agendada</string>
+    <string name="training_blocked_match_msg">Este treino dura %1$d dia(s), mas você tem uma partida em %2$d dia(s). Treinar agora faria a partida ser jogada automaticamente, sem o seu pick &amp; ban. Jogue a partida primeiro.</string>
+    <string name="training_blocked_match_today_msg">Você tem uma partida HOJE. Jogue-a antes de treinar, senão ela seria jogada automaticamente sem o seu pick &amp; ban.</string>
     <string name="training_confirm_title">Iniciar treino?</string>
     <string name="training_confirm_msg">%1$s vai consumir %2$d dia(s) e custar R$ %3$s. Deseja confirmar?</string>
     <string name="training_result_title">%1$s %2$s</string>

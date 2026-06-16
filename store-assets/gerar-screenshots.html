@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Screenshots Mockup — Rift Manager</title>
+<style>
+    body { margin:0; background:#0A0B1A; color:#F5EDD8;
+        font-family:-apple-system,"Segoe UI",Roboto,sans-serif; padding:32px; }
+    h1 { color:#F0B638; }
+    .muted { color:#A8A2BD; font-size:13px; max-width:760px; }
+    .row { display:flex; flex-wrap:wrap; gap:24px; margin-top:24px; }
+    .card { background:#161830; border:1px solid #2A2D55; border-radius:12px; padding:16px; }
+    canvas { display:block; border:1px solid #2A2D55; border-radius:8px;
+        width:240px; height:auto; }
+    button { background:#F0B638; color:#0A0B1A; border:none; border-radius:8px;
+        padding:10px 16px; font-weight:bold; cursor:pointer; margin-top:12px; width:100%; }
+    button:hover { background:#FFD876; }
+    .lbl { color:#F0B638; font-weight:bold; margin-bottom:8px; font-size:14px; }
+    #all { width:auto; padding:12px 24px; margin-bottom:8px; }
+</style>
+</head>
+<body>
+<h1>📱 Screenshots Mockup — Rift Manager</h1>
+<p class="muted">Mockups das telas principais (1080×1920, formato de celular) representando
+o visual do app. Servem como placeholder profissional na ficha da loja. Recomendo
+substituí-los por capturas reais quando possível, mas estes já são aceitos pela Play
+Store. Clique para baixar cada um, ou use "Baixar todos".</p>
+
+<button id="all" onclick="downloadAll()">⬇ Baixar TODOS os screenshots</button>
+
+<div class="row" id="container"></div>
+
+<script>
+const GOLD="#F0B638", GOLD_L="#FFD876", BG="#0A0B1A", SURF="#161830",
+      SURF2="#1F2240", TEXT="#F5EDD8", MUTED="#A8A2BD", OUTLINE="#2A2D55",
+      SUCCESS="#00E0A0", DANGER="#FF4B6E", BLUE="#3A7BFF", RED="#FF4B6E";
+const W=1080, H=1920;
+
+function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+
+function star(ctx,cx,cy,oR,iR,fill,pts=5){ctx.save();ctx.fillStyle=fill;ctx.beginPath();
+  for(let i=0;i<pts*2;i++){const a=Math.PI/pts*i-Math.PI/2;const r=i%2===0?oR:iR;
+  const x=cx+r*Math.cos(a),y=cy+r*Math.sin(a);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+  ctx.closePath();ctx.fill();ctx.restore();}
+
+function trophy(ctx,cx,cy,s,color=GOLD){ctx.save();ctx.fillStyle=color;ctx.strokeStyle=color;
+  ctx.beginPath();ctx.moveTo(cx-0.8*s,cy-1.3*s);ctx.lineTo(cx+0.8*s,cy-1.3*s);
+  ctx.lineTo(cx+0.78*s,cy-0.2*s);ctx.quadraticCurveTo(cx+0.7*s,cy+0.55*s,cx,cy+0.62*s);
+  ctx.quadraticCurveTo(cx-0.7*s,cy+0.55*s,cx-0.78*s,cy-0.2*s);ctx.closePath();ctx.fill();
+  ctx.lineWidth=0.16*s;ctx.beginPath();ctx.arc(cx-0.8*s,cy-0.55*s,0.5*s,-Math.PI*0.5,Math.PI*0.75,false);ctx.stroke();
+  ctx.beginPath();ctx.arc(cx+0.8*s,cy-0.55*s,0.5*s,Math.PI*0.25,Math.PI*1.5,false);ctx.stroke();
+  ctx.fillRect(cx-0.16*s,cy+0.55*s,0.32*s,0.62*s);ctx.fillStyle=GOLD_L;
+  ctx.beginPath();ctx.moveTo(cx-0.5*s,cy+1.17*s);ctx.lineTo(cx+0.5*s,cy+1.17*s);
+  ctx.lineTo(cx+0.72*s,cy+1.5*s);ctx.lineTo(cx-0.72*s,cy+1.5*s);ctx.closePath();ctx.fill();
+  ctx.fillRect(cx-0.85*s,cy+1.5*s,1.7*s,0.22*s);star(ctx,cx,cy-0.35*s,0.4*s,0.17*s,BG,5);ctx.restore();}
+
+// Status bar + título comum
+function header(ctx,title){
+  ctx.fillStyle=SURF;ctx.fillRect(0,0,W,150);
+  ctx.fillStyle=GOLD;ctx.font="bold 52px 'Segoe UI',Arial";ctx.textBaseline="middle";
+  ctx.fillText(title,48,90);
+  ctx.fillStyle=OUTLINE;ctx.fillRect(0,150,W,2);
+}
+
+// avatar circular com inicial
+function avatar(ctx,cx,cy,r,initial,ring=GOLD){
+  ctx.fillStyle=SURF2;ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle=ring;ctx.lineWidth=4;ctx.stroke();
+  ctx.fillStyle=GOLD;ctx.font="bold "+(r*0.9)+"px 'Segoe UI',Arial";
+  ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(initial,cx,cy);
+  ctx.textAlign="left";
+}
+
+// ───────────────────────── TELA 1: HUB DO TIME ─────────────────────────
+function drawHub(ctx){
+  ctx.fillStyle=BG;ctx.fillRect(0,0,W,H);
+  header(ctx,"Meu Time");
+
+  // Card do time / orçamento
+  ctx.fillStyle=SURF;rr(ctx,40,190,W-80,260,20);ctx.fill();
+  ctx.strokeStyle=GOLD;ctx.lineWidth=2;ctx.stroke();
+  trophy(ctx,140,320,55);
+  ctx.fillStyle=TEXT;ctx.font="bold 46px 'Segoe UI',Arial";ctx.textBaseline="alphabetic";
+  ctx.fillText("Pinheiros eSports",250,300);
+  ctx.fillStyle=MUTED;ctx.font="32px 'Segoe UI',Arial";
+  ctx.fillText("1ª Divisão · Split de Verão",250,348);
+  ctx.fillStyle=SUCCESS;ctx.font="bold 40px 'Segoe UI',Arial";
+  ctx.fillText("R$ 2.450.000",250,410);
+
+  // Linha de stats (3 chips)
+  const chips=[["5","Vitórias"],["2","Derrotas"],["3º","Posição"]];
+  let cx0=40;const cw=(W-80-40)/3;
+  chips.forEach((c,i)=>{
+    const x=cx0+i*(cw+20);
+    ctx.fillStyle=SURF2;rr(ctx,x,480,cw,140,16);ctx.fill();
+    ctx.fillStyle=GOLD;ctx.font="bold 54px 'Segoe UI',Arial";ctx.textAlign="center";
+    ctx.fillText(c[0],x+cw/2,548);
+    ctx.fillStyle=MUTED;ctx.font="28px 'Segoe UI',Arial";
+    ctx.fillText(c[1],x+cw/2,596);ctx.textAlign="left";
+  });
+
+  // Grid de ações (2 col x 3 lin)
+  const actions=[["⚔️","Próxima Partida"],["👥","Elenco"],["💰","Mercado"],
+    ["🎯","Treino"],["🔍","Scouting"],["📰","Notícias"]];
+  const gw=(W-80-30)/2, gh=180;
+  actions.forEach((a,i)=>{
+    const col=i%2, rowi=Math.floor(i/2);
+    const x=40+col*(gw+30), y=660+rowi*(gh+24);
+    ctx.fillStyle=SURF;rr(ctx,x,y,gw,gh,18);ctx.fill();
+    ctx.strokeStyle=OUTLINE;ctx.lineWidth=1.5;ctx.stroke();
+    ctx.font="64px 'Segoe UI',Arial";ctx.textAlign="center";ctx.fillStyle=TEXT;
+    ctx.fillText(a[0],x+gw/2,y+90);
+    ctx.fillStyle=TEXT;ctx.font="bold 34px 'Segoe UI',Arial";
+    ctx.fillText(a[1],x+gw/2,y+150);ctx.textAlign="left";
+  });
+
+  // Banner inferior "próxima partida"
+  ctx.fillStyle=SURF;rr(ctx,40,1330,W-80,200,20);ctx.fill();
+  ctx.strokeStyle=GOLD;ctx.lineWidth=2;ctx.stroke();
+  ctx.fillStyle=GOLD;ctx.font="bold 30px 'Segoe UI',Arial";
+  ctx.fillText("PRÓXIMA PARTIDA · HOJE",70,1400);
+  ctx.fillStyle=TEXT;ctx.font="bold 48px 'Segoe UI',Arial";
+  ctx.fillText("Pinheiros  vs  Tupis GG",70,1465);
+  // botão jogar
+  ctx.fillStyle=GOLD;rr(ctx,W-320,1360,260,120,16);ctx.fill();
+  ctx.fillStyle=BG;ctx.font="bold 40px 'Segoe UI',Arial";ctx.textAlign="center";
+  ctx.fillText("JOGAR",W-190,1430);ctx.textAlign="left";
+
+  footerNav(ctx,0);
+}
+
+// ───────────────────────── TELA 2: PICK & BAN ─────────────────────────
+function drawPickBan(ctx){
+  ctx.fillStyle=BG;ctx.fillRect(0,0,W,H);
+  header(ctx,"Pick & Ban");
+
+  // Barras de time (azul vs vermelho)
+  ctx.fillStyle=BLUE;rr(ctx,40,190,490,90,12);ctx.fill();
+  ctx.fillStyle="#fff";ctx.font="bold 36px 'Segoe UI',Arial";ctx.fillText("AZUL · Pinheiros",70,248);
+  ctx.fillStyle=RED;rr(ctx,W-530,190,490,90,12);ctx.fill();
+  ctx.fillStyle="#fff";ctx.textAlign="right";ctx.fillText("Tupis GG · VERMELHO",W-70,248);ctx.textAlign="left";
+
+  // Slots de pick (5 de cada lado)
+  const champs=["Top","Jng","Mid","Adc","Sup"];
+  for(let i=0;i<5;i++){
+    // azul
+    ctx.fillStyle=SURF;rr(ctx,40,310+i*150,490,130,14);ctx.fill();
+    ctx.strokeStyle=i===2?GOLD:OUTLINE;ctx.lineWidth=i===2?3:1.5;ctx.stroke();
+    ctx.fillStyle=SURF2;rr(ctx,55,325+i*150,100,100,10);ctx.fill();
+    ctx.fillStyle=GOLD;ctx.font="bold 30px 'Segoe UI',Arial";ctx.fillText(champs[i],175,360+i*150);
+    ctx.fillStyle=TEXT;ctx.font="28px 'Segoe UI',Arial";ctx.fillText("Campeão "+(i+1),175,400+i*150);
+    // vermelho
+    ctx.fillStyle=SURF;rr(ctx,W-530,310+i*150,490,130,14);ctx.fill();
+    ctx.strokeStyle=OUTLINE;ctx.lineWidth=1.5;ctx.stroke();
+    ctx.fillStyle=SURF2;rr(ctx,W-170,325+i*150,100,100,10);ctx.fill();
+    ctx.fillStyle=GOLD;ctx.font="bold 30px 'Segoe UI',Arial";ctx.textAlign="right";
+    ctx.fillText(champs[i],W-185,360+i*150);
+    ctx.fillStyle=TEXT;ctx.font="28px 'Segoe UI',Arial";ctx.fillText("Campeão "+(i+1),W-185,400+i*150);
+    ctx.textAlign="left";
+  }
+
+  // Faixa de sugestões (destaque do app)
+  ctx.fillStyle=GOLD;ctx.font="bold 30px 'Segoe UI',Arial";
+  ctx.fillText("✨ SUGESTÕES PARA A MID",48,1130);
+  ctx.fillStyle=MUTED;ctx.font="24px 'Segoe UI',Arial";
+  ctx.fillText("🎯 Main · ⚡ Comp · 🛡 Counter · ✨ Sinergia",48,1170);
+  const sugg=[["Main do jogador","🎯 MAIN",GOLD],["Forte contra a comp","🛡 COUNTER",DANGER],
+    ["Sinergia com o time","✨ SINERGIA","#9B7BFF"]];
+  sugg.forEach((s,i)=>{
+    const y=1200+i*150;
+    ctx.fillStyle=SURF2;rr(ctx,40,y,W-80,130,14);ctx.fill();
+    ctx.strokeStyle=OUTLINE;ctx.lineWidth=1.5;ctx.stroke();
+    ctx.fillStyle=SURF;rr(ctx,55,y+15,100,100,10);ctx.fill();
+    ctx.fillStyle=TEXT;ctx.font="bold 36px 'Segoe UI',Arial";ctx.fillText("Campeão sugerido",180,y+55);
+    ctx.fillStyle=MUTED;ctx.font="26px 'Segoe UI',Arial";ctx.fillText(s[0],180,y+95);
+    // badge
+    ctx.fillStyle=s[2];rr(ctx,W-260,y+40,200,52,10);ctx.fill();
+    ctx.fillStyle=BG;ctx.font="bold 26px 'Segoe UI',Arial";ctx.textAlign="center";
+    ctx.fillText(s[1],W-160,y+72);ctx.textAlign="left";
+  });
+
+  // Botão confirmar
+  ctx.fillStyle=GOLD;rr(ctx,40,1680,W-80,120,16);ctx.fill();
+  ctx.fillStyle=BG;ctx.font="bold 44px 'Segoe UI',Arial";ctx.textAlign="center";
+  ctx.fillText("CONFIRMAR PICK",W/2,1755);ctx.textAlign="left";
+}
+
+// ───────────────────────── TELA 3: MERCADO ─────────────────────────
+function drawMarket(ctx){
+  ctx.fillStyle=BG;ctx.fillRect(0,0,W,H);
+  header(ctx,"Mercado de Transferências");
+  // saldo
+  ctx.fillStyle=SUCCESS;ctx.font="bold 38px 'Segoe UI',Arial";ctx.textAlign="right";
+  ctx.fillText("R$ 2.450.000",W-48,90);ctx.textAlign="left";
+
+  // barra de busca
+  ctx.fillStyle=SURF2;rr(ctx,40,190,W-80,90,16);ctx.fill();
+  ctx.fillStyle=MUTED;ctx.font="34px 'Segoe UI',Arial";ctx.fillText("🔍  Buscar jogador...",70,248);
+
+  // chips de filtro de role
+  const roles=["TODOS","TOP","JNG","MID","ADC","SUP"];
+  let x=40;
+  roles.forEach((r,i)=>{
+    const w=i===0?150:110;
+    ctx.fillStyle=i===0?GOLD:SURF;rr(ctx,x,310,w,70,35);ctx.fill();
+    if(i!==0){ctx.strokeStyle=OUTLINE;ctx.lineWidth=1.5;ctx.stroke();}
+    ctx.fillStyle=i===0?BG:TEXT;ctx.font="bold 28px 'Segoe UI',Arial";ctx.textAlign="center";
+    ctx.fillText(r,x+w/2,353);ctx.textAlign="left";
+    x+=w+16;
+  });
+
+  // lista de jogadores
+  const players=[["Aspas","ADC",92,"R$ 1.200.000"],["brTT","ADC",88,"R$ 950.000"],
+    ["Tinowns","MID",90,"R$ 1.050.000"],["Robo","TOP",85,"R$ 720.000"],
+    ["Croc","JNG",87,"R$ 810.000"],["Ackerman","MID",83,"R$ 600.000"]];
+  players.forEach((p,i)=>{
+    const y=420+i*210;
+    ctx.fillStyle=SURF;rr(ctx,40,y,W-80,185,18);ctx.fill();
+    ctx.strokeStyle=OUTLINE;ctx.lineWidth=1.5;ctx.stroke();
+    avatar(ctx,140,y+92,65,p[0][0]);
+    ctx.fillStyle=TEXT;ctx.font="bold 44px 'Segoe UI',Arial";ctx.fillText(p[0],240,y+75);
+    // role badge
+    ctx.fillStyle=SURF2;rr(ctx,240,y+95,90,50,8);ctx.fill();
+    ctx.fillStyle=GOLD;ctx.font="bold 26px 'Segoe UI',Arial";ctx.textAlign="center";
+    ctx.fillText(p[1],285,y+128);ctx.textAlign="left";
+    // overall circle
+    ctx.fillStyle=p[2]>=90?SUCCESS:(p[2]>=85?GOLD:MUTED);
+    ctx.beginPath();ctx.arc(W-130,y+70,52,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=BG;ctx.font="bold 46px 'Segoe UI',Arial";ctx.textAlign="center";
+    ctx.fillText(p[2],W-130,y+70);ctx.textAlign="left";
+    // preço
+    ctx.fillStyle=SUCCESS;ctx.font="bold 34px 'Segoe UI',Arial";ctx.textAlign="right";
+    ctx.fillText(p[3],W-80,y+150);ctx.textAlign="left";
+  });
+
+  footerNav(ctx,2);
+}
+
+// ───────────────────────── TELA 4: RESULTADO DA PARTIDA ─────────────────
+function drawResult(ctx){
+  ctx.fillStyle=BG;ctx.fillRect(0,0,W,H);
+  // topo: VITÓRIA
+  ctx.fillStyle=SUCCESS;ctx.font="bold 100px 'Segoe UI',Arial";ctx.textAlign="center";
+  ctx.textBaseline="alphabetic";ctx.fillText("VITÓRIA!",W/2,260);
+  trophy(ctx,W/2,460,90);
+
+  // placar
+  ctx.fillStyle=SURF;rr(ctx,40,620,W-80,260,20);ctx.fill();
+  ctx.strokeStyle=GOLD;ctx.lineWidth=2;ctx.stroke();
+  ctx.fillStyle=TEXT;ctx.font="bold 44px 'Segoe UI',Arial";ctx.textAlign="center";
+  ctx.fillText("Pinheiros",290,720);ctx.fillText("Tupis GG",W-290,720);
+  ctx.fillStyle=SUCCESS;ctx.font="bold 130px 'Segoe UI',Arial";ctx.fillText("2",290,840);
+  ctx.fillStyle=MUTED;ctx.fillText("1",W-290,840);
+  ctx.fillStyle=GOLD;ctx.font="bold 50px 'Segoe UI',Arial";ctx.fillText("×",W/2,820);
+
+  // XP do técnico
+  ctx.fillStyle=SURF;rr(ctx,40,920,W-80,180,18);ctx.fill();
+  ctx.textAlign="left";
+  ctx.fillStyle=GOLD;ctx.font="bold 34px 'Segoe UI',Arial";ctx.fillText("⭐ +150 XP de Técnico",70,990);
+  // barra de progresso
+  ctx.fillStyle=SURF2;rr(ctx,70,1020,W-140,40,20);ctx.fill();
+  ctx.fillStyle=GOLD;rr(ctx,70,1020,(W-140)*0.65,40,20);ctx.fill();
+  ctx.fillStyle=MUTED;ctx.font="26px 'Segoe UI',Arial";ctx.fillText("Nível 7 · 650/1000 para o próximo nível",70,1090);
+
+  // destaques da partida (MVP)
+  ctx.fillStyle=GOLD;ctx.font="bold 36px 'Segoe UI',Arial";ctx.fillText("DESTAQUES",70,1180);
+  const mvp=[["Tinowns","MID","8/2/11 · MVP",SUCCESS],["Robo","TOP","4/1/9",TEXT],
+    ["Aspas","ADC","6/3/7",TEXT]];
+  mvp.forEach((m,i)=>{
+    const y=1210+i*160;
+    ctx.fillStyle=SURF;rr(ctx,40,y,W-80,140,16);ctx.fill();
+    ctx.strokeStyle=i===0?GOLD:OUTLINE;ctx.lineWidth=i===0?3:1.5;ctx.stroke();
+    avatar(ctx,130,y+70,55,m[0][0],i===0?GOLD:OUTLINE);
+    ctx.fillStyle=TEXT;ctx.font="bold 40px 'Segoe UI',Arial";ctx.fillText(m[0],220,y+62);
+    ctx.fillStyle=MUTED;ctx.font="28px 'Segoe UI',Arial";ctx.fillText(m[1],220,y+102);
+    ctx.fillStyle=m[3];ctx.font="bold 34px 'Segoe UI',Arial";ctx.textAlign="right";
+    ctx.fillText(m[2],W-70,y+85);ctx.textAlign="left";
+  });
+
+  // botão continuar
+  ctx.fillStyle=GOLD;rr(ctx,40,1720,W-80,120,16);ctx.fill();
+  ctx.fillStyle=BG;ctx.font="bold 44px 'Segoe UI',Arial";ctx.textAlign="center";
+  ctx.fillText("CONTINUAR",W/2,1795);ctx.textAlign="left";
+}
+
+// barra de navegação inferior
+function footerNav(ctx,active){
+  ctx.fillStyle=SURF;ctx.fillRect(0,H-130,W,130);
+  ctx.fillStyle=OUTLINE;ctx.fillRect(0,H-130,W,2);
+  const items=["🏠","👥","💰","📊"];
+  items.forEach((it,i)=>{
+    const x=(W/4)*i+(W/8);
+    ctx.font="56px 'Segoe UI',Arial";ctx.textAlign="center";
+    ctx.globalAlpha=i===active?1:0.45;ctx.fillStyle=i===active?GOLD:TEXT;
+    ctx.fillText(it,x,H-55);ctx.globalAlpha=1;
+  });
+  ctx.textAlign="left";
+}
+
+// ───────────────────────── render + download ─────────────────────────
+const screens=[
+  {id:"hub",label:"1 · Hub do Time",fn:drawHub,file:"screenshot-1-hub.png"},
+  {id:"pickban",label:"2 · Pick & Ban",fn:drawPickBan,file:"screenshot-2-pickban.png"},
+  {id:"market",label:"3 · Mercado",fn:drawMarket,file:"screenshot-3-mercado.png"},
+  {id:"result",label:"4 · Resultado",fn:drawResult,file:"screenshot-4-resultado.png"},
+];
+
+const container=document.getElementById("container");
+screens.forEach(s=>{
+  const card=document.createElement("div");card.className="card";
+  const lbl=document.createElement("div");lbl.className="lbl";lbl.textContent=s.label;
+  const cv=document.createElement("canvas");cv.width=W;cv.height=H;cv.id="cv_"+s.id;
+  const btn=document.createElement("button");btn.textContent="⬇ Baixar";
+  btn.onclick=()=>dl(cv,s.file);
+  card.appendChild(lbl);card.appendChild(cv);card.appendChild(btn);
+  container.appendChild(card);
+  const ctx=cv.getContext("2d");s.fn(ctx);
+});
+
+function dl(cv,file){const a=document.createElement("a");a.download=file;
+  a.href=cv.toDataURL("image/png");a.click();}
+function downloadAll(){screens.forEach((s,i)=>{
+  setTimeout(()=>dl(document.getElementById("cv_"+s.id),s.file),i*400);});}
+</script>
+</body>
+</html>

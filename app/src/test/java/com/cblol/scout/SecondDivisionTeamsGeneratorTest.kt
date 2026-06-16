@@ -149,4 +149,41 @@ class SecondDivisionTeamsGeneratorTest {
             assertTrue("Jogador ${p.nome_jogo} sem champion pool", p.championPool.isNotEmpty())
         }
     }
+
+    @Test
+    fun players_haveUniqueGamerTags() {
+        // Regressão: antes os gamertags eram sorteados COM reposição, repetindo
+        // muito (vários "Trovão"/"Zenith" na mesma liga). Agora o distribuidor
+        // único garante que cada um dos ~48 jogadores tem um nome_jogo distinto.
+        val gen = SecondDivisionTeamsGenerator.generate(seed = 42L)
+        val tags = gen.players.map { it.nome_jogo }
+        assertEquals(
+            "Gamertags repetidos detectados: " +
+                tags.groupingBy { it }.eachCount().filter { it.value > 1 },
+            tags.size, tags.toSet().size
+        )
+    }
+
+    @Test
+    fun players_haveUniqueRealNames() {
+        // Mesmo raciocínio: nomes reais (nome + sobrenome) não devem repetir
+        // dentro da mesma liga gerada.
+        val gen = SecondDivisionTeamsGenerator.generate(seed = 42L)
+        val names = gen.players.map { it.nome_real }
+        assertEquals(
+            "Nomes reais repetidos: " +
+                names.groupingBy { it }.eachCount().filter { it.value > 1 },
+            names.size, names.toSet().size
+        )
+    }
+
+    @Test
+    fun players_uniqueGamerTagsAcrossMultipleSeeds() {
+        // A unicidade deve valer para qualquer seed, não só o 42.
+        listOf(1L, 7L, 99L, 2024L, 555L).forEach { seed ->
+            val gen = SecondDivisionTeamsGenerator.generate(seed = seed)
+            val tags = gen.players.map { it.nome_jogo }
+            assertEquals("Tags repetidos no seed $seed", tags.size, tags.toSet().size)
+        }
+    }
 }

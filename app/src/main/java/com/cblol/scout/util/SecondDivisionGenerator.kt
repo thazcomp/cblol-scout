@@ -57,9 +57,15 @@ object SecondDivisionGenerator {
         synchronized(this) {
             cached?.let { return it }
             val rng = Random.Default
+            // Distribuidores de nomes SEM reposição: garantem que cada jogador
+            // gerado recebe um gamertag e um nome real únicos (o sorteio com
+            // reposição anterior repetia nomes com frequência — problema do
+            // aniversário). Ver [UniqueNamePool].
+            val tagPool  = UniqueNamePool(GAMER_TAGS, rng)
+            val namePool = UniqueRealNamePool(FIRST_NAMES, LAST_NAMES, rng)
             val list = ROLES.flatMap { role ->
                 (1..PLAYERS_PER_ROLE).map { idx ->
-                    buildPlayer(role, idx, rng)
+                    buildPlayer(role, idx, rng, tagPool, namePool)
                 }
             }
             cached = list
@@ -74,9 +80,15 @@ object SecondDivisionGenerator {
 
     // ── Construção de um jogador ───────────────────────────────────────
 
-    private fun buildPlayer(role: String, indexInRole: Int, rng: Random): Player {
-        val gamerTag = pickGamerTag(rng)
-        val realName = pickRealName(rng)
+    private fun buildPlayer(
+        role: String,
+        indexInRole: Int,
+        rng: Random,
+        tagPool: UniqueNamePool,
+        namePool: UniqueRealNamePool
+    ): Player {
+        val gamerTag = tagPool.next()
+        val realName = namePool.next()
         val id       = "cd_${role.lowercase()}_$indexInRole"
         val age      = rng.nextInt(17, 23)  // 17-22
 
@@ -180,10 +192,6 @@ object SecondDivisionGenerator {
         return pool.shuffled(rng).take(rng.nextInt(3, 5))
     }
 
-    private fun pickGamerTag(rng: Random): String = GAMER_TAGS.random(rng)
-    private fun pickRealName(rng: Random): String =
-        "${FIRST_NAMES.random(rng)} ${LAST_NAMES.random(rng)}"
-
     // ── Pools de nomes ─────────────────────────────────────────────────
 
     /**
@@ -195,7 +203,9 @@ object SecondDivisionGenerator {
         "Sonic", "Frostt", "Lyric", "Cypher", "Drako", "Vexen",
         "Sword", "Hellion", "Krieg", "Solace", "Vyper", "Quantum",
         "Rage", "Nyx", "Onslaught", "Phantom", "Skyfall", "Mirage",
-        "Tempest", "Wraith", "Echo", "Blitz", "Crisis", "Zone"
+        "Tempest", "Wraith", "Echo", "Blitz", "Crisis", "Zone",
+        "Pulse", "Raze", "Drift", "Ember", "Surge", "Talon",
+        "Vandal", "Specter", "Riptide", "Kaze", "Volt", "Strix"
     )
 
     private val FIRST_NAMES = listOf(
