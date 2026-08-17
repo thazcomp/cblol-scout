@@ -287,6 +287,9 @@
          LOGIN
          ═══════════════════════════════════════════════════════════════ -->
     <string name="login_guest">Convidado</string>
+    <string name="coach_rename_title">Renomear Técnico</string>
+    <string name="coach_rename_hint">Nome do Técnico</string>
+    <string name="btn_rename">Renomear</string>
     <string name="login_start">Jogar</string>
     <string name="login_welcome">Bem-vindo, %1$s!</string>
     <string name="login_error_user">Informe um usuário</string>

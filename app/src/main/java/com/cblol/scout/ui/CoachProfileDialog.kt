@@ -3,6 +3,8 @@ package com.cblol.scout.ui
 import android.app.Activity
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -12,12 +14,15 @@ import com.cblol.scout.data.CoachProfile
 import com.cblol.scout.domain.GameConstants
 import com.cblol.scout.domain.LevelUpRewards
 import com.cblol.scout.domain.usecase.CoachProgressionService
+import com.cblol.scout.domain.usecase.UpdateManagerNameUseCase
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 
 /**
  * Dialog que mostra o perfil do técnico com nome, level, XP, atributos
  * derivados e estatísticas de carreira.
  *
- * O dialog é puramente informativo (sem ações). Para alterar dados do
+ * O dialog é informativo e permite renomear o técnico. Para alterar outros dados do
  * técnico use os fluxos normais do jogo (vencer partidas, transferências, etc.)
  * que disparam `CoachProgressionService.record*`.
  *
@@ -30,7 +35,9 @@ import com.cblol.scout.domain.usecase.CoachProgressionService
  *
  * Strings em `R.string.coach_*`; cores em `R.color.champion_gold` etc.
  */
-object CoachProfileDialog {
+object CoachProfileDialog : KoinComponent {
+
+    private val updateManagerName: UpdateManagerNameUseCase by inject()
 
     /**
      * Exibe o dialog para o `profile` informado.
@@ -38,8 +45,9 @@ object CoachProfileDialog {
      * @param activity Activity hospedeira (usada para o tema do dialog)
      * @param profile dados crus do técnico (lidos do GameState)
      * @param name nome do treinador (vem do GameState.managerName)
+     * @param onRename callback opcional chamado quando o nome é alterado
      */
-    fun show(activity: Activity, profile: CoachProfile, name: String) {
+    fun show(activity: Activity, profile: CoachProfile, name: String, onRename: (() -> Unit)? = null) {
         val view  = activity.layoutInflater.inflate(R.layout.dialog_coach_profile, null)
         val stats = CoachProgressionService.compute(profile, name)
 
@@ -49,10 +57,42 @@ object CoachProfileDialog {
         bindBadges(view, profile)
         bindStats(view, stats)
 
+        view.findViewById<ImageButton>(R.id.btn_rename_coach).setOnClickListener {
+            showRenameDialog(activity, stats.name) { newName ->
+                updateManagerName(newName)
+                val newStats = CoachProgressionService.compute(profile, newName)
+                bindHeader(view, newStats)
+                onRename?.invoke()
+            }
+        }
+
         stylizedDialog(activity)
             .setTitle(R.string.coach_dialog_title)
             .setView(view)
             .setPositiveButton(R.string.btn_ok, null)
+            .show()
+    }
+
+    private fun showRenameDialog(activity: Activity, currentName: String, onConfirm: (String) -> Unit) {
+        val input = EditText(activity).apply {
+            setText(currentName)
+            setSelection(text.length)
+            hint = activity.getString(R.string.coach_rename_hint)
+            // Padding aproximado para manter consistência
+            val pad = (16 * activity.resources.displayMetrics.density).toInt()
+            setPadding(pad, pad, pad, pad)
+        }
+
+        stylizedDialog(activity)
+            .setTitle(R.string.coach_rename_title)
+            .setView(input)
+            .setPositiveButton(R.string.btn_rename) { _, _ ->
+                val newName = input.text.toString()
+                if (newName.isNotBlank()) {
+                    onConfirm(newName)
+                }
+            }
+            .setNegativeButton(R.string.btn_cancel, null)
             .show()
     }
 

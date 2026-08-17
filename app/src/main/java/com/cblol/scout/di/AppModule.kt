@@ -29,6 +29,7 @@ val appModule = module {
     factory { IsMissingStarterUseCase(androidContext()) }
     factory { StarterCountUseCase(androidContext()) }
     factory { CanSellPlayerUseCase(androidContext()) }
+    factory { UpdateManagerNameUseCase(androidContext()) }
 
     // ── UseCases — Hub ───────────────────────────────────────────────────
     factory { GetHubStateUseCase(androidContext()) }

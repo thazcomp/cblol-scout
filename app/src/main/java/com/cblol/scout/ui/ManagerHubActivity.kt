@@ -187,7 +187,9 @@ class ManagerHubActivity : AppCompatActivity() {
         binding.cardStandings.setOnClickListener    { startActivity(Intent(this, StandingsActivity::class.java)) }
         findViewById<View>(R.id.card_coach_profile).setOnClickListener {
             val gs = GameRepository.current()
-            CoachProfileDialog.show(this, gs.coachProfile, gs.managerName)
+            CoachProfileDialog.show(this, gs.coachProfile, gs.managerName) {
+                vm.refresh() // Recarrega o estado para refletir o novo nome no Hub
+            }
         }
         findViewById<View>(R.id.card_sponsors).setOnClickListener {
             startActivity(Intent(this, SponsorsActivity::class.java))

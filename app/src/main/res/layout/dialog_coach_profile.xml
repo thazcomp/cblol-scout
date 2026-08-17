@@ -59,15 +59,33 @@
                 android:orientation="vertical"
                 android:layout_marginStart="12dp">
 
-                <TextView
-                    android:id="@+id/tv_coach_name"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:textColor="@color/champion_gold"
-                    android:textSize="18sp"
-                    android:textStyle="bold"
-                    android:maxLines="1"
-                    android:ellipsize="end" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:id="@+id/tv_coach_name"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:textColor="@color/champion_gold"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:maxLines="1"
+                        android:ellipsize="end" />
+
+                    <ImageButton
+                        android:id="@+id/btn_rename_coach"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@android:drawable/ic_menu_edit"
+                        android:contentDescription="@string/btn_rename"
+                        xmlns:app="http://schemas.android.com/apk/res-auto"
+                        app:tint="@color/champion_gold" />
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/tv_coach_title"
