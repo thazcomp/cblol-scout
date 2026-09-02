@@ -74,7 +74,25 @@ class RealmStaticDataSource(
     }
 
     private fun openRealm(): Realm {
-        val config = RealmConfiguration.Builder(
+        return try {
+            Realm.open(buildConfig())
+        } catch (e: Exception) {
+            // Arquivo cifrado com chave diferente da atual (Keystore invalidado)
+            // ou corrupção. Como este banco contém apenas dados de SEED (nenhum
+            // dado de usuário), é totalmente seguro apagar e recriar/re-semear.
+            // Evita o crash de boot por AEADBadTagException.
+            android.util.Log.w(
+                "RealmStaticDataSource",
+                "Falha ao abrir o Realm estático (chave incompatível/corrupção). " +
+                    "Recriando e re-semeando.", e
+            )
+            runCatching { deleteRealmFiles() }
+            Realm.open(buildConfig())
+        }
+    }
+
+    private fun buildConfig(): RealmConfiguration =
+        RealmConfiguration.Builder(
             schema = setOf(
                 ChampionEntity::class,
                 CompositionEntity::class,
@@ -84,11 +102,14 @@ class RealmStaticDataSource(
         )
             .name(DB_NAME)
             .encryptionKey(keyProvider.getOrCreateKey())
-            // Dados estáticos são versionados pelo app; em mudança de schema
-            // simplesmente recriamos e re-semeamos (não há dado de usuário aqui).
             .deleteRealmIfMigrationNeeded()
             .build()
-        return Realm.open(config)
+
+    /** Apaga o arquivo do Realm estático e seus auxiliares. */
+    private fun deleteRealmFiles() {
+        context.filesDir.listFiles()?.forEach { f ->
+            if (f.name.startsWith(DB_NAME)) f.deleteRecursively()
+        }
     }
 
     /** Popula o Realm a partir dos seeds caso ainda esteja vazio. */

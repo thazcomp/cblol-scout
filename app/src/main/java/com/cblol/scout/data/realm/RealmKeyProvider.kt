@@ -42,12 +42,38 @@ class RealmKeyProvider(private val context: Context) {
         val storedIvB64 = prefs.getString(KEY_IV, null)
 
         if (storedB64 != null && storedIvB64 != null) {
-            val encrypted = Base64.decode(storedB64, Base64.NO_WRAP)
-            val iv = Base64.decode(storedIvB64, Base64.NO_WRAP)
-            return decrypt(encrypted, iv)
+            try {
+                val encrypted = Base64.decode(storedB64, Base64.NO_WRAP)
+                val iv = Base64.decode(storedIvB64, Base64.NO_WRAP)
+                return decrypt(encrypted, iv)
+            } catch (e: Exception) {
+                // A chave-mestra do Android Keystore não consegue mais decifrar o
+                // blob salvo. Isso ocorre quando o Keystore é invalidado sem que
+                // as SharedPreferences sejam limpas junto — por exemplo:
+                //   • reinstalação / restauração de backup (a Keystore NUNCA é
+                //     copiada em backup, mas as prefs e o Realm podem ser)
+                //   • troca de assinatura (debug↔release, Play App Signing)
+                //   • rotação/limpeza de chaves do Keystore pelo sistema
+                //
+                // O save antigo é irrecuperável nesse ponto (a chave que o cifrava
+                // se foi), então em vez de crashar no boot com AEADBadTagException,
+                // descartamos o estado órfão e recriamos tudo limpo. Ver
+                // [resetKeystoreAndSave].
+                android.util.Log.w(
+                    "RealmKeyProvider",
+                    "Falha ao decifrar a chave do Realm (Keystore invalidado). " +
+                        "Recriando chave e descartando save indecifrável.", e
+                )
+                resetKeystoreAndSave(prefs)
+                // Cai para o fluxo de criação abaixo.
+            }
         }
 
-        // Primeira execução: gera a chave de 64 bytes do Realm e a protege.
+        return createAndStoreNewKey(prefs)
+    }
+
+    /** Gera a chave de 64 bytes do Realm, protege-a e persiste o blob cifrado. */
+    private fun createAndStoreNewKey(prefs: android.content.SharedPreferences): ByteArray {
         val realmKey = ByteArray(REALM_KEY_SIZE).also { SecureRandom().nextBytes(it) }
         val (encrypted, iv) = encrypt(realmKey)
         prefs.edit()
@@ -55,6 +81,38 @@ class RealmKeyProvider(private val context: Context) {
             .putString(KEY_IV, Base64.encodeToString(iv, Base64.NO_WRAP))
             .apply()
         return realmKey
+    }
+
+    /**
+     * Descarta o estado criptográfico órfão quando a chave do Keystore não
+     * corresponde mais ao blob salvo:
+     *  1. Remove a chave-mestra inválida do Android Keystore (para forçar a
+     *     geração de uma nova em [masterKey]).
+     *  2. Limpa o blob cifrado das SharedPreferences.
+     *  3. Apaga o(s) arquivo(s) do Realm, que estão cifrados com uma chave que
+     *     não existe mais e portanto são impossíveis de abrir. Deixá-los no
+     *     lugar faria o Realm falhar ao abrir mesmo com a chave nova.
+     *
+     * Após isto, o app inicia com um estado limpo (sem save). É uma perda de
+     * progresso inevitável neste cenário — a alternativa seria um app que não
+     * abre nunca mais.
+     */
+    private fun resetKeystoreAndSave(prefs: android.content.SharedPreferences) {
+        // 1. Remove a master key inválida do Keystore.
+        runCatching {
+            KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
+                .deleteEntry(MASTER_KEY_ALIAS)
+        }
+        // 2. Limpa o blob cifrado.
+        runCatching { prefs.edit().clear().apply() }
+        // 3. Apaga os arquivos do Realm indecifráveis (o próprio .realm e os
+        //    auxiliares .lock / .management / .note). O prefixo do arquivo é
+        //    fixo (RealmStaticDataSource.DB_NAME começa com "cblol").
+        runCatching {
+            context.filesDir.listFiles()?.forEach { f ->
+                if (f.name.startsWith(REALM_FILE_PREFIX)) f.deleteRecursively()
+            }
+        }
     }
 
     // ── Keystore / AES-GCM ──────────────────────────────────────────────
@@ -101,6 +159,15 @@ class RealmKeyProvider(private val context: Context) {
         private const val PREFS = "cblol_realm_keys"
         private const val KEY_ENCRYPTED_REALM_KEY = "encrypted_realm_key"
         private const val KEY_IV = "realm_key_iv"
+
+        /**
+         * Prefixo comum dos arquivos Realm do app (`cblol_save.realm` e
+         * `cblol_static.realm`, mais seus auxiliares). Usado em
+         * [resetKeystoreAndSave] para apagar TODOS os bancos indecifráveis
+         * quando a chave-mestra do Keystore é invalidada — ambos foram
+         * cifrados com a mesma chave, então ambos precisam ser recriados.
+         */
+        private const val REALM_FILE_PREFIX = "cblol"
 
         /** O Realm exige exatamente 64 bytes para a criptografia AES-256. */
         const val REALM_KEY_SIZE = 64

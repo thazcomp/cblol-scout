@@ -209,17 +209,39 @@ class GameStatePersistence(
      * campeões/comps/sponsors).
      */
     private fun openRealm(): Realm {
-        val config = RealmConfiguration.Builder(schema = setOf(GameStateBlobEntity::class))
+        val config = buildConfig()
+        return try {
+            Realm.open(config)
+        } catch (e: Exception) {
+            // Falha ao abrir normalmente significa que o arquivo .realm existente
+            // foi cifrado com uma chave diferente da atual (ex: Keystore foi
+            // invalidado e recriado, mas o arquivo sobreviveu) OU corrupção.
+            // O `deleteRealmIfMigrationNeeded` cobre só incompatibilidade de
+            // SCHEMA, não de chave — então tratamos aqui: apaga o arquivo
+            // indecifrável e recria limpo, evitando um crash de boot.
+            android.util.Log.w(
+                "GameStatePersistence",
+                "Falha ao abrir o Realm de save (chave incompatível/corrupção). " +
+                    "Recriando o arquivo limpo.", e
+            )
+            runCatching { deleteRealmFiles() }
+            Realm.open(buildConfig())
+        }
+    }
+
+    private fun buildConfig(): RealmConfiguration =
+        RealmConfiguration.Builder(schema = setOf(GameStateBlobEntity::class))
             .name(DB_NAME)
             .encryptionKey(keyProvider.getOrCreateKey())
-            // Como o payload JSON acomoda evolução do data class, não temos
-            // schema fields para migrar. Mudanças na entidade Realm em si
-            // (adicionar campos diretos) podem ser tratadas com migration
-            // policy específica; por enquanto, em desenvolvimento, recriar
-            // basta — o save é local, sem dado precioso de servidor.
             .deleteRealmIfMigrationNeeded()
             .build()
-        return Realm.open(config)
+
+    /** Apaga o arquivo de save do Realm e seus auxiliares (.lock/.management/.note). */
+    private fun deleteRealmFiles() {
+        val dir = context.filesDir
+        dir.listFiles()?.forEach { f ->
+            if (f.name.startsWith(DB_NAME)) f.deleteRecursively()
+        }
     }
 
     companion object {
